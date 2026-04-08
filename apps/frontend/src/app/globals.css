@@ -59,6 +59,64 @@ html {
   background: #6b7280;
 }
 
+/* ══════════════════════════════════════════════════════════
+   Dashboard Theme System (Dark / Light)
+   ══════════════════════════════════════════════════════════ */
+
+/* Default: Dark Mode */
+:root {
+  --dash-bg-page: #0f1419;
+  --dash-bg-card: #151d28;
+  --dash-bg-sidebar: #0d1117;
+  --dash-bg-header: rgba(13, 17, 23, 0.8);
+  --dash-bg-input: #0f1419;
+  --dash-bg-hover: #1a2332;
+  --dash-bg-modal: #1a2332;
+  --dash-bg-banner: rgba(245, 158, 11, 0.08);
+  --dash-bg-banner-inner: rgba(15, 20, 25, 0.6);
+
+  --dash-text-heading: #ffffff;
+  --dash-text-primary: #e2e8f0;
+  --dash-text-secondary: #c0d0e0;
+  --dash-text-muted: #6b8aab;
+  --dash-text-faint: #4a6a8a;
+
+  --dash-border: #1e2d3d;
+  --dash-border-subtle: rgba(30, 45, 61, 0.5);
+
+  --dash-sidebar-hover: #151d28;
+  --dash-badge-contract-bg: rgba(107, 138, 171, 0.1);
+  --dash-badge-contract-text: #8896ab;
+  --dash-badge-contract-border: rgba(107, 138, 171, 0.2);
+}
+
+/* Light Mode */
+html.light {
+  --dash-bg-page: #f0f4f8;
+  --dash-bg-card: #ffffff;
+  --dash-bg-sidebar: #ffffff;
+  --dash-bg-header: rgba(255, 255, 255, 0.85);
+  --dash-bg-input: #f0f4f8;
+  --dash-bg-hover: #f1f5f9;
+  --dash-bg-modal: #ffffff;
+  --dash-bg-banner: rgba(245, 158, 11, 0.08);
+  --dash-bg-banner-inner: rgba(255, 255, 255, 0.7);
+
+  --dash-text-heading: #0f172a;
+  --dash-text-primary: #1e293b;
+  --dash-text-secondary: #334155;
+  --dash-text-muted: #64748b;
+  --dash-text-faint: #94a3b8;
+
+  --dash-border: #e2e8f0;
+  --dash-border-subtle: rgba(226, 232, 240, 0.6);
+
+  --dash-sidebar-hover: #f1f5f9;
+  --dash-badge-contract-bg: rgba(100, 116, 139, 0.1);
+  --dash-badge-contract-text: #64748b;
+  --dash-badge-contract-border: rgba(100, 116, 139, 0.2);
+}
+
 /* ── Login page custom animations ──────────────────────── */
 @keyframes blob-float {
   0% {
@@ -77,6 +135,18 @@ html {
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Modal fade-in animation ──────────────────────────── */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
