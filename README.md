@@ -6,7 +6,7 @@ A full-stack monorepo for project resource planning.
 
 | Layer    | Technology              |
 | -------- | ----------------------- |
-| Frontend | Next.js 15 + TypeScript |
+| Frontend | Next.js 16 + TypeScript |
 | Backend  | C# .NET 10 Web API      |
 | Monorepo | npm workspaces          |
 
