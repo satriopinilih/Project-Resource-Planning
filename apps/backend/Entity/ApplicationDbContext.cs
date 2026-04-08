@@ -106,6 +106,10 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<ContractExtension>()
             .Property(ce => ce.UpdatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        modelBuilder.Entity<ContractExtension>()
+            .Property(ce => ce.Status)
+            .HasDefaultValue("Pending");
     }
 
     // Optional: Override SaveChanges to automatically set audit fields

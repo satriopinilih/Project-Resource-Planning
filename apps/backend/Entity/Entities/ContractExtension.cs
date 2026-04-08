@@ -19,6 +19,17 @@ public class ContractExtension
 
     public string ReasonForExtension { get; set; } = string.Empty;
 
+    [StringLength(20)]
+    public string Status { get; set; } = "Pending"; // Pending, Approved, Declined
+
+    [StringLength(500)]
+    public string? DeclineReason { get; set; }
+
+    public DateTime? ProcessedAt { get; set; }
+
+    [StringLength(20)]
+    public string? ProcessedBy { get; set; }
+
     // Audit fields
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

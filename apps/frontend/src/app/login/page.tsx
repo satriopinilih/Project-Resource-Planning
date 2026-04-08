@@ -1,22 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { login } from "@/lib/api";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userId || !password) {
+      return;
+    }
+
     setIsLoading(true);
+    setError(null);
 
-    // TODO: Integrate with backend authentication
-    console.log("Login attempt:", { userId });
-
-    setTimeout(() => {
+    try {
+      const result = await login(userId, password);
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("auth_user", JSON.stringify({
+        userId: result.userId,
+        userName: result.userName,
+        email: result.email,
+        roles: result.roles
+      }));
+      router.push("/dashboard");
+    } catch {
+      setError("Invalid User ID or Password");
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -64,7 +82,7 @@ export default function LoginPage() {
             <input
               id="userId"
               type="text"
-              placeholder="GM123"
+              placeholder="HR123 or hr.manager@company.com"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               className="w-full h-12 px-4 text-[0.95rem] text-[#1a1f36] bg-[#f7f9fc] border-[1.5px] border-[#e2e8f0] rounded-xl outline-none transition-all duration-200 placeholder:text-[#a0aec0] hover:border-[#c5d1e8] hover:bg-[#f0f4fb] focus:border-[#3366ff] focus:bg-white focus:shadow-[0_0_0_3px_rgba(51,102,255,0.1)]"
@@ -91,6 +109,12 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           <button
             id="signInButton"
