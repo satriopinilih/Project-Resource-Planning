@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Header from "../components/Header";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
+import { getProjects } from "../../../../lib/api";
 
 interface Project {
   id: string;
@@ -15,43 +17,64 @@ interface Project {
   budget: string;
 }
 
-const projectsData: Project[] = [
-  {
-    id: "proj001",
-    name: "Digital Transformation Initiative",
-    client: "TechCorp Inc.",
-    status: "Upcoming",
-    timeline: "2026-01-06 — 2026-03-30",
-    pm: "TBD",
-    team: 6,
-    budget: "$120,000",
-  },
-  {
-    id: "proj002",
-    name: "Customer Portal Development",
-    client: "RetailMax Ltd.",
-    status: "Upcoming",
-    timeline: "2026-04-01 — 2026-05-27",
-    pm: "TBD",
-    team: 4,
-    budget: "$95,000",
-  },
-  {
-    id: "proj003",
-    name: "Data Analytics Platform",
-    client: "FinServe Corp.",
-    status: "On Hold",
-    timeline: "—",
-    pm: "TBD",
-    team: 0,
-    budget: "$180,000",
-  },
-];
+const mapStatus = (backendStatus: number): Project["status"] => {
+  switch (backendStatus) {
+    case 0: return "Upcoming";
+    case 1: return "Active";
+    case 2: return "Completed";
+    default: return "On Hold";
+  }
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return "TBD";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "TBD";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
 
 const tabs = ["All", "Active", "Upcoming", "Completed", "On Hold"];
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("All");
+  const [projectsData, setProjectsData] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const data = await getProjects();
+        const mappedData: Project[] = data.map((p) => {
+          const pmMember = p.members?.find((m) => 
+            m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase().includes("lead")
+          );
+          return {
+            id: `proj${String(p.projectId).padStart(3, "0")}`,
+            name: p.projectName,
+            client: p.clientOrganization || "Internal",
+            status: mapStatus(p.projectStatus),
+            timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
+            pm: pmMember ? pmMember.userName : "TBD",
+            team: p.members?.length || 0,
+            budget: "N/A",
+          };
+        });
+        setProjectsData(mappedData);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  const filteredProjects = projectsData.filter((project) => {
+    if (activeTab === "All") return true;
+    return project.status === activeTab;
+  });
 
   return (
     <>
@@ -113,49 +136,82 @@ export default function ProjectsPage() {
                 </tr>
               </thead>
               <tbody>
-                {projectsData.map((project) => (
-                  <tr
-                    key={project.id}
-                    className="border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-colors duration-150"
-                  >
-                    <td className="py-4 pl-6 pr-4">
-                      <p className="text-[13px] font-semibold text-[#60a5fa]">
-                        {project.name}
-                      </p>
-                      <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5">
-                        {project.id}
-                      </p>
-                    </td>
-                    <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-primary)]">
-                      {project.client}
-                    </td>
-                    <td className="py-4 px-4">
-                      <span
-                        className={`inline-block px-3 py-1 text-[11px] font-semibold rounded-full border ${
-                          project.status === "Upcoming"
-                            ? "bg-[#1e3a8a]/30 text-[#93c5fd] border-[#1e3a8a]/50"
-                            : project.status === "On Hold"
-                            ? "bg-[#78350f]/30 text-[#fcd34d] border-[#78350f]/50"
-                            : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
-                        }`}
-                      >
-                        {project.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-[12px] font-medium text-[var(--dash-text-secondary)]">
-                      {project.timeline}
-                    </td>
-                    <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-secondary)]">
-                      {project.pm}
-                    </td>
-                    <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-secondary)]">
-                      {project.team}
-                    </td>
-                    <td className="py-4 pr-6 pl-4 text-[13px] font-medium text-[var(--dash-text-primary)]">
-                      {project.budget}
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <Loader2 className="w-6 h-6 animate-spin text-[#3b82f6]" />
+                        <span className="text-[13px]">Loading projects...</span>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : filteredProjects.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                      No projects found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProjects.map((project) => (
+                    <tr
+                      key={project.id}
+                      onClick={() => router.push(`/dashboard/gm/projects/${project.id}`)}
+                      className="border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer group"
+                    >
+                      <td className="py-4 pl-6 pr-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div>
+                            <p className="text-[13px] font-bold text-white group-hover:text-blue-400 transition-colors">
+                              {project.name}
+                            </p>
+                            <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5 font-medium">
+                              {project.id}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-primary)]">
+                        {project.client}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span
+                          className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${
+                            project.status === "Upcoming"
+                              ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                              : project.status === "Active"
+                              ? "bg-green-500/10 text-green-400 border-green-500/20"
+                              : project.status === "Completed"
+                              ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                              : project.status === "On Hold"
+                              ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                              : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                          }`}
+                        >
+                          {project.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-[12px] font-medium text-[var(--dash-text-secondary)]">
+                        {project.timeline}
+                      </td>
+                      <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-secondary)]">
+                        {project.pm}
+                      </td>
+                      <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-secondary)]">
+                        <div className="flex items-center gap-1.5">
+                          <Users size={14} className="text-gray-500" />
+                          {project.team}
+                        </div>
+                      </td>
+                      <td className="py-4 pr-6 pl-4">
+                         <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-medium text-[var(--dash-text-primary)]">{project.budget}</span>
+                            <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
+                         </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

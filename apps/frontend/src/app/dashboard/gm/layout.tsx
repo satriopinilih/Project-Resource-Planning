@@ -8,7 +8,7 @@ export default function GMLayout({
   return (
     <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
       <Sidebar />
-      <main className="flex-1 ml-[290px] flex flex-col min-h-screen">
+      <main className="flex-1 ml-64 flex flex-col min-h-screen">
         {children}
       </main>
     </div>

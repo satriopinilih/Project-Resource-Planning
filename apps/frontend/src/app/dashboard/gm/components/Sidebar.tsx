@@ -37,7 +37,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-[290px] flex-col bg-[var(--dash-bg-sidebar)] border-r border-[var(--dash-border)] transition-colors duration-300">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-[var(--dash-bg-sidebar)] border-r border-[var(--dash-border)] transition-colors duration-300">
       {/* Branding */}
       <div className="px-8 pt-8 pb-6">
         <h1 className="text-[20px] font-bold text-[var(--dash-text-heading)] leading-tight tracking-tight">
@@ -49,7 +49,7 @@ export default function Sidebar() {
       </div>
 
       {/* Separator */}
-      <div className="mx-6 border-t border-[var(--dash-border)] mb-6" />
+      <div className="border-t border-[var(--dash-border)] mb-6" />
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-2 px-6">
@@ -64,7 +64,7 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className={`
-                flex items-center gap-4 px-4 py-3.5 rounded-xl text-[16px] font-medium
+                flex items-center gap-3 px-4 py-3 rounded-xl text-[16px] font-medium
                 transition-all duration-200
                 ${isActive
                   ? "bg-[#1e3a5f]/60 text-[#60a5fa] "
@@ -79,15 +79,18 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* Separator */}
+      <div className="border-t border-[var(--dash-border)] mb-1" />
+
       {/* Logout */}
-      <div className="px-6 pb-8">
-        <button 
+      <div className="px-4 py-3">
+        <button
           onClick={() => {
             localStorage.removeItem("auth_token");
             localStorage.removeItem("auth_user");
             window.location.href = "/login";
           }}
-          className="flex items-center gap-4 px-4 py-3.5 rounded-xl text-[16px] font-medium text-[var(--dash-text-muted)] hover:text-[#f87171] hover:bg-[var(--dash-sidebar-hover)] transition-all duration-200 w-full cursor-pointer"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full"
         >
           <LogOut size={22} strokeWidth={1.8} />
           Logout
