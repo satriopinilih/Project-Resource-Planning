@@ -29,7 +29,11 @@ export default function LoginPage() {
         email: result.email,
         roles: result.roles
       }));
-      router.push("/dashboard");
+      if (result.roles.includes("GM")) {
+        router.push("/dashboard/gm");
+      } else {
+        router.push("/dashboard");
+      }
     } catch {
       setError("Invalid User ID or Password");
     } finally {
