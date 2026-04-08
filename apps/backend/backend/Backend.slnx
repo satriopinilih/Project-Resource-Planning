@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="../Commons/Commons.csproj" Id="1cf6e187-c180-4f02-9c49-89071b97b2f5" />
+  <Project Path="../Contract/Contracts.csproj" Id="1a2a93d5-a008-470e-9937-ea45b637aad5" />
+  <Project Path="../Entity/Entities.csproj" Id="8ab0be88-7d24-47b1-b1c3-1acb6f539b8e" />
+  <Project Path="WebAPI.csproj" />
+</Solution>
