@@ -13,41 +13,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    // Check if user has a saved preference
     const savedTheme = localStorage.getItem('theme');
     
+    // Default to dark for this app as it has premium dark look
+    let isDark = true; 
+    
     if (savedTheme) {
-      // User has manually set a preference - respect it
-      const isDark = savedTheme === 'dark';
-      setIsDarkMode(isDark);
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      isDark = savedTheme === 'dark';
     } else {
-      // No saved preference - follow system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDarkMode(prefersDark);
-      if (prefersDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
 
-    // Listen for system theme changes (only if no manual preference is set)
+    setIsDarkMode(isDark);
+    applyTheme(isDark);
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
-      const savedTheme = localStorage.getItem('theme');
-      // Only update if user hasn't set a manual preference
-      if (!savedTheme) {
+      if (!localStorage.getItem('theme')) {
         setIsDarkMode(e.matches);
-        if (e.matches) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
+        applyTheme(e.matches);
       }
     };
 
@@ -55,16 +39,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
+  const applyTheme = (dark: boolean) => {
+    if (dark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
   const toggleDarkMode = () => {
     setIsDarkMode(prev => {
       const newValue = !prev;
-      if (newValue) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-      }
+      applyTheme(newValue);
+      localStorage.setItem('theme', newValue ? 'dark' : 'light');
       return newValue;
     });
   };

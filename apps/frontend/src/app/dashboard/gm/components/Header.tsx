@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Bell, Sun, Moon, User } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface HeaderProps {
   title: string;
 }
 
 export default function Header({ title }: HeaderProps) {
-  const [isDark, setIsDark] = useState(true);
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const [userName, setUserName] = useState("General Manager");
 
   // Hydrate from localStorage on mount
@@ -19,26 +20,7 @@ export default function Header({ title }: HeaderProps) {
         setUserName(JSON.parse(auth).userName);
       } catch (e) {}
     }
-
-    const stored = localStorage.getItem("theme");
-    if (stored === "light") {
-      setIsDark(false);
-      document.documentElement.classList.add("light");
-    }
   }, []);
-
-  const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-
-    if (next) {
-      document.documentElement.classList.remove("light");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.add("light");
-      localStorage.setItem("theme", "light");
-    }
-  };
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between h-[80px] px-8 bg-[var(--dash-bg-header)] backdrop-blur-xl border-b border-[var(--dash-border)] transition-colors duration-300">
@@ -57,11 +39,11 @@ export default function Header({ title }: HeaderProps) {
 
         {/* Theme toggle (Light / Dark) */}
         <button
-          onClick={toggleTheme}
+          onClick={toggleDarkMode}
           className="p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
-          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          {isDark ? (
+          {isDarkMode ? (
             <Sun size={22} strokeWidth={1.8} />
           ) : (
             <Moon size={22} strokeWidth={1.8} />
