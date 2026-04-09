@@ -68,15 +68,7 @@ export default function AlertBanner() {
               <p className="text-[12px] text-[var(--dash-text-muted)]">{project.clientOrganization}</p>
             </div>
             <Link
-<<<<<<< HEAD
-<<<<<<< HEAD
-              href={`/dashboard/gm/projects/${project.projectId}`}
-=======
               href={`/project/${project.projectId}`}
->>>>>>> main
-=======
-              href={`/project/${project.projectId}`}
->>>>>>> 15ba17903c386cb5134573ed3a1d612fafadbb0f
               className="flex items-center gap-1.5 text-[13px] font-medium text-[#3b82f6] hover:text-[#60a5fa] transition-colors duration-200"
             >
               Assign Timeline
