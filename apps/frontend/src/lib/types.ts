@@ -31,6 +31,8 @@ export interface ContractExtensionRequest {
   id: string;
   employeeId: string;
   employeeName: string;
+  requestedBy?: string;
+  requestedByName?: string;
   role: string;
   currentEndDate: string;
   requestedNewEndDate: string;

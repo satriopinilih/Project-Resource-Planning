@@ -27,23 +27,39 @@ public class SeedController : ControllerBase
         // }
         try
         {
-            // Handle partially-seeded databases (common after earlier failed runs)
-            if (await _db.Departments.AnyAsync() || await _db.Skills.AnyAsync() || await _db.Projects.AnyAsync())
-            {
-                _db.ContractExtensions.RemoveRange(_db.ContractExtensions);
-                _db.UserProjects.RemoveRange(_db.UserProjects);
-                _db.UserSkills.RemoveRange(_db.UserSkills);
-                _db.UserStaffRoles.RemoveRange(_db.UserStaffRoles);
-                _db.UserRoles.RemoveRange(_db.UserRoles);
-                _db.ProjectRequiredRoles.RemoveRange(_db.ProjectRequiredRoles);
-                _db.Users.RemoveRange(_db.Users);
-                _db.Projects.RemoveRange(_db.Projects);
-                _db.Skills.RemoveRange(_db.Skills);
-                _db.StaffRoles.RemoveRange(_db.StaffRoles);
-                _db.Roles.RemoveRange(_db.Roles);
-                _db.Departments.RemoveRange(_db.Departments);
-                await _db.SaveChangesAsync();
-            }
+            // if (await _db.Users.AnyAsync())
+            // {
+            //     return Ok(ApiResponse<string>.SuccessResponse("Already seeded", "Seed skipped"));
+            // }
+
+            // Reset data safely without optimistic-concurrency delete issues
+            await _db.Database.ExecuteSqlRawAsync(@"
+DO $$
+DECLARE
+    table_name text;
+    table_names text[] := ARRAY[
+        'ContractExtensions',
+        'UserProjects',
+        'UserSkills',
+        'UserStaffRoles',
+        'UserRoles',
+        'ProjectRequiredSkills',
+        'ProjectRequiredRoles',
+        'Projects',
+        'Skills',
+        'StaffRoles',
+        'Roles',
+        'Users',
+        'Departments'
+    ];
+BEGIN
+    FOREACH table_name IN ARRAY table_names
+    LOOP
+        IF to_regclass(format('""%s""', table_name)) IS NOT NULL THEN
+            EXECUTE format('TRUNCATE TABLE ""%s"" RESTART IDENTITY CASCADE', table_name);
+        END IF;
+    END LOOP;
+END $$;");
 
             var now = DateTime.UtcNow;
 

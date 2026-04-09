@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
-import { getEmployees, createContractExtension, seedBackendData } from '@/lib/api';
+import { getEmployees, createContractExtension, getContractExtensionRequests } from '@/lib/api';
 import { Employee } from '@/lib/types';
 import { getPrimaryRole, getSessionUser } from '@/lib/auth';
-import { Loader2, X, FileText, Calendar, Info } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 export default function TeamMembersPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -21,6 +21,7 @@ export default function TeamMembersPage() {
   const [extensionReason, setExtensionReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [requestedEmployeeIds, setRequestedEmployeeIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -30,8 +31,13 @@ export default function TeamMembersPage() {
         setRole(currentRole);
 
         setError(null);
-        const data = await getEmployees();
+        const [data, pendingRequests] = await Promise.all([
+          getEmployees(),
+          getContractExtensionRequests('Pending')
+        ]);
+
         setEmployees(data);
+        setRequestedEmployeeIds(new Set(pendingRequests.map((request) => request.employeeId)));
         if (data.length > 0) {
           setSelectedMember(data[0].id);
         }
@@ -52,6 +58,7 @@ export default function TeamMembersPage() {
         parseInt(extensionDuration) || 12,
         extensionReason
       );
+      setRequestedEmployeeIds((prev) => new Set(prev).add(selectedEmployee.id));
       setSubmitSuccess(true);
       setTimeout(() => {
         setExtensionModalOpen(false);
@@ -68,6 +75,7 @@ export default function TeamMembersPage() {
   const selectedEmployee = selectedMember
     ? employees.find(e => e.id === selectedMember)
     : null;
+  const hasPendingRequest = selectedEmployee ? requestedEmployeeIds.has(selectedEmployee.id) : false;
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
@@ -119,14 +127,11 @@ export default function TeamMembersPage() {
                     )}
 
                     <div className="mt-2 flex items-center gap-2">
-                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${employee.contractStatus === 'Active' ? 'bg-[#064e3b]/50 text-[#34d399]' :
-                        employee.contractStatus === 'Expiring Soon' ? 'bg-[#78350f]/50 text-[#fbbf24]' :
-                          'bg-gray-800 text-gray-400'
-                        }`}>
-                        {employee.contractStatus}
+                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'bg-[#78350f]/50 text-[#fbbf24]' : 'bg-[#064e3b]/50 text-[#34d399]'}`}>
+                        {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'Expiring Soon' : 'Active'}
                       </span>
 
-                      {employee.contractStatus === 'Expiring Soon' && employee.daysRemaining && (
+                      {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.daysRemaining !== undefined && (
                         <div className="flex items-center gap-1 text-[11px] font-medium text-[#fbbf24]">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -188,11 +193,8 @@ export default function TeamMembersPage() {
                   <div className="bg-[#22252e] rounded-xl border border-gray-700/50 p-6">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-[16px] font-bold text-white">Contract Information</h3>
-                      <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg ${selectedEmployee.contractStatus === 'Active' ? 'bg-[#064e3b]/30 text-[#34d399] border border-[#064e3b]/50' :
-                        selectedEmployee.contractStatus === 'Expiring Soon' ? 'bg-[#78350f]/30 text-[#fbbf24] border border-[#78350f]/50' :
-                          'bg-gray-800 text-gray-400 border border-gray-700'
-                        }`}>
-                        {selectedEmployee.contractStatus}
+                      <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg border ${(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'bg-[#78350f]/30 text-[#fbbf24] border-[#78350f]/50' : 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50'}`}>
+                        {(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'Expiring Soon' : 'Active'}
                       </span>
                     </div>
 
@@ -225,12 +227,31 @@ export default function TeamMembersPage() {
                       Duration: 24 months
                     </div>
 
-                    <button 
-                      onClick={() => setExtensionModalOpen(true)}
-                      className="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold text-[14px] py-3 rounded-xl transition-colors"
-                    >
-                      Request Contract Extension
-                    </button>
+                    {role === 'GM' ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            if (!hasPendingRequest) {
+                              setExtensionModalOpen(true);
+                            }
+                          }}
+                          disabled={hasPendingRequest}
+                          className={`w-full font-bold text-[14px] py-3 rounded-xl transition-colors ${hasPendingRequest
+                            ? 'bg-[#111827] text-gray-300 cursor-not-allowed border border-gray-700'
+                            : 'bg-white hover:bg-gray-100 text-gray-900'
+                            }`}
+                        >
+                          {hasPendingRequest ? 'Request Sent' : 'Request Contract Extension'}
+                        </button>
+                        {hasPendingRequest && (
+                          <p className="mt-2 text-[12px] text-gray-400 text-center">Request has been sent to HR</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-gray-300">
+                        Contact GM to request contract extension
+                      </div>
+                    )}
                   </div>
 
                   {/* Card 3: Resource Pipeline */}
@@ -316,7 +337,7 @@ export default function TeamMembersPage() {
       </div>
 
       {/* Extension Modal */}
-      {extensionModalOpen && selectedEmployee && (
+      {role === 'GM' && extensionModalOpen && selectedEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 text-white">
             <div className="p-7">

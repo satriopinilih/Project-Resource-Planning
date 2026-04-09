@@ -3,6 +3,7 @@ using Contracts.DTOs.ContractExtension;
 using Entities;
 using Entities.Entities;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,8 +39,15 @@ public class ContractExtensionsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<ApiResponse<ContractExtensionDto>>> Create([FromBody] CreateContractExtensionDto request)
     {
+        var isGm = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "GM");
+        if (!isGm)
+        {
+            return StatusCode(403, ApiResponse<ContractExtensionDto>.ErrorResponse("Only GM can request contract extensions"));
+        }
+
         var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == request.UserId);
         if (user is null)
         {

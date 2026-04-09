@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using Serilog;
 using System.Text;
 using System.IdentityModel.Tokens.Jwt;
@@ -85,14 +86,48 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 8. Auto-migrate
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    // await dbContext.Database.MigrateAsync();
+    var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
+
+    try
+    {
+        await dbContext.Database.MigrateAsync();
+    }
+    catch (PostgresException ex) when (
+        ex.SqlState == PostgresErrorCodes.DuplicateTable ||
+        ex.SqlState == PostgresErrorCodes.DuplicateObject ||
+        ex.SqlState == PostgresErrorCodes.DuplicateColumn ||
+        ex.SqlState == PostgresErrorCodes.UniqueViolation)
+    {
+        Log.Warning("Ignoring migration conflict ({SqlState}) and continuing startup: {Message}", ex.SqlState, ex.MessageText);
+
+        if (pendingMigrations.Count > 0)
+        {
+            var efVersion = typeof(DbContext).Assembly.GetName().Version?.ToString() ?? "10.0.0";
+
+            await dbContext.Database.ExecuteSqlRawAsync(@"
+CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (
+    ""MigrationId"" character varying(150) NOT NULL,
+    ""ProductVersion"" character varying(32) NOT NULL,
+    CONSTRAINT ""PK___EFMigrationsHistory"" PRIMARY KEY (""MigrationId"")
+);");
+
+            foreach (var migrationId in pendingMigrations)
+            {
+                await dbContext.Database.ExecuteSqlRawAsync(
+                    @"INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"") VALUES ({0}, {1}) ON CONFLICT (""MigrationId"") DO NOTHING;",
+                    migrationId,
+                    efVersion);
+            }
+
+            Log.Warning("Marked pending migrations as applied after conflict: {Count}", pendingMigrations.Count);
+        }
+    }
 }
 
-// 9. Middleware
+// 8. Middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

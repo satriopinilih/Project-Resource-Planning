@@ -126,6 +126,8 @@ const mapContractExtension = (item: BackendContractExtension): ContractExtension
     id: String(item.contractExtensionRequestID),
     employeeId: item.userId,
     employeeName: item.userName,
+    requestedBy: item.requestedBy,
+    requestedByName: item.requestedByName,
     role: 'Staff',
     currentEndDate: '-',
     requestedNewEndDate: formatDate(requestedNewEndDate.toISOString()),
@@ -191,8 +193,9 @@ export async function getExpiringEmployees(days = 60): Promise<Employee[]> {
   return data.map(mapEmployee);
 }
 
-export async function getContractExtensionRequests(): Promise<ContractExtensionRequest[]> {
-  const data = await fetchJson<BackendContractExtension[]>('/api/contractextensions');
+export async function getContractExtensionRequests(status?: 'Pending' | 'Approved' | 'Declined'): Promise<ContractExtensionRequest[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const data = await fetchJson<BackendContractExtension[]>(`/api/contractextensions${query}`);
   return data.map(mapContractExtension);
 }
 
