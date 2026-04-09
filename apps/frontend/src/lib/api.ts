@@ -139,11 +139,14 @@ const mapContractExtension = (item: BackendContractExtension): ContractExtension
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...(init?.headers ?? {})
       },
       cache: 'no-store'
@@ -152,12 +155,26 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`Cannot reach backend at ${API_BASE_URL}. Ensure API is running.`);
   }
 
-  if (!res.ok) {
-    throw new Error(`API request failed: ${res.status}`);
+  const contentType = res.headers.get('content-type');
+  let data: any;
+  
+  if (contentType && contentType.includes('application/json')) {
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.message || `API request failed: ${res.status}`);
+    }
+    data = json.data;
+  } else {
+    const text = await res.text();
+    if (!res.ok) {
+      // If it's a long error page, just show the first line or a summary
+      const summary = text.split('\n')[0].substring(0, 200);
+      throw new Error(summary || `API request failed: ${res.status}`);
+    }
+    data = text;
   }
 
-  const json = (await res.json()) as ApiResponse<T>;
-  return json.data;
+  return data;
 }
 
 export async function seedBackendData(): Promise<void> {

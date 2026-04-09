@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Header from "../components/Header";
+import AppHeader from "@/components/AppHeader";
 import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
 import { getProjects } from "../../../../lib/api";
 
@@ -39,6 +39,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("All");
   const [projectsData, setProjectsData] = useState<Project[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -72,13 +73,17 @@ export default function ProjectsPage() {
   }, []);
 
   const filteredProjects = projectsData.filter((project) => {
-    if (activeTab === "All") return true;
-    return project.status === activeTab;
+    const matchesTab = activeTab === "All" || project.status === activeTab;
+    const matchesSearch = 
+      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.id.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesTab && matchesSearch;
   });
 
   return (
     <>
-      <Header title="Projects" />
+      <AppHeader title="Projects" role="GM" />
 
       <div className="p-6">
         <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl transition-colors duration-300">
@@ -93,6 +98,8 @@ export default function ProjectsPage() {
               <input
                 type="text"
                 placeholder="Search projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-10 pl-10 pr-4 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
               />
             </div>

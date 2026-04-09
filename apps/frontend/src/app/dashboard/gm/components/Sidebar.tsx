@@ -22,8 +22,8 @@ const navItems = [
     icon: FolderKanban,
   },
   {
-    label: "Team-member",
-    href: "/team-member",
+    label: "Team Member",
+    href: "/team-members",
     icon: Users,
   },
   {
