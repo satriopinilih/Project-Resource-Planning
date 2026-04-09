@@ -3,19 +3,27 @@
 import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
+import GmSidebar from '@/app/dashboard/gm/components/Sidebar';
+import GmHeader from '@/app/dashboard/gm/components/Header';
 import StatusBadge from '@/components/StatusBadge';
 import { getEmployees, seedBackendData } from '@/lib/api';
 import { Employee } from '@/lib/types';
+import { getPrimaryRole, getSessionUser } from '@/lib/auth';
 
 export default function TeamMembersPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [role, setRole] = useState<'GM' | 'HR' | 'PM' | 'Marketing' | 'Staff' | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
+        const user = getSessionUser();
+        const currentRole = getPrimaryRole(user?.roles ?? []);
+        setRole(currentRole);
+
         setError(null);
         await seedBackendData();
         const data = await getEmployees();
@@ -40,11 +48,11 @@ export default function TeamMembersPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-      <Sidebar />
+    <div className={role === 'GM' ? 'flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300' : 'flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors'}>
+      {role === 'GM' ? <GmSidebar /> : <Sidebar />}
       
-      <div className="flex-1 flex flex-col">
-        <Header />
+      <div className={role === 'GM' ? 'flex-1 ml-[290px] flex flex-col min-h-screen' : 'flex-1 flex flex-col'}>
+        {role === 'GM' ? <GmHeader title="Team Members" /> : <Header />}
         
         <main className="flex-1 p-8">
           {isLoading && (

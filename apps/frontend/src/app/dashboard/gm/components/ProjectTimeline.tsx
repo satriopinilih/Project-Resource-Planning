@@ -142,7 +142,7 @@ export default function ProjectTimeline() {
                           style={{ gridColumn: `span ${spanCols}` }}
                         >
                           <Link
-                            href={`/dashboard/gm/projects/${project.id}`}
+                            href={`/project/${project.id}`}
                             className={`
                               block w-full py-2 px-3 rounded-md text-[11px] font-semibold text-white
                               truncate transition-all duration-200 cursor-pointer
