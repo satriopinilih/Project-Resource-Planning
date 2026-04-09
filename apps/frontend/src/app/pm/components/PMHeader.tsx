@@ -1,10 +1,17 @@
 "use client";
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { getPrimaryRole, getSessionUser, SessionUser } from "@/lib/auth";
 
 export default function HeaderPM() {
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const [user, setUser] = React.useState<SessionUser | null>(null);
+
+  React.useEffect(() => {
+    setUser(getSessionUser());
+  }, []);
+
+  const role = getPrimaryRole(user?.roles ?? []);
 
   return (
     <header className="bg-white dark:bg-[#292B2F] border-b border-gray-200 dark:border-gray-700 px-8 py-4 transition-colors">
@@ -44,20 +51,17 @@ export default function HeaderPM() {
             </svg>
           )}
         </button>
-
         {/* User Info (PM Version) */}
         <div className="flex items-center gap-3">
           <div className="text-right">
-            {/* Ganti Nama sesuai kebutuhan, nanti ini ambil dari profile */}
             <div className="text-sm font-medium text-gray-900 dark:text-white">
-              Alex Turner
+              {user?.userName || "User"}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Architect / PM
+              {role || "Team Member"}
             </div>
           </div>
 
-          {/* User Avatar - Warna diubah dikit biar beda sama HR kalau mau */}
           <div className="w-10 h-10 rounded-full bg-[#2B7FFC] flex items-center justify-center text-white font-semibold shadow-sm">
             <svg
               className="w-6 h-6"
@@ -73,13 +77,10 @@ export default function HeaderPM() {
               />
             </svg>
           </div>
-
-          {/* Role Badge - Warna Biru untuk PM (HR tadi Merah) */}
           <div className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold rounded-full border border-blue-200 dark:border-blue-800">
             PM
           </div>
 
-          {/* Notification Badge - Jika tidak ada notif bisa disembunyikan atau diubah angkanya */}
           <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
             3
           </div>

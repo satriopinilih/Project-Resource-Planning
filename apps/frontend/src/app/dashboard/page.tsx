@@ -28,6 +28,12 @@ export default function DashboardPage() {
 
     if (!sessionUser || !sessionRole) {
       router.push('/login');
+      return;
+    }
+
+    if (sessionRole === 'PM') {
+      router.push('/pm/dashboard');
+      return;
     }
   }, [router]);
 

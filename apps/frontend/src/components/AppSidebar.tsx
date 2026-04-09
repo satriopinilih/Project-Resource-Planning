@@ -33,10 +33,10 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   PM: [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Project", href: "/project", icon: FolderKanban },
-    { label: "Team Member", href: "/team-members", icon: Users },
-    { label: "Settings", href: "/settings", icon: Settings },
+    { label: "Dashboard", href: "/pm/dashboard", icon: LayoutDashboard },
+    { label: "Project", href: "/pm/projects", icon: FolderKanban },
+    { label: "Team Member", href: "/pm/team-members", icon: Users },
+    { label: "Settings", href: "/pm/settings", icon: Settings },
   ],
   Marketing: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
