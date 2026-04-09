@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Serilog
 builder.Host.UseSerilog((context, config) =>
 {
-    config.ReadFrom.Configuration(context.Configuration);
+     config.ReadFrom.Configuration(context.Configuration);
 });
 
 // 2. Controllers (NO FluentValidation here anymore)
