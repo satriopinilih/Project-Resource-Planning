@@ -15,10 +15,10 @@ JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Serilog
-builder.Host.UseSerilog((context, config) =>
-{
-     config.ReadFrom.Configuration(context.Configuration);
-});
+// builder.Host.UseSerilog((context, config) =>
+// {
+//      config.ReadFrom.Configuration(context.Configuration);
+// });
 
 // 2. Controllers (NO FluentValidation here anymore)
 builder.Services.AddControllers();
@@ -89,7 +89,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.MigrateAsync();
+    // await dbContext.Database.MigrateAsync();
 }
 
 // 9. Middleware
@@ -99,7 +99,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseSerilogRequestLogging();
+// app.UseSerilogRequestLogging();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();

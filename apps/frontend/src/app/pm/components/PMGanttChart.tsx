@@ -72,7 +72,28 @@ export default function PMTimelineView() {
           `http://localhost:5103/api/timeline/${endpoint}`,
         );
         const result = await response.json();
-        setTimelineData(result);
+
+        const sortedResult = result.sort((a: any, b: any) => {
+          const earliestA =
+            a.bars.length > 0
+              ? Math.min(
+                  ...a.bars.map((bar: any) =>
+                    new Date(bar.startDate).getTime(),
+                  ),
+                )
+              : Infinity;
+          const earliestB =
+            b.bars.length > 0
+              ? Math.min(
+                  ...b.bars.map((bar: any) =>
+                    new Date(bar.startDate).getTime(),
+                  ),
+                )
+              : Infinity;
+          return earliestA - earliestB;
+        });
+
+        setTimelineData(sortedResult);
       } catch (error) {
         setTimelineData([]);
       } finally {
@@ -97,46 +118,31 @@ export default function PMTimelineView() {
   }, [timelineData]);
 
   return (
-    /* Container Utama: Tinggi pas layar laptop (100vh) dikurangi margin */
-    <div className="flex flex-col h-[calc(100vh-40px)] bg-white dark:bg-[#2A2B2E] rounded-xl border border-gray-800/50 dark:border-gray-700 shadow-sm mt-6 overflow-hidden text-gray-900 dark:text-white">
-      {/* 1. Header & Navigasi (Tetap di Atas / Fixed) */}
+    <div className="flex flex-col h-[calc(90vh-40px)] bg-white dark:bg-[var(--dash-bg-card)] rounded-xl border border-gray-800/50 dark:border-[var(--dash-border)] shadow-sm mt-6 overflow-hidden text-gray-900 dark:text-white">
       <div className="flex-none p-6 pb-2">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-8">
-            <h2 className="text-xl font-semibold tracking-tight">
-              Timeline View
-            </h2>
-
-            {/* Navigasi Tahun di Tengah Atas */}
+            <h2 className="text-xl font-semibold tracking-tight">Timeline View</h2>
             <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setCurrentYear((prev) => prev - 1)}
-                className="hover:text-blue-500"
-              >
+              <button onClick={() => setCurrentYear((prev) => prev - 1)} className="hover:text-blue-500">
                 <ChevronLeft size={16} />
               </button>
-              <span className="text-sm font-bold w-12 text-center">
-                {currentYear}
-              </span>
-              <button
-                onClick={() => setCurrentYear((prev) => prev + 1)}
-                className="hover:text-blue-500"
-              >
+              <span className="text-sm font-bold w-12 text-center">{currentYear}</span>
+              <button onClick={() => setCurrentYear((prev) => prev + 1)} className="hover:text-blue-500">
                 <ChevronRight size={16} />
               </button>
             </div>
           </div>
-
           <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
             <button
               onClick={() => setViewMode("Projects")}
-              className={`px-5 py-1.5 rounded-md text-[11px] font-semibold transition-all ${viewMode === "Projects" ? "bg-white dark:bg-gray-700 text-[#2B7FFC] shadow-sm" : "text-gray-500"}`}
+              className={`px-5 py-1.5 rounded-l-md text-[11px] font-semibold transition-all ${viewMode === "Projects" ? "bg-[#2B7FFC] text-white shadow-md" : "text-gray-400"}`}
             >
               Projects
             </button>
             <button
               onClick={() => setViewMode("Resources")}
-              className={`px-5 py-1.5 rounded-md text-[11px] font-semibold transition-all ${viewMode === "Resources" ? "bg-[#2B7FFC] text-white shadow-md" : "text-gray-400"}`}
+              className={`px-5 py-1.5 rounded-r-md text-[11px] font-semibold transition-all ${viewMode === "Resources" ? "bg-[#2B7FFC] text-white shadow-md" : "text-gray-400"}`}
             >
               Resources
             </button>
@@ -144,7 +150,6 @@ export default function PMTimelineView() {
         </div>
       </div>
 
-      {/* 2. Area Timeline (Scrollable Area) */}
       <div className="flex-1 overflow-auto border-t border-gray-100 dark:border-gray-700/50">
         <div className="min-w-[1200px] relative">
           {/* Header Bulan (Sticky di atas area scroll) */}
@@ -154,12 +159,7 @@ export default function PMTimelineView() {
             </div>
             <div className="grid grid-cols-12">
               {MONTHS.map((m) => (
-                <div
-                  key={m}
-                  className="py-4 text-center text-[10px] text-gray-500 font-bold tracking-widest uppercase"
-                >
-                  {m}
-                </div>
+                <div key={m} className="py-4 text-center text-[10px] text-gray-500 font-bold tracking-widest uppercase">{m}</div>
               ))}
             </div>
           </div>
@@ -171,10 +171,7 @@ export default function PMTimelineView() {
               <div className="border-r border-gray-100 dark:border-gray-700/30" />
               <div className="grid grid-cols-12">
                 {MONTHS.map((_, i) => (
-                  <div
-                    key={i}
-                    className="border-r border-gray-100 dark:border-gray-700/20"
-                  />
+                  <div key={i} className="border-r border-gray-100 dark:border-gray-700/20" />
                 ))}
               </div>
             </div>
@@ -188,12 +185,18 @@ export default function PMTimelineView() {
                 return (
                   <div
                     key={idx}
-                    className="grid grid-cols-[260px_1fr] items-stretch border-b border-gray-50 dark:border-gray-700/30 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors"
+                    className="grid grid-cols-[260px_1fr] items-stretch border-b border-gray-50 dark:border-gray-700/30 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors group"
                     style={{ minHeight: `${dynamicRowHeight}px` }}
                   >
-                    {/* Sticky Sidebar (Client Name) */}
-                    <div className="sticky left-0 z-20 bg-white dark:bg-[#2A2B2E] p-4 border-r border-gray-100 dark:border-gray-700/50 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]">
-                      <div className="text-[13px] font-semibold truncate group-hover:text-[#2B7FFC]">
+                    <div 
+                      onClick={() => {
+                        if (viewMode === "Projects" && item.id) {
+                          router.push(`/pm/projects/proj${String(item.id).padStart(3, "0")}`);
+                        }
+                      }}
+                      className={`sticky left-0 z-20 bg-white dark:bg-[var(--dash-bg-card)] p-4 border-r border-gray-100 dark:border-gray-700/50 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] ${viewMode === "Projects" ? "cursor-pointer hover:bg-gray-50/80 dark:hover:bg-white/10" : ""}`}
+                    >
+                      <div className={`text-[13px] font-semibold truncate ${viewMode === "Projects" ? "group-hover:text-[#2B7FFC]" : ""}`}>
                         {item.label}
                       </div>
                       <div className="text-[10px] text-gray-400 mt-0.5 truncate">
@@ -235,21 +238,12 @@ export default function PMTimelineView() {
         </div>
       </div>
 
-      {/* 3. Legend (Tetap di Bawah / Fixed) */}
       <div className="flex-none p-6 bg-gray-50/50 dark:bg-white/5 border-t border-gray-100 dark:border-gray-700/60">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-            Client:
-          </span>
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-7 gap-y-3">
           {Object.entries(projectPalette).map(([name, color]) => (
-            <div key={name} className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded-xs"
-                style={{ backgroundColor: color }}
-              />
-              <span className="text-[13px] text-gray-500 dark:text-white">
-                {name}
-              </span>
+            <div key={name} className="flex items-center gap-2 overflow-hidden">
+              <div className="flex-none w-4 h-4 rounded-xs" style={{ backgroundColor: color }} />
+              <span className="text-[13px] text-gray-500 dark:text-white truncate" title={name}>{name}</span>
             </div>
           ))}
         </div>

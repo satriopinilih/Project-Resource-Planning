@@ -140,7 +140,6 @@ const mapContractExtension = (item: BackendContractExtension): ContractExtension
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
