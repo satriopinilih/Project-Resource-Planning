@@ -2,6 +2,7 @@ using Contracts.DTOs.Common;
 using Contracts.DTOs.ContractExtension;
 using Entities;
 using Entities.Entities;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,7 +46,9 @@ public class ContractExtensionsController : ControllerBase
             return BadRequest(ApiResponse<ContractExtensionDto>.ErrorResponse("Employee not found"));
         }
 
-        var requestedBy = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value ?? "system";
+        var requestedBy = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+            ?? User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value 
+            ?? "system";
 
         var row = new ContractExtension
         {
@@ -66,7 +69,9 @@ public class ContractExtensionsController : ControllerBase
         var created = await _db.ContractExtensions
             .Include(c => c.User)
             .Include(c => c.RequestedByUser)
-            .FirstAsync(c => c.ContractExtensionRequestID == row.ContractExtensionRequestID);
+            .FirstOrDefaultAsync(c => c.ContractExtensionRequestID == row.ContractExtensionRequestID);
+
+        if (created == null) return StatusCode(500, ApiResponse<ContractExtensionDto>.ErrorResponse("Failed to retrieve created record"));
 
         return Ok(ApiResponse<ContractExtensionDto>.SuccessResponse(MapToDto(created), "Extension request created"));
     }

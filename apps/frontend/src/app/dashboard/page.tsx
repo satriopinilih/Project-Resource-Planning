@@ -3,15 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPrimaryRole, getSessionUser, SessionUser } from '@/lib/auth';
-import GmHeader from './gm/components/Header';
+import AppSidebar from '@/components/AppSidebar';
+import AppHeader from '@/components/AppHeader';
 import StatCards from './gm/components/StatCards';
 import AlertBanner from './gm/components/AlertBanner';
 import ProjectTimeline from './gm/components/ProjectTimeline';
 import ResourcePipeline from './gm/components/ResourcePipeline';
 import EmployeeContractTable from './gm/components/EmployeeContractTable';
-import GmSidebar from './gm/components/Sidebar';
-import Header from '@/components/Header';
-import Sidebar from '@/components/Sidebar';
 import HRDashboard from '@/components/dashboards/HRDashboard';
 
 export default function DashboardPage() {
@@ -47,9 +45,9 @@ export default function DashboardPage() {
   if (role === 'GM') {
     return (
       <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
-        <GmSidebar />
-        <main className="flex-1 ml-[290px] flex flex-col min-h-screen">
-          <GmHeader title="Dashboard" />
+        <AppSidebar role="GM" />
+        <main className="flex-1 ml-64 flex flex-col min-h-screen">
+          <AppHeader title="Dashboard" role="GM" />
           <div className="flex-1 p-6 space-y-5 overflow-y-auto">
             <StatCards />
             <AlertBanner />
@@ -67,14 +65,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Header />
+    <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
+      <AppSidebar role={role} />
+      <div className="flex-1 ml-64 flex flex-col min-h-screen">
+        <AppHeader title={`${role} Dashboard`} role={role} />
         <main className="flex-1 p-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{role} Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome, {user.userName}. This dashboard is scoped to your role.</p>
+            <h1 className="text-3xl font-bold text-[var(--dash-text-heading)]">{role} Dashboard</h1>
+            <p className="text-[var(--dash-text-secondary)] mt-1">Welcome, {user.userName}. This dashboard is scoped to your role.</p>
           </div>
         </main>
       </div>

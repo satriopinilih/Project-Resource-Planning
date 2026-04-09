@@ -1,21 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Header from "../components/Header";
+import AppHeader from "@/components/AppHeader";
 import {
-    User,
-    Shield,
-    Palette,
-    Database,
-    Info,
-    RefreshCw,
-    Trash2,
     CheckCircle2,
     AlertCircle,
     Moon,
     Sun,
 } from "lucide-react";
-import { seedBackendData } from "../../../../lib/api";
 import { useTheme } from "@/contexts/ThemeContext";
 
 interface UserProfile {
@@ -28,8 +20,6 @@ interface UserProfile {
 export default function SettingsPage() {
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [isResetting, setIsResetting] = useState(false);
-    const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     useEffect(() => {
         const auth = localStorage.getItem("auth_user");
@@ -42,46 +32,11 @@ export default function SettingsPage() {
         }
     }, []);
 
-    const handleResetDemo = async () => {
-        if (!confirm("Are you sure you want to reset all data to demo state? This will recreate all projects and assignments.")) return;
-
-        setIsResetting(true);
-        setStatusMsg(null);
-        try {
-            await seedBackendData();
-            setStatusMsg({ type: 'success', text: 'Database successfully reset to demo data!' });
-            // Refresh the page or notify user
-            setTimeout(() => window.location.reload(), 2000);
-        } catch (error) {
-            setStatusMsg({ type: 'error', text: 'Failed to reset database. Please ensure Backend is running.' });
-        } finally {
-            setIsResetting(false);
-        }
-    };
-
-    const handleClearData = () => {
-        if (confirm("This will log you out and clear your local preference. Continue?")) {
-            localStorage.clear();
-            window.location.href = "/login";
-        }
-    };
-
     return (
-        <>
-            <Header title="Settings" />
+        <div className="flex flex-col min-h-screen">
+        <AppHeader title="Settings" role="GM" />
 
             <div className="p-8 w-full space-y-8 pb-16">
-                {/* Status Message */}
-                {statusMsg && (
-                    <div className={`p-4 rounded-xl border flex items-center gap-3 animate-card-enter ${statusMsg.type === 'success'
-                        ? 'bg-green-500/10 border-green-500/20 text-green-500'
-                        : 'bg-red-500/10 border-red-500/20 text-red-500'
-                        }`}>
-                        {statusMsg.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                        <span className="text-[14px] font-medium">{statusMsg.text}</span>
-                    </div>
-                )}
-
                 {/* Profile Information */}
                 <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm dark:border-gray-700 px-10 py-8 mb-6">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Profile Information</h2>
@@ -121,7 +76,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Appearance */}
-                <div className="bg-white dark:bg-[#292B2F] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/50 p-6 mb-6">
+                <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm  dark:border-gray-700/50 p-6 mb-6">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Appearance</h2>
 
                     <div className="flex items-center justify-between mb-8">
@@ -184,7 +139,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* System Information */}
-                <div className="bg-white dark:bg-[#292B2F] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/50 p-8">
+                <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm  dark:border-gray-700/50 p-8">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">System Information</h2>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -210,6 +165,6 @@ export default function SettingsPage() {
                     </div>
                 </div>
             </div >
-        </>
+        </div>
     );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPrimaryRole, getSessionUser, SessionUser } from '@/lib/auth';
 import GMProjectsPage from '../dashboard/gm/projects/page';
-import GmSidebar from '../dashboard/gm/components/Sidebar';
+import AppSidebar from '@/components/AppSidebar';
 
 export default function ProjectPage() {
   const router = useRouter();
@@ -32,8 +32,8 @@ export default function ProjectPage() {
 
   return (
     <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
-      <GmSidebar />
-      <main className="flex-1 ml-[290px] flex flex-col min-h-screen">
+      <AppSidebar role="GM" />
+      <main className="flex-1 ml-64 flex flex-col min-h-screen">
         <GMProjectsPage />
       </main>
     </div>

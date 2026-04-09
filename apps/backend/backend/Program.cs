@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,34 +89,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var connection = dbContext.Database.GetDbConnection();
-    await connection.OpenAsync();
-
-    var departmentsExists = false;
-    var migrationsHistoryExists = false;
-
-    await using (var cmd = connection.CreateCommand())
-    {
-        cmd.CommandText = "SELECT to_regclass('public.\"Departments\"') IS NOT NULL";
-        departmentsExists = (bool?)await cmd.ExecuteScalarAsync() ?? false;
-    }
-
-    await using (var cmd = connection.CreateCommand())
-    {
-        cmd.CommandText = "SELECT to_regclass('public.\"__EFMigrationsHistory\"') IS NOT NULL";
-        migrationsHistoryExists = (bool?)await cmd.ExecuteScalarAsync() ?? false;
-    }
-
-    await connection.CloseAsync();
-
-    if (departmentsExists && !migrationsHistoryExists)
-    {
-        Log.Warning("Skipping auto-migration because tables exist but __EFMigrationsHistory is missing.");
-    }
-    else
-    {
-        await dbContext.Database.MigrateAsync();
-    }
+    await dbContext.Database.MigrateAsync();
 }
 
 // 9. Middleware

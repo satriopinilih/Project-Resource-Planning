@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Header from "../components/Header";
+import AppHeader from "@/components/AppHeader";
 import {
   Users,
   AlertTriangle,
@@ -95,7 +95,7 @@ export default function TeamMembersPage() {
 
   return (
     <>
-      <Header title="Team Members" />
+      <AppHeader title="Team Members" role="GM" />
 
       <div className="p-6 flex gap-6 min-h-0 flex-1">
         {/* ── Left Panel: Member List ── */}
