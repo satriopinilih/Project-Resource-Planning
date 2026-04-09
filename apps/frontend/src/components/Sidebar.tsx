@@ -18,7 +18,7 @@ export default function Sidebar() {
       )
     },
     { 
-      href: '/team-members', 
+      href: '/team-member', 
       label: 'Team Members', 
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -39,7 +39,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-64 bg-white dark:bg-[#292B2F] border-r border-gray-200 dark:border-gray-700 min-h-screen flex flex-col transition-colors">
+    <div className="w-64 h-screen sticky top-0 shrink-0 overflow-hidden bg-white dark:bg-[#292B2F] border-r border-gray-200 dark:border-gray-700 flex flex-col transition-colors">
       {/* Logo */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="font-bold text-lg text-gray-900 dark:text-white">Resource Planning</div>
@@ -72,7 +72,14 @@ export default function Sidebar() {
 
       {/* Logout */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#29385B] w-full transition-colors">
+        <button
+          onClick={() => {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            window.location.href = '/login';
+          }}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#29385B] w-full transition-colors"
+        >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>

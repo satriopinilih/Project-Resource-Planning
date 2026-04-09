@@ -55,6 +55,37 @@ type BackendContractExtension = {
   status: 'Pending' | 'Approved' | 'Declined';
 };
 
+export type BackendProject = {
+  projectId: number;
+  projectName: string;
+  clientOrganization: string;
+  projectDescription: string;
+  estimatedDuration: number;
+  priorityLevel: number;
+  estimatedStartDate: string;
+  estimatedEndDate: string;
+  projectStatus: number; // 0=Pending,1=Running,2=Completed
+  members: { userId: string; userName: string; role: string; staffRole: string }[];
+};
+
+export type BackendEmployee = {
+  userId: string;
+  userName: string;
+  email: string;
+  role: string;
+  departmentId: number;
+  departmentName: string;
+  employeeType: number; // 0=Contract,1=Permanent
+  experienceLevel: string;
+  contractStart: string;
+  contractEnd: string;
+  contractStatus: number; // 0=Active,1=Expired,2=ExpiringSoon
+  daysRemaining: number;
+  skills: string[];
+  roles: string[];
+  projects: BackendUserProject[];
+};
+
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -159,6 +190,33 @@ export async function declineContractExtension(contractExtensionRequestID: numbe
   await fetchJson('/api/contractextensions/decline', {
     method: 'POST',
     body: JSON.stringify({ contractExtensionRequestID, declineReason })
+  });
+}
+
+export async function getProjects(): Promise<BackendProject[]> {
+  return fetchJson<BackendProject[]>('/api/projects');
+}
+
+export async function getPendingProjects(): Promise<BackendProject[]> {
+  return fetchJson<BackendProject[]>('/api/projects?status=Pending');
+}
+
+export async function getProjectById(id: string): Promise<BackendProject> {
+  return fetchJson<BackendProject>(`/api/projects/${id}`);
+}
+
+export async function getRawEmployees(): Promise<BackendEmployee[]> {
+  return fetchJson<BackendEmployee[]>('/api/employees');
+}
+
+export async function createContractExtension(
+  userId: string,
+  extensionDuration: number,
+  reasonForExtension: string
+): Promise<void> {
+  await fetchJson('/api/contractextensions', {
+    method: 'POST',
+    body: JSON.stringify({ userId, extensionDuration, reasonForExtension })
   });
 }
 

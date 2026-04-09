@@ -1,10 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Header() {
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const [userName, setUserName] = useState('User');
+  const [roleLabel, setRoleLabel] = useState('Staff');
+
+  useEffect(() => {
+    const raw = localStorage.getItem('auth_user');
+    if (!raw) return;
+
+    try {
+      const user = JSON.parse(raw) as { userName?: string; roles?: string[] };
+      const roles = user.roles ?? [];
+      const primaryRole = roles.includes('GM')
+        ? 'GM'
+        : roles.includes('HR')
+        ? 'HR'
+        : roles.includes('PM')
+        ? 'PM'
+        : roles.includes('Marketing')
+        ? 'Marketing'
+        : roles.includes('Staff')
+        ? 'Staff'
+        : 'Staff';
+
+      setUserName(user.userName || 'User');
+      setRoleLabel(primaryRole);
+    } catch {
+      setUserName('User');
+      setRoleLabel('Staff');
+    }
+  }, []);
 
   return (
     <header className="bg-white dark:bg-[#292B2F] border-b border-gray-200 dark:border-gray-700 px-8 py-4 transition-colors">
@@ -30,8 +59,8 @@ export default function Header() {
         {/* User Info */}
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-sm font-medium text-gray-900 dark:text-white">HR Manager</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">HR</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{userName}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{roleLabel}</div>
           </div>
           
           {/* User Avatar */}
@@ -43,7 +72,7 @@ export default function Header() {
 
           {/* Role Badge */}
           <div className="px-3 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded-full border border-red-200 dark:border-red-800">
-            HR
+            {roleLabel}
           </div>
 
           {/* Notification Badge */}

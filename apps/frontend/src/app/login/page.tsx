@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/api";
+import { getDashboardPathByRoles } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,7 +30,30 @@ export default function LoginPage() {
         email: result.email,
         roles: result.roles
       }));
-      router.push("/dashboard");
+      router.push(getDashboardPathByRoles(result.roles));
+    } catch {
+      setError("Invalid User ID or Password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleQuickLogin = async (identifier: string) => {
+    setUserId(identifier);
+    setPassword("password123");
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await login(identifier, "password123");
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("auth_user", JSON.stringify({
+        userId: result.userId,
+        userName: result.userName,
+        email: result.email,
+        roles: result.roles
+      }));
+      router.push(getDashboardPathByRoles(result.roles));
     } catch {
       setError("Invalid User ID or Password");
     } finally {
@@ -129,6 +153,47 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        <div className="w-full mt-7">
+          <h3 className="text-center text-sm font-medium text-gray-700 mb-3">Quick Login (Demo)</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("GM001")}
+              className="h-11 rounded-xl bg-[#e7dbff] text-[#6a00ff] font-semibold hover:opacity-90"
+            >
+              GM
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("PM001")}
+              className="h-11 rounded-xl bg-[#d7f2de] text-[#0c8f45] font-semibold hover:opacity-90"
+            >
+              PM
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("MKT001")}
+              className="h-11 rounded-xl bg-[#dce8f8] text-[#1950d6] font-semibold hover:opacity-90"
+            >
+              Marketing
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("EMP001")}
+              className="h-11 rounded-xl bg-[#f6e7cf] text-[#d14f00] font-semibold hover:opacity-90"
+            >
+              Staff
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("HR123")}
+              className="h-11 rounded-xl bg-[#f1dff0] text-[#b02086] font-semibold hover:opacity-90 col-span-2"
+            >
+              HR
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
