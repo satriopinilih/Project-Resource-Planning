@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Bell, Sun, Moon, User } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
+import { getContractExtensionRequests } from "@/lib/api";
+import { ContractExtensionRequest } from "@/lib/types";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
 
@@ -40,6 +42,17 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [userName, setUserName] = useState("User");
   const [userRole, setUserRole] = useState<string>(role ?? "Staff");
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState<ContractExtensionRequest[]>([]);
+
+  const loadNotifications = async () => {
+    try {
+      const pending = await getContractExtensionRequests("Pending");
+      setNotifications(pending);
+    } catch {
+      setNotifications([]);
+    }
+  };
 
   useEffect(() => {
     const auth = getSessionUser();
@@ -55,6 +68,20 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     }
   }, [role]);
 
+  useEffect(() => {
+    if (userRole !== "HR") {
+      setNotifications([]);
+      return;
+    }
+
+    loadNotifications();
+    const timer = setInterval(loadNotifications, 15000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [userRole]);
+
   const badgeClass = roleBadgeClass[userRole] ?? roleBadgeClass["Staff"];
   const avatarClass = avatarBgClass[userRole] ?? avatarBgClass["Staff"];
 
@@ -67,11 +94,47 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
       {/* Right section */}
       <div className="flex items-center gap-6">
-        {/* Notification bell */}
-        <button className="relative p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer">
-          <Bell size={22} strokeWidth={1.8} />
-          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => {
+              if (!isNotificationOpen && userRole === "HR") {
+                loadNotifications();
+              }
+              setIsNotificationOpen((prev) => !prev);
+            }}
+            className="relative p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
+          >
+            <Bell size={22} strokeWidth={1.8} />
+            {userRole === "HR" && notifications.length > 0 && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
+            )}
+          </button>
+
+          {isNotificationOpen && (
+            <div className="absolute right-0 mt-3 w-[340px] rounded-xl border border-[#30374a] bg-[#1b1f2a] shadow-[0_20px_40px_rgba(0,0,0,0.35)] overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-[#30374a]">
+                <h3 className="text-[23px] font-semibold text-white">Notifications</h3>
+              </div>
+
+              {userRole === "HR" && notifications.length > 0 ? (
+                <div className="max-h-72 overflow-y-auto">
+                  {notifications.slice(0, 6).map((item) => (
+                    <div key={item.id} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
+                      <p className="text-[13px] text-[#d9e0f2] leading-5">
+                        Contract extension request for <span className="font-semibold">{item.employeeName}</span>
+                      </p>
+                      <p className="text-[12px] text-[#93a2c0] mt-1">
+                        Requested by {item.requestedByName || item.requestedBy || "GM"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-8 text-center text-[22px] text-[#9aa7c0]">No notifications</div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Theme toggle */}
         <button

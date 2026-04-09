@@ -87,7 +87,11 @@ const typeStyles: Record<string, string> = {
     "bg-[var(--dash-badge-contract-bg)] text-[var(--dash-badge-contract-text)] border border-[var(--dash-badge-contract-border)]",
 };
 
-export default function EmployeeContractTable() {
+interface EmployeeContractTableProps {
+  showExtensionAction?: boolean;
+}
+
+export default function EmployeeContractTable({ showExtensionAction = true }: EmployeeContractTableProps) {
   const [employeesData, setEmployeesData] = useState<EmployeeContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -326,7 +330,7 @@ export default function EmployeeContractTable() {
                             <Eye size={14} strokeWidth={1.8} />
                             View Detail
                           </button>
-                          {emp.status === "Expiring Soon" && (
+                          {showExtensionAction && emp.status === "Expiring Soon" && (
                             <button
                               onClick={() => {
                                 setExtensionModal(emp);
@@ -459,7 +463,7 @@ export default function EmployeeContractTable() {
       )}
 
       {/* Request Extension Modal */}
-      {extensionModal && (
+      {showExtensionAction && extensionModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={() => setExtensionModal(null)}

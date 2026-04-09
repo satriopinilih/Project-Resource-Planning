@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import PMSidebar from "@/app/pm/components/PMSidebar";
 import PMHeader from "@/app/pm/components/PMHeader";
 import StatusBadge from "@/components/StatusBadge";
-import { getEmployees, seedBackendData } from "@/lib/api";
+import { getEmployees } from "@/lib/api";
 import { Employee } from "@/lib/types";
 
 export default function TeamMembersPage() {
@@ -17,7 +17,6 @@ export default function TeamMembersPage() {
     (async () => {
       try {
         setError(null);
-        await seedBackendData();
         const data = await getEmployees();
         setEmployees(data);
         if (data.length > 0) {
@@ -112,11 +111,11 @@ export default function TeamMembersPage() {
                           )}
                           <div className="mt-2">
                             <StatusBadge
-                              status={employee.contractStatus}
+                              status={(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? "Expiring Soon" : "Active"}
                               size="sm"
                             />
                           </div>
-                          {employee.contractStatus === "Expiring Soon" && (
+                          {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && (
                             <div className="flex items-center gap-1 mt-2 text-xs text-yellow-600 dark:text-yellow-500">
                               <svg
                                 className="w-3 h-3"
@@ -202,7 +201,7 @@ export default function TeamMembersPage() {
                         Contract Information
                       </h3>
                       <StatusBadge
-                        status={selectedEmployee.contractStatus}
+                        status={(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? "Expiring Soon" : "Active"}
                         size="sm"
                       />
                     </div>
@@ -272,7 +271,7 @@ export default function TeamMembersPage() {
                       </div>
                     </div>
 
-                    {selectedEmployee.contractStatus === "Expiring Soon" && (
+                    {(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && (
                       <div className="mt-4 text-xs text-gray-600 dark:text-gray-400 italic">
                         Only GM can request contract extensions
                       </div>
