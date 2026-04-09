@@ -22,7 +22,7 @@ interface Employee {
   id: string;
   name: string;
   role: string;
-  allocations: EmployeeAllocation[];
+  tracks: EmployeeAllocation[][];
 }
 
 const COLORS: Array<"green" | "blue"> = ["blue", "green"];
@@ -38,21 +38,26 @@ function buildEmployees(
   apiProjects: BackendProject[],
   apiEmployees: BackendEmployee[]
 ): Employee[] {
-  // Build project date lookup
   const projectMap = new Map<number, { name: string; start: Date; end: Date }>();
-  apiProjects.forEach((p) => {
-    projectMap.set(p.projectId, {
-      name: p.projectName,
-      start: new Date(p.estimatedStartDate),
-      end: new Date(p.estimatedEndDate),
-    });
+
+  // Pastikan apiProjects adalah array sebelum di-loop
+  (apiProjects || []).forEach((p) => {
+    if (p && p.projectId) {
+      projectMap.set(p.projectId, {
+        name: p.projectName,
+        start: new Date(p.estimatedStartDate),
+        end: new Date(p.estimatedEndDate),
+      });
+    }
   });
 
-  return apiEmployees
-    .filter((e) => !SYSTEM_USER_IDS.includes(e.userId))
+  return (apiEmployees || [])
+    .filter((e) => e && !SYSTEM_USER_IDS.includes(e.userId))
     .map((emp) => {
-      const allocations: EmployeeAllocation[] = emp.projects
+      // 1. Ambil dan bersihkan data alokasi (tambahkan fallback || [] jika emp.projects undefined)
+      const allocations: EmployeeAllocation[] = (emp.projects || [])
         .map((p, idx) => {
+          if (!p) return null;
           const proj = projectMap.get(p.projectId);
           if (!proj) return null;
           return {
@@ -65,7 +70,37 @@ function buildEmployees(
         })
         .filter((a): a is EmployeeAllocation => a !== null);
 
-      return { id: emp.userId, name: emp.userName, role: emp.role, allocations };
+      // Urutkan berdasarkan bulan mulai
+      allocations.sort((a, b) => a.startMonth - b.startMonth);
+
+      // 2. Logika Track Allocator: Memisahkan proyek yang tumpang tindih ke baris baru
+      const tracks: EmployeeAllocation[][] = [];
+      allocations.forEach((alloc) => {
+        let placed = false;
+        for (const track of tracks) {
+          // Cek apakah proyek ini bertabrakan dengan proyek lain di track ini
+          const overlaps = track.some(
+            (a) =>
+              Math.max(alloc.startMonth, a.startMonth) <=
+              Math.min(alloc.endMonth, a.endMonth)
+          );
+          if (!overlaps) {
+            track.push(alloc);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) {
+          tracks.push([alloc]); // Jika bertabrakan semua, buat track (baris) baru
+        }
+      });
+
+      return {
+        id: emp.userId,
+        name: emp.userName || "Unknown",
+        role: emp.role || "-",
+        tracks
+      };
     });
 }
 
@@ -114,26 +149,30 @@ export default function ResourcePipeline() {
       {!loading && !error && (
         <div className="overflow-x-auto">
           <div className="min-w-[700px]">
-            {/* Month headers */}
-            <div className="grid grid-cols-[180px_repeat(12,1fr)] gap-0 mb-3">
-              <div />
-              {months.map((month) => (
-                <div
-                  key={month}
-                  className="text-center text-[11px] text-[var(--dash-text-muted)] font-medium pb-3"
-                >
-                  {month}
-                </div>
-              ))}
+
+            {/* Header Bulan */}
+            <div className="flex mb-3">
+              <div className="w-[180px] shrink-0" />
+              <div className="flex-1 grid grid-cols-12">
+                {months.map((month) => (
+                  <div
+                    key={month}
+                    className="text-center text-[11px] text-[var(--dash-text-muted)] font-medium pb-3"
+                  >
+                    {month}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Employee rows */}
+            {/* List Karyawan */}
             {employees.map((employee) => (
               <div
                 key={employee.id}
-                className="grid grid-cols-[180px_repeat(12,1fr)] gap-0 items-center py-2 group"
+                className="flex items-center py-3 border-t border-[var(--dash-border-subtle)] group hover:bg-[#1a1f2e]/30 transition-colors"
               >
-                <div className="pr-4">
+                {/* Info Karyawan */}
+                <div className="w-[180px] shrink-0 pr-4">
                   <p className="text-[13px] font-semibold text-[var(--dash-text-heading)] leading-tight">
                     {employee.name}
                   </p>
@@ -142,55 +181,56 @@ export default function ResourcePipeline() {
                   </p>
                 </div>
 
-                {months.map((_, monthIdx) => {
-                  const startingAllocation = employee.allocations.find(
-                    (a) => a.startMonth === monthIdx
-                  );
-                  const isInAllocation = employee.allocations.some(
-                    (a) => monthIdx > a.startMonth && monthIdx <= a.endMonth
-                  );
+                {/* Container Timeline Bar */}
+                <div className="flex-1 relative min-h-[32px] flex flex-col justify-center gap-2 py-1">
 
-                  if (startingAllocation) {
-                    const spanCols = Math.max(
-                      1,
-                      startingAllocation.endMonth - startingAllocation.startMonth + 1
-                    );
-                    return (
+                  {/* Garis Vertikal Background */}
+                  <div className="absolute inset-0 grid grid-cols-12 pointer-events-none">
+                    {months.map((_, i) => (
                       <div
-                        key={monthIdx}
-                        className="relative px-0.5"
-                        style={{ gridColumn: `span ${spanCols}` }}
-                      >
-                        <Link
-                          href={`/project/${startingAllocation.projectId}`}
-                          className={`
-                            block w-full py-1.5 px-2 rounded text-[10px] font-semibold text-white
-                            truncate transition-all duration-200 cursor-pointer border
-                            ${allocationColors[startingAllocation.color]}
-                          `}
-                        >
-                          {startingAllocation.projectName}
-                        </Link>
-                      </div>
-                    );
-                  }
+                        key={i}
+                        className="border-l border-[var(--dash-border-subtle)] h-full"
+                      />
+                    ))}
+                  </div>
 
-                  if (isInAllocation) return null;
+                  {/* Render Tracks (Proyek) - Menggunakan fallback (employee.tracks || []) */}
+                  {(employee.tracks || []).map((track, tIdx) => (
+                    <div key={tIdx} className="relative h-[28px] w-full">
+                      {(track || []).map((alloc, aIdx) => {
+                        const startPercent = (alloc.startMonth / 12) * 100;
+                        const widthPercent = ((alloc.endMonth - alloc.startMonth + 1) / 12) * 100;
 
-                  const isEmpty = employee.allocations.length === 0;
-                  return (
-                    <div
-                      key={monthIdx}
-                      className="h-8 border-l border-[var(--dash-border-subtle)] flex items-center justify-center"
-                    >
-                      {isEmpty && monthIdx === 5 && (
-                        <span className="text-[11px] text-[var(--dash-text-faint)] italic">
-                          Available
-                        </span>
-                      )}
+                        return (
+                          <Link
+                            key={aIdx}
+                            href={`/project/${alloc.projectId}`}
+                            style={{
+                              left: `calc(${startPercent}% + 4px)`,
+                              width: `calc(${widthPercent}% - 8px)`,
+                            }}
+                            className={`
+                              absolute top-0 h-full px-3 rounded-md text-[11px] font-semibold text-white
+                              truncate flex items-center transition-all duration-200 cursor-pointer border shadow-sm
+                              ${allocationColors[alloc.color]}
+                            `}
+                          >
+                            {alloc.projectName}
+                          </Link>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  ))}
+
+                  {/* Jika Karyawan Kosong (Available) */}
+                  {(!employee.tracks || employee.tracks.length === 0) && (
+                    <div className="relative h-[28px] w-full flex items-center">
+                      <span className="absolute left-[45%] text-[11px] text-[var(--dash-text-faint)] italic">
+                        Available
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
 

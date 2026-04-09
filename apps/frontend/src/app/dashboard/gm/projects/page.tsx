@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
 import { getProjects } from "../../../../lib/api";
@@ -17,12 +17,29 @@ interface Project {
   budget: string;
 }
 
-const mapStatus = (backendStatus: number): Project["status"] => {
+const mapStatus = (backendStatus: number, startDateStr?: string): Project["status"] => {
   switch (backendStatus) {
-    case 0: return "Upcoming";
-    case 1: return "Active";
-    case 2: return "Completed";
-    default: return "On Hold";
+    case 0: // Pending
+      return "On Hold";
+    case 1: // Scheduled
+      return "Upcoming";
+    case 2: // Running
+      // Cek ulang menggunakan tanggal untuk jaga-jaga
+      if (startDateStr) {
+        const startDate = new Date(startDateStr);
+        const today = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        
+        if (startDate > today) {
+          return "Upcoming";
+        }
+      }
+      return "Active";
+    case 3: // Completed
+      return "Completed";
+    default:
+      return "On Hold";
   }
 };
 
@@ -37,16 +54,26 @@ const tabs = ["All", "Active", "Upcoming", "Completed", "On Hold"];
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("All");
+  const searchParams = useSearchParams();
+  const tabQuery = searchParams.get("tab");
+  
+  const [activeTab, setActiveTab] = useState(tabs.includes(tabQuery || "") ? tabQuery! : "All");
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+
+  // Jika URL berubah, update tab-nya secara dinamis
+  useEffect(() => {
+    if (tabQuery && tabs.includes(tabQuery)) {
+      setActiveTab(tabQuery);
+    }
+  }, [tabQuery]);
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const data = await getProjects();
-        const mappedData: Project[] = data.map((p) => {
+          const mappedData: Project[] = data.map((p) => {
           const pmMember = p.members?.find((m) => 
             m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase().includes("lead")
           );
@@ -54,7 +81,7 @@ export default function ProjectsPage() {
             id: `proj${String(p.projectId).padStart(3, "0")}`,
             name: p.projectName,
             client: p.clientOrganization || "Internal",
-            status: mapStatus(p.projectStatus),
+            status: mapStatus(p.projectStatus, p.estimatedStartDate),
             timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
             pm: pmMember ? pmMember.userName : "TBD",
             team: p.members?.length || 0,
