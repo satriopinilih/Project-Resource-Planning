@@ -162,7 +162,7 @@ export default function ResourcePipeline() {
                         style={{ gridColumn: `span ${spanCols}` }}
                       >
                         <Link
-                          href={`/dashboard/gm/projects/${startingAllocation.projectId}`}
+                          href={`/project/${startingAllocation.projectId}`}
                           className={`
                             block w-full py-1.5 px-2 rounded text-[10px] font-semibold text-white
                             truncate transition-all duration-200 cursor-pointer border

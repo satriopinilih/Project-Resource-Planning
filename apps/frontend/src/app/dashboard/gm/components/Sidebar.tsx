@@ -13,22 +13,22 @@ import {
 const navItems = [
   {
     label: "Dashboard",
-    href: "/dashboard/gm",
+    href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    label: "Projects",
-    href: "/dashboard/gm/projects",
+    label: "Project",
+    href: "/project",
     icon: FolderKanban,
   },
   {
-    label: "Team Members",
-    href: "/dashboard/gm/team",
+    label: "Team-member",
+    href: "/team-member",
     icon: Users,
   },
   {
     label: "Settings",
-    href: "/dashboard/gm/settings",
+    href: "/settings",
     icon: Settings,
   },
 ];
@@ -56,7 +56,7 @@ export default function Sidebar() {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/dashboard/gm" &&
+            (item.href !== "/dashboard" &&
               pathname.startsWith(item.href));
 
           return (
