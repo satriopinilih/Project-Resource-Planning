@@ -22,24 +22,22 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col font-[var(--font-inter)]">
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const savedTheme = localStorage.getItem('theme');
-                if (savedTheme) {
-                  if (savedTheme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                  }
-                } else {
-                  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.documentElement.classList.add('dark');
-                  }
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`
+            try {
+              const savedTheme = localStorage.getItem('theme');
+              if (savedTheme) {
+                if (savedTheme === 'dark') {
+                  document.documentElement.classList.add('dark');
                 }
-              } catch (e) {}
-            `,
-          }}
-        />
+              } else {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                  document.documentElement.classList.add('dark');
+                }
+              }
+            } catch (e) {}
+          `}
+        </Script>
         <ThemeProvider>
           {children}
         </ThemeProvider>

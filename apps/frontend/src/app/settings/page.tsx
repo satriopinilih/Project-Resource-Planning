@@ -1,19 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
+import GmSidebar from '@/app/dashboard/gm/components/Sidebar';
+import GmHeader from '@/app/dashboard/gm/components/Header';
 import { useTheme } from '@/contexts/ThemeContext';
+import { getPrimaryRole, getSessionUser } from '@/lib/auth';
 
 export default function SettingsPage() {
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const [role, setRole] = useState<'GM' | 'HR' | 'PM' | 'Marketing' | 'Staff' | null>(null);
+
+  useEffect(() => {
+    const user = getSessionUser();
+    setRole(getPrimaryRole(user?.roles ?? []));
+  }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#E9EEF6] dark:bg-[#202020] transition-colors">
-      <Sidebar />
+    <div className={role === 'GM' ? 'flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300' : 'flex min-h-screen bg-[#E9EEF6] dark:bg-[#202020] transition-colors'}>
+      {role === 'GM' ? <GmSidebar /> : <Sidebar />}
       
-      <div className="flex-1 flex flex-col">
-        <Header />
+      <div className={role === 'GM' ? 'flex-1 ml-[290px] flex flex-col min-h-screen' : 'flex-1 flex flex-col'}>
+        {role === 'GM' ? <GmHeader title="Settings" /> : <Header />}
         
         <main className="flex-1 p-8">
           {/* Page Header */}
