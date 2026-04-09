@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const MONTHS = [
   "Jan",
@@ -19,6 +20,7 @@ const MONTHS = [
 ];
 
 export default function PMTimelineView() {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"Projects" | "Resources">(
     "Projects",
   );
@@ -45,21 +47,26 @@ export default function PMTimelineView() {
       (a, b) =>
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     );
+
     const levels: any[][] = [];
+
     sorted.forEach((bar) => {
       let assignedLevel = 0;
       const barStart = new Date(bar.startDate).getTime();
+
       for (let i = 0; i < levels.length; i++) {
         const lastBarInLevel = levels[i][levels[i].length - 1];
-        if (barStart > new Date(lastBarInLevel.endDate).getTime()) {
+        if (barStart >= new Date(lastBarInLevel.endDate).getTime()) {
           assignedLevel = i;
           break;
         }
         assignedLevel = i + 1;
       }
+
       if (!levels[assignedLevel]) levels[assignedLevel] = [];
       levels[assignedLevel].push({ ...bar, level: assignedLevel });
     });
+
     return { flatBars: levels.flat(), totalLevels: levels.length };
   };
 
@@ -110,9 +117,14 @@ export default function PMTimelineView() {
         timelineData.flatMap((item) => item.bars.map((bar: any) => bar.title)),
       ),
     );
+
+    const total = uniqueNames.length;
     uniqueNames.forEach((name, index) => {
-      const colors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"];
-      palette[name] = colors[index % colors.length];
+      const hueBase = 230;
+      const hueRange = 100;
+      const hue = total > 1 ? hueBase - index * (hueRange / (total - 1)) : 230;
+      const lightness = index % 2 === 0 ? "50%" : "40%";
+      palette[name] = `hsl(${hue}, 75%, ${lightness})`;
     });
     return palette;
   }, [timelineData]);
@@ -152,8 +164,7 @@ export default function PMTimelineView() {
 
       <div className="flex-1 overflow-auto border-t border-gray-100 dark:border-gray-700/50">
         <div className="min-w-[1200px] relative">
-          {/* Header Bulan (Sticky di atas area scroll) */}
-          <div className="sticky top-0 z-30 grid grid-cols-[260px_1fr] bg-white dark:bg-[#2A2B2E] border-b border-gray-100 dark:border-gray-700">
+          <div className="sticky top-0 z-30 grid grid-cols-[260px_1fr] bg-white dark:bg-[var(--dash-bg-card)] border-b border-gray-100 dark:border-gray-700">
             <div className="p-4 text-[10px] uppercase font-bold text-gray-400 border-r border-gray-100 dark:border-gray-700/50">
               {viewMode === "Projects" ? "Project / Client" : "Staff / Role"}
             </div>
@@ -164,11 +175,9 @@ export default function PMTimelineView() {
             </div>
           </div>
 
-          {/* Konten Timeline */}
           <div className="relative">
-            {/* Grid Lines (Background) */}
             <div className="absolute inset-0 grid grid-cols-[260px_1fr] pointer-events-none z-0">
-              <div className="border-r border-gray-100 dark:border-gray-700/30" />
+              <div className="border-r border-[var(--dash-border-subtle)]" />
               <div className="grid grid-cols-12">
                 {MONTHS.map((_, i) => (
                   <div key={i} className="border-r border-gray-100 dark:border-gray-700/20" />
@@ -176,12 +185,10 @@ export default function PMTimelineView() {
               </div>
             </div>
 
-            {/* Baris Data */}
             <div className="relative z-10">
               {timelineData.map((item, idx) => {
                 const { flatBars, totalLevels } = organizeBars(item.bars);
-                const dynamicRowHeight =
-                  totalLevels > 0 ? totalLevels * 42 + 20 : 64;
+                const dynamicRowHeight = totalLevels > 0 ? totalLevels * 42 + 20 : 64;
                 return (
                   <div
                     key={idx}
@@ -199,25 +206,29 @@ export default function PMTimelineView() {
                       <div className={`text-[13px] font-semibold truncate ${viewMode === "Projects" ? "group-hover:text-[#2B7FFC]" : ""}`}>
                         {item.label}
                       </div>
-                      <div className="text-[10px] text-gray-400 mt-0.5 truncate">
+                      <div className="text-[10px] text-[var(--dash-text-muted)] mt-0.5 truncate">
                         {item.subLabel}
                       </div>
                     </div>
 
-                    {/* Bars Area */}
                     <div className="relative py-4">
                       {flatBars.map((bar: any, bIdx: number) => {
-                        const start = getYearPercentage(
-                          bar.startDate,
-                          currentYear,
-                        );
+                        const start = getYearPercentage(bar.startDate, currentYear);
                         const end = getYearPercentage(bar.endDate, currentYear);
                         if (start >= 100 || end <= 0) return null;
                         const barColor = projectPalette[bar.title] || "#3B82F6";
+
                         return (
                           <div
                             key={bIdx}
-                            className="absolute h-8 rounded-md flex items-center px-3 text-[10px] font-bold text-white shadow-sm transition-all hover:scale-[1.02] hover:z-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const projId = viewMode === "Projects" ? item.id : bar.projectId;
+                              if (projId) {
+                                router.push(`/pm/projects/proj${String(projId).padStart(3, "0")}`);
+                              }
+                            }}
+                            className="absolute h-8 rounded-md flex items-center px-3 text-[10px] font-bold text-white shadow-sm transition-all hover:scale-[1.02] hover:z-50 cursor-pointer"
                             style={{
                               left: `${start}%`,
                               width: `${Math.max(1, end - start)}%`,

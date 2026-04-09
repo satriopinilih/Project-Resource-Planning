@@ -1,0 +1,38 @@
+@keyframes premiumFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.premiumCard {
+  background: linear-gradient(-45deg, #1e3a8a, #1e40af, #2563eb, #1e3a8a);
+  background-size: 300% 300%;
+  animation: premiumFlow 8s ease infinite;
+  border: none !important;
+}
+
+:global(.light) .premiumCard {
+  background: linear-gradient(-45deg, #10b981, #059669, #34d399, #10b981);
+  background-size: 300% 300%;
+  animation: premiumFlow 8s ease infinite;
+}
+
+.premiumText {
+  color: white !important;
+}
+
+.premiumTitle {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.premiumIconBg {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  backdrop-filter: blur(4px);
+}

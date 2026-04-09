@@ -78,27 +78,22 @@ public class PMProjectController : ControllerBase
 
         var total = projects.Count;
 
-        // 1. SCHEDULED: Belum mulai DAN status bukan Completed
+        // Statistics derived directly from database ProjectStatus enum
+        var onHold = projects.Count(p => 
+            p.ProjectStatus == ProjectStatus.Pending);
+
         var scheduled = projects.Count(p => 
-            today < p.EstimatedStartDate && 
-            p.ProjectStatus != ProjectStatus.Completed);
+            p.ProjectStatus == ProjectStatus.Scheduled);
 
-        // 2. RUNNING: Di dalam range tanggal DAN status bukan Completed
-        var running = projects.Count(p => {
-            var endDate = CalculateEndDateFromWeeks(p.EstimatedStartDate, p.EstimatedDuration);
-            return today >= p.EstimatedStartDate && 
-                today <= endDate && 
-                p.ProjectStatus != ProjectStatus.Completed;
-        });
+        var running = projects.Count(p => 
+            p.ProjectStatus == ProjectStatus.Running);
 
-        // 3. COMPLETED: Sudah lewat tanggal selesai ATAU status sudah Completed
-        var completed = projects.Count(p => {
-            var endDate = CalculateEndDateFromWeeks(p.EstimatedStartDate, p.EstimatedDuration);
-            return today > endDate || p.ProjectStatus == ProjectStatus.Completed;
-        });
+        var completed = projects.Count(p => 
+            p.ProjectStatus == ProjectStatus.Completed);
 
         return Ok(new {
             total,
+            onHold,
             scheduled,
             running,
             completed
