@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Entities.Entities;
 using Commons.Enums;
 
@@ -23,7 +23,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<UserProject> UserProjects { get; set; }
     public DbSet<ProjectRequiredRole> ProjectRequiredRoles { get; set; }
     public DbSet<ContractExtension> ContractExtensions { get; set; }
-
+    public DbSet<Holiday> Holidays { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -110,6 +110,15 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<ContractExtension>()
             .Property(ce => ce.Status)
             .HasDefaultValue("Pending");
+
+        modelBuilder.Entity<Holiday>().HasData(
+            new Holiday { Id = 1, Name = "New Year's Day", Date = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },
+            new Holiday { Id = 2, Name = "Good Friday", Date = DateTime.SpecifyKind(new DateTime(2026, 4, 3), DateTimeKind.Utc) },
+            new Holiday { Id = 3, Name = "Easter Sunday", Date = DateTime.SpecifyKind(new DateTime(2026, 4, 5), DateTimeKind.Utc) },
+            new Holiday { Id = 4, Name = "Labour Day", Date = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc) },
+            new Holiday { Id = 5, Name = "Independence Day", Date = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc) },
+            new Holiday { Id = 6, Name = "Christmas Day", Date = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc) }
+        );
     }
 
     // Optional: Override SaveChanges to automatically set audit fields

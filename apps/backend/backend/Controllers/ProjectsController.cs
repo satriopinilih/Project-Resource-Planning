@@ -89,4 +89,105 @@ public class ProjectsController : ControllerBase
             }).ToList()
         };
     }
+    [HttpPost]
+    public async Task<IActionResult> CreateProject([FromBody] CreateProjectRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // Map DTO to Entity
+        var project = new Entities.Entities.Project
+        {
+            ProjectName = request.ProjectName,
+            ClientOrganization = request.ClientOrganization,
+            ProjectDescription = request.ProjectDescription,
+            EstimatedDuration = request.EstimatedDuration,
+            PriorityLevel = request.PriorityLevel,
+            EstimatedStartDate = request.EstimatedStartDate,
+            
+            // Set default status for new projects
+            ProjectStatus = ProjectStatus.Pending, 
+
+            // Handle Audit Fields
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedBy = "SystemUser", // Replace with User.Identity.Name if using Auth
+            UpdatedBy = "SystemUser"
+        };
+
+        try 
+        {
+            _db.Projects.Add(project);
+            await _db.SaveChangesAsync();
+
+            // Return 201 Created with the location of the new resource
+            return CreatedAtAction(nameof(GetById), new { id = project.ProjectID }, project);
+        }
+        catch (Exception ex)
+        {
+            // Log exception here
+            return StatusCode(500, "An error occurred while creating the project.");
+        }
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var project = await _db.Projects.FindAsync(id);
+        if (project == null)
+        {
+            return NotFound(ApiResponse<ProjectDto>.ErrorResponse("Project not found"));
+        }
+
+        project.ProjectName = request.ProjectName;
+        project.ClientOrganization = request.ClientOrganization;
+        project.ProjectDescription = request.ProjectDescription;
+        project.EstimatedDuration = request.EstimatedDuration;
+        project.PriorityLevel = request.PriorityLevel;
+        project.EstimatedStartDate = request.EstimatedStartDate;
+        project.ProjectStatus = request.ProjectStatus;
+
+        project.UpdatedAt = DateTime.UtcNow;
+        project.UpdatedBy = "SystemUser"; // Replace with User.Identity.Name if using Auth
+
+        try
+        {
+            await _db.SaveChangesAsync();
+            return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(project)));
+        }
+        catch (Exception ex)
+        {
+            // Log exception here
+            return StatusCode(500, "An error occurred while updating the project.");
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteProject(int id)
+    {
+        var project = await _db.Projects.FindAsync(id);
+        if (project == null)
+        {
+            return NotFound(ApiResponse<ProjectDto>.ErrorResponse("Project not found"));
+        }
+
+        try
+        {
+            _db.Projects.Remove(project);
+            await _db.SaveChangesAsync();
+            return Ok(ApiResponse<string>.SuccessResponse("Project deleted successfully"));
+        }
+        catch (Exception ex)
+        {
+            // Log exception here
+            return StatusCode(500, "An error occurred while deleting the project.");
+        }
+    }
 }
