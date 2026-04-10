@@ -28,9 +28,14 @@ export default function LoginPage() {
         userId: result.userId,
         userName: result.userName,
         email: result.email,
-        roles: result.roles
+        roles: result.roles,
+        mustChangePassword: result.mustChangePassword
       }));
-      router.push(getDashboardPathByRoles(result.roles));
+      if (result.mustChangePassword) {
+        router.push('/settings?forcePasswordChange=1');
+      } else {
+        router.push(getDashboardPathByRoles(result.roles));
+      }
     } catch {
       setError("Invalid User ID or Password");
     } finally {
@@ -51,9 +56,14 @@ export default function LoginPage() {
         userId: result.userId,
         userName: result.userName,
         email: result.email,
-        roles: result.roles
+        roles: result.roles,
+        mustChangePassword: result.mustChangePassword
       }));
-      router.push(getDashboardPathByRoles(result.roles));
+      if (result.mustChangePassword) {
+        router.push('/settings?forcePasswordChange=1');
+      } else {
+        router.push(getDashboardPathByRoles(result.roles));
+      }
     } catch {
       setError("Invalid User ID or Password");
     } finally {

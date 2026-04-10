@@ -3,6 +3,7 @@ export type SessionUser = {
   userName: string;
   email: string;
   roles: string[];
+  mustChangePassword?: boolean;
 };
 
 export function getSessionUser(): SessionUser | null {
@@ -21,7 +22,7 @@ export function getDashboardPathByRoles(roles: string[] = []): string {
   if (roles.includes('GM')) return '/dashboard';
   if (roles.includes('HR')) return '/dashboard';
   if (roles.includes('PM')) return '/pm/dashboard';
-  if (roles.includes('Marketing')) return '/dashboard';
+  if (roles.includes('Marketing')) return '/mrkt/dashboard';
   if (roles.includes('Staff')) return '/dashboard';
   return '/login';
 }

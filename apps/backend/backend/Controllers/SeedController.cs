@@ -75,7 +75,7 @@ END $$;");
             var rolePm = new Role { RoleName = RoleName.PM };
             var roleMrkt = new Role { RoleName = RoleName.Marketing };
             var roleStaff = new Role { RoleName = RoleName.Staff };
-            _db.Roles.AddRange(roleHr, roleGm, rolePm, roleStaff);
+            _db.Roles.AddRange(roleHr, roleGm, rolePm, roleMrkt, roleStaff);
 
             // Staff roles (display roles)
             var srSeniorBA = new StaffRole { RoleName = "Senior BA" };
@@ -83,7 +83,10 @@ END $$;");
             var srSeniorDev = new StaffRole { RoleName = "Senior Dev" };
             var srJuniorDev = new StaffRole { RoleName = "Junior Dev" };
             var srArchitect = new StaffRole { RoleName = "Architect" };
-            _db.StaffRoles.AddRange(srSeniorBA, srJuniorBA, srSeniorDev, srJuniorDev, srArchitect);
+            var srProjectManager = new StaffRole { RoleName = "Project Manager" };
+            var srSoftwareEngineer = new StaffRole { RoleName = "Software Engineer" };
+            var srQATester = new StaffRole { RoleName = "QA Tester" };
+            _db.StaffRoles.AddRange(srSeniorBA, srJuniorBA, srSeniorDev, srJuniorDev, srArchitect, srProjectManager, srSoftwareEngineer, srQATester);
 
             // Skills
             var skills = new[]
@@ -117,14 +120,118 @@ END $$;");
             // Projects
             var projects = new[]
             {
-                new Project { ProjectName = "Digital Transformation Initiative", ClientOrganization = "TechCorp Inc.", ProjectDescription = "Transformation", EstimatedDuration = 13, PriorityLevel = PriorityLevel.High, EstimatedStartDate = new DateTime(2026, 1, 6, 0, 0, 0, DateTimeKind.Utc), ProjectStatus = ProjectStatus.Completed, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new Project { ProjectName = "Customer Portal Development", ClientOrganization = "RetailMax Ltd.", ProjectDescription = "Portal", EstimatedDuration = 8, PriorityLevel = PriorityLevel.Medium, EstimatedStartDate = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc), ProjectStatus = ProjectStatus.Running, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new Project { ProjectName = "E-commerce Platform Rebuild", ClientOrganization = "ShopHub Co.", ProjectDescription = "Rebuild", EstimatedDuration = 21, PriorityLevel = PriorityLevel.High, EstimatedStartDate = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), ProjectStatus = ProjectStatus.Running, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new Project { ProjectName = "Cloud Migration Project", ClientOrganization = "FinanceFirst Bank", ProjectDescription = "Migration", EstimatedDuration = 26, PriorityLevel = PriorityLevel.High, EstimatedStartDate = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), ProjectStatus = ProjectStatus.Running, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new Project { ProjectName = "Analytics Dashboard", ClientOrganization = "DataInsights Corp.", ProjectDescription = "Analytics", EstimatedDuration = 15, PriorityLevel = PriorityLevel.Medium, EstimatedStartDate = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), ProjectStatus = ProjectStatus.Completed, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new Project { ProjectName = "Internal Tools Dashboard", ClientOrganization = "Internal", ProjectDescription = "Internal tools", EstimatedDuration = 14, PriorityLevel = PriorityLevel.Medium, EstimatedStartDate = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc), ProjectStatus = ProjectStatus.Running, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new Project { ProjectName = "Mobile App Launch", ClientOrganization = "TravelEase Inc.", ProjectDescription = "Mobile launch", EstimatedDuration = 14, PriorityLevel = PriorityLevel.High, EstimatedStartDate = new DateTime(2026, 2, 10, 0, 0, 0, DateTimeKind.Utc), ProjectStatus = ProjectStatus.Running, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new Project { ProjectName = "Data Analytics Platform", ClientOrganization = "FinServe Corp.", ProjectDescription = "New analytics platform", EstimatedDuration = 12, PriorityLevel = PriorityLevel.High, EstimatedStartDate = now, ProjectStatus = ProjectStatus.Pending, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
+                new Project { 
+                    ProjectName = "Digital Transformation Initiative", 
+                    ClientOrganization = "TechCorp Inc.", 
+                    ProjectDescription = "Transformation", 
+                    EstimatedDuration = 13, 
+                    PriorityLevel = PriorityLevel.High, 
+                    EstimatedStartDate = new DateTime(2026, 1, 6, 0, 0, 0, DateTimeKind.Utc), 
+                    EstimatedEndDate = new DateTime(2026, 1, 6, 0, 0, 0, DateTimeKind.Utc).AddMonths(13),
+                    ProjectStatus = ProjectStatus.Completed, 
+                    CreatedAt = now, 
+                    UpdatedAt = now, 
+                    CreatedBy = "system", 
+                    UpdatedBy = "system" 
+                },
+                new Project { 
+                    ProjectName = "Customer Portal Development", 
+                    ClientOrganization = "RetailMax Ltd.", 
+                    ProjectDescription = "Portal", 
+                    EstimatedDuration = 8, 
+                    PriorityLevel = PriorityLevel.Medium, 
+                    EstimatedStartDate = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc), 
+                    EstimatedEndDate = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(8),
+                    ProjectStatus = ProjectStatus.Running, 
+                    CreatedAt = now, 
+                    UpdatedAt = now, 
+                    CreatedBy = "system", 
+                    UpdatedBy = "system" 
+                },
+                new Project { 
+                    ProjectName = "E-commerce Platform Rebuild", 
+                    ClientOrganization = "ShopHub Co.", 
+                    ProjectDescription = "Rebuild", 
+                    EstimatedDuration = 21, 
+                    PriorityLevel = PriorityLevel.High, 
+                    EstimatedStartDate = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), 
+                    EstimatedEndDate = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(21),
+                    ProjectStatus = ProjectStatus.Running, 
+                    CreatedAt = now, 
+                    UpdatedAt = now, 
+                    CreatedBy = "system", 
+                    UpdatedBy = "system" 
+                },
+                new Project { 
+                    ProjectName = "Cloud Migration Project", 
+                    ClientOrganization = "FinanceFirst Bank", 
+                    ProjectDescription = "Migration", 
+                    EstimatedDuration = 26, 
+                    PriorityLevel = PriorityLevel.High, 
+                    EstimatedStartDate = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 
+                    EstimatedEndDate = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(26),
+                    ProjectStatus = ProjectStatus.Running, 
+                    CreatedAt = now, 
+                    UpdatedAt = now, 
+                    CreatedBy = "system", 
+                    UpdatedBy = "system" 
+                },
+                new Project { 
+                    ProjectName = "Analytics Dashboard", 
+                    ClientOrganization = "DataInsights Corp.", 
+                    ProjectDescription = "Analytics", 
+                    EstimatedDuration = 15, 
+                    PriorityLevel = PriorityLevel.Medium, 
+                    EstimatedStartDate = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), 
+                    EstimatedEndDate = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc).AddMonths(15),
+                    ProjectStatus = ProjectStatus.Completed, 
+                    CreatedAt = now, 
+                    UpdatedAt = now, 
+                    CreatedBy = "system", 
+                    UpdatedBy = "system" 
+                },
+                new Project { 
+                    ProjectName = "Internal Tools Dashboard", 
+                    ClientOrganization = "Internal", 
+                    ProjectDescription = "Internal tools", 
+                    EstimatedDuration = 14, 
+                    PriorityLevel = PriorityLevel.Medium, 
+                    EstimatedStartDate = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc), 
+                    EstimatedEndDate = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc).AddMonths(14),
+                    ProjectStatus = ProjectStatus.Running, 
+                    CreatedAt = now, 
+                    UpdatedAt = now, 
+                    CreatedBy = "system", 
+                    UpdatedBy = "system" 
+                },
+                new Project { 
+                    ProjectName = "Mobile App Launch", 
+                    ClientOrganization = "TravelEase Inc.", 
+                    ProjectDescription = "Mobile launch", 
+                    EstimatedDuration = 14, 
+                    PriorityLevel = PriorityLevel.High, 
+                    EstimatedStartDate = new DateTime(2026, 2, 10, 0, 0, 0, DateTimeKind.Utc), 
+                    EstimatedEndDate = new DateTime(2026, 2, 10, 0, 0, 0, DateTimeKind.Utc).AddMonths(14),
+                    ProjectStatus = ProjectStatus.Running, 
+                    CreatedAt = now, 
+                    UpdatedAt = now, 
+                    CreatedBy = "system", 
+                    UpdatedBy = "system" 
+                },
+                new Project { 
+                    ProjectName = "Data Analytics Platform", 
+                    ClientOrganization = "FinServe Corp.", 
+                    ProjectDescription = "New analytics platform", 
+                    EstimatedDuration = 12, 
+                    PriorityLevel = PriorityLevel.High, 
+                    EstimatedStartDate = now, 
+                    EstimatedEndDate = now.AddMonths(12),
+                    ProjectStatus = ProjectStatus.Pending, 
+                    CreatedAt = now, 
+                    UpdatedAt = now, 
+                    CreatedBy = "system", 
+                    UpdatedBy = "system" 
+                }
             };
             _db.Projects.AddRange(projects);
 
@@ -156,6 +263,7 @@ END $$;");
                 new UserRole { UserId = "HR123", RoleId = roleHr.RoleId },
                 new UserRole { UserId = "GM001", RoleId = roleGm.RoleId },
                 new UserRole { UserId = "PM001", RoleId = rolePm.RoleId },
+                new UserRole { UserId = "MKT001", RoleId = roleMrkt.RoleId },
                 new UserRole { UserId = "EMP001", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP002", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP003", RoleId = roleStaff.RoleId },

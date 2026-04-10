@@ -6,7 +6,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
 import { getContractExtensionRequests, getProjects } from "@/lib/api";
 import { ContractExtensionRequest } from "@/lib/types";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
 
@@ -46,6 +46,7 @@ interface PMNotification {
 
 export default function AppHeader({ title, role }: AppHeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [userName, setUserName] = useState("User");
   const [userRole, setUserRole] = useState<string>(role ?? "Staff");
@@ -86,6 +87,10 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   useEffect(() => {
     const auth = getSessionUser();
     if (auth) {
+      if (auth.mustChangePassword && pathname !== '/settings') {
+        router.replace('/settings?forcePasswordChange=1');
+        return;
+      }
       setUserName(auth.userName);
       if (!role) {
         // Detect role from session if not passed as prop
@@ -95,7 +100,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         setUserRole(role);
       }
     }
-  }, [role]);
+  }, [role, pathname, router]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;

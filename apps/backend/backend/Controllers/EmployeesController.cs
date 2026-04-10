@@ -4,6 +4,8 @@ using Contracts.DTOs.Common;
 using Contracts.DTOs.User;
 using Entities;
 using Entities.Entities;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -109,39 +111,98 @@ public class EmployeesController : ControllerBase
         return Ok(ApiResponse<List<UserDto>>.SuccessResponse(data));
     }
 
-    [HttpPost]
-    public async Task<ActionResult<ApiResponse<UserDto>>> Create([FromBody] CreateUserDto request)
+    [HttpGet("form-options")]
+    public async Task<ActionResult<ApiResponse<EmployeeFormOptionsDto>>> GetFormOptions()
     {
-        var exists = await _db.Users.AnyAsync(u => u.UserId == request.UserId || u.Email == request.Email);
+        var departments = await _db.Departments
+            .OrderBy(d => d.DepartmentName)
+            .Select(d => new LookupItemDto
+            {
+                Id = d.DepartementID,
+                Name = d.DepartmentName
+            })
+            .ToListAsync();
+
+        var skills = await _db.Skills
+            .OrderBy(s => s.SkillName)
+            .Select(s => new LookupItemDto
+            {
+                Id = s.SkillID,
+                Name = s.SkillName
+            })
+            .ToListAsync();
+
+        var roles = await _db.Roles
+            .OrderBy(r => r.RoleId)
+            .Select(r => new LookupItemDto
+            {
+                Id = r.RoleId,
+                Name = r.RoleName.ToString()
+            })
+            .ToListAsync();
+
+        var staffRoles = await _db.StaffRoles
+            .OrderBy(sr => sr.RoleName)
+            .Select(sr => new LookupItemDto
+            {
+                Id = sr.StaffRoleId,
+                Name = sr.RoleName
+            })
+            .ToListAsync();
+
+        var dto = new EmployeeFormOptionsDto
+        {
+            Departments = departments,
+            Skills = skills,
+            Roles = roles,
+            StaffRoles = staffRoles
+        };
+
+        return Ok(ApiResponse<EmployeeFormOptionsDto>.SuccessResponse(dto));
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<ApiResponse<CreateUserResultDto>>> Create([FromBody] CreateUserDto request)
+    {
+        var actorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? User.FindFirstValue(ClaimTypes.Name)
+                          ?? "system";
+
+        var normalizedEmail = request.Email.Trim().ToLower();
+        var exists = await _db.Users.AnyAsync(u =>
+            u.UserId == request.UserId ||
+            u.Email.ToLower() == normalizedEmail);
         if (exists)
         {
-            return BadRequest(ApiResponse<UserDto>.ErrorResponse("UserId or Email already exists"));
+            return BadRequest(ApiResponse<CreateUserResultDto>.ErrorResponse("UserId or Email already exists"));
         }
 
         var department = await _db.Departments.FirstOrDefaultAsync(d => d.DepartementID == request.DepartmentId);
         if (department is null)
         {
-            return BadRequest(ApiResponse<UserDto>.ErrorResponse("Department not found"));
+            return BadRequest(ApiResponse<CreateUserResultDto>.ErrorResponse("Department not found"));
         }
+
+        var temporaryPassword = BuildTemporaryPassword(request.UserName, request.UserId);
 
         var user = new User
         {
             UserId = request.UserId,
             UserName = request.UserName,
-            Email = request.Email,
-            Password = request.Password,
+            Email = normalizedEmail,
+            Password = temporaryPassword,
             DepartmentId = request.DepartmentId,
             EmployeeType = request.EmployeeType,
             ExperienceLevel = request.ExperienceLevel,
-            ContractStart = request.ContractStart,
-            ContractEnd = request.ContractEnd,
+            ContractStart = DateTime.SpecifyKind(request.ContractStart, DateTimeKind.Utc),
+            ContractEnd = DateTime.SpecifyKind(request.ContractEnd, DateTimeKind.Utc),
             ContractStatus = request.ContractEnd.Date < DateTime.UtcNow.Date
                 ? ContractStatus.Expired
                 : (request.ContractEnd.Date <= DateTime.UtcNow.Date.AddDays(60) ? ContractStatus.ExpiringSoon : ContractStatus.Active),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            CreatedBy = "system",
-            UpdatedBy = "system"
+            CreatedBy = actorUserId,
+            UpdatedBy = actorUserId
         };
 
         _db.Users.Add(user);
@@ -164,7 +225,28 @@ public class EmployeesController : ControllerBase
             }
         }
 
-        await _db.SaveChangesAsync();
+        if (request.StaffRoleIds.Any())
+        {
+            var staffRoles = await _db.StaffRoles
+                .Where(sr => request.StaffRoleIds.Contains(sr.StaffRoleId))
+                .Select(sr => sr.StaffRoleId)
+                .ToListAsync();
+
+            foreach (var srid in staffRoles)
+            {
+                _db.UserStaffRoles.Add(new UserStaffRole { UserId = user.UserId, StaffRoleId = srid });
+            }
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            var detail = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(ApiResponse<CreateUserResultDto>.ErrorResponse($"Failed to create employee: {detail}"));
+        }
 
         var created = await _db.Users
             .Include(u => u.Department)
@@ -174,7 +256,56 @@ public class EmployeesController : ControllerBase
             .Include(u => u.UserProjects).ThenInclude(up => up.Project)
             .FirstAsync(u => u.UserId == user.UserId);
 
-        return Ok(ApiResponse<UserDto>.SuccessResponse(MapToUserDto(created), "Employee created"));
+        var result = new CreateUserResultDto
+        {
+            User = MapToUserDto(created),
+            TemporaryPassword = temporaryPassword,
+            MustChangePassword = true
+        };
+
+        return Ok(ApiResponse<CreateUserResultDto>.SuccessResponse(result, "Employee created"));
+    }
+
+    [Authorize]
+    [HttpPost("{id}/reset-password")]
+    public async Task<ActionResult<ApiResponse<object>>> ResetPassword(string id)
+    {
+        var isHr = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "HR");
+        if (!isHr)
+        {
+            return StatusCode(403, ApiResponse<object>.ErrorResponse("Only HR can reset user passwords"));
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id);
+        if (user is null)
+        {
+            return NotFound(ApiResponse<object>.ErrorResponse("Employee not found"));
+        }
+
+        var temporaryPassword = BuildTemporaryPassword(user.UserName, user.UserId);
+        user.Password = temporaryPassword;
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "HR";
+
+        await _db.SaveChangesAsync();
+
+        return Ok(ApiResponse<object>.SuccessResponse(new
+        {
+            temporaryPassword,
+            mustChangePassword = true
+        }, "Password has been reset to default temporary password"));
+    }
+
+    private static string BuildTemporaryPassword(string userName, string userId)
+    {
+        var firstName = (userName ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "User";
+        var digitPart = new string((userId ?? string.Empty).Where(char.IsDigit).ToArray());
+        if (string.IsNullOrWhiteSpace(digitPart))
+        {
+            digitPart = "001";
+        }
+
+        return $"{firstName}@{digitPart}";
     }
 
     private static UserDto MapToUserDto(User u)

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
-import { getEmployees, createContractExtension, getContractExtensionRequests } from '@/lib/api';
+import { getEmployees, createContractExtension, getContractExtensionRequests, resetEmployeePassword } from '@/lib/api';
 import { Employee } from '@/lib/types';
 import { getPrimaryRole, getSessionUser } from '@/lib/auth';
 import { Loader2, X } from 'lucide-react';
@@ -14,7 +14,7 @@ export default function TeamMembersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<'GM' | 'HR' | 'PM' | 'Marketing' | 'Staff' | null>(null);
-  
+
   // Extension Modal State
   const [extensionModalOpen, setExtensionModalOpen] = useState(false);
   const [extensionDuration, setExtensionDuration] = useState("12");
@@ -22,6 +22,10 @@ export default function TeamMembersPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [requestedEmployeeIds, setRequestedEmployeeIds] = useState<Set<string>>(new Set());
+  const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetTempPassword, setResetTempPassword] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -69,6 +73,21 @@ export default function TeamMembersPage() {
       alert(err instanceof Error ? err.message : "Failed to submit extension request");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedEmployee) return;
+    setResettingUserId(selectedEmployee.id);
+    try {
+      const result = await resetEmployeePassword(selectedEmployee.id);
+      setResetTempPassword(result.temporaryPassword);
+      setShowResetConfirmModal(false);
+      setResetConfirmText('');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to reset password');
+    } finally {
+      setResettingUserId(null);
     }
   };
 
@@ -127,11 +146,11 @@ export default function TeamMembersPage() {
                     )}
 
                     <div className="mt-2 flex items-center gap-2">
-                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'bg-[#78350f]/50 text-[#fbbf24]' : 'bg-[#064e3b]/50 text-[#34d399]'}`}>
-                        {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'Expiring Soon' : 'Active'}
+                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'bg-[#78350f]/50 text-[#fbbf24]' : 'bg-[#064e3b]/50 text-[#34d399]'}`}>
+                        {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'Expiring Soon' : 'Active'}
                       </span>
 
-                      {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.daysRemaining !== undefined && (
+                      {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.daysRemaining !== undefined && employee.employmentType !== 'Permanent' && (
                         <div className="flex items-center gap-1 text-[11px] font-medium text-[#fbbf24]">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -193,8 +212,8 @@ export default function TeamMembersPage() {
                   <div className="bg-[#22252e] rounded-xl border border-gray-700/50 p-6">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-[16px] font-bold text-white">Contract Information</h3>
-                      <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg border ${(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'bg-[#78350f]/30 text-[#fbbf24] border-[#78350f]/50' : 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50'}`}>
-                        {(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'Expiring Soon' : 'Active'}
+                      <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg border ${(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && selectedEmployee.employmentType !== 'Permanent' ? 'bg-[#78350f]/30 text-[#fbbf24] border-[#78350f]/50' : 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50'}`}>
+                        {(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && selectedEmployee.employmentType !== 'Permanent' ? 'Expiring Soon' : 'Active'}
                       </span>
                     </div>
 
@@ -216,18 +235,26 @@ export default function TeamMembersPage() {
                           </svg>
                           Contract End
                         </div>
-                        <div className="text-[15px] text-white font-medium">{selectedEmployee.contractEnd || 'Jan 14, 2027'}</div>
+                        <div className="text-[15px] text-white font-medium">
+                          {selectedEmployee.employmentType === 'Permanent' ? '-' : (selectedEmployee.contractEnd || 'Jan 14, 2027')}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-6">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Duration: 24 months
-                    </div>
+                    {selectedEmployee.employmentType !== 'Permanent' && (
+                      <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-6">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Duration: 24 months
+                      </div>
+                    )}
 
-                    {role === 'GM' ? (
+                    {selectedEmployee.employmentType === 'Permanent' ? (
+                      <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-[#34d399]">
+                        Permanent Employee
+                      </div>
+                    ) : role === 'GM' ? (
                       <>
                         <button
                           onClick={() => {
@@ -248,8 +275,22 @@ export default function TeamMembersPage() {
                         )}
                       </>
                     ) : (
-                      <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-gray-300">
-                        Contact GM to request contract extension
+                      <div className="space-y-2">
+                        <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-gray-300">
+                          Contact GM to request contract extension
+                        </div>
+                        {role === 'HR' && (
+                          <button
+                            onClick={() => {
+                              setShowResetConfirmModal(true);
+                              setResetConfirmText('');
+                            }}
+                            disabled={resettingUserId === selectedEmployee.id}
+                            className="w-full rounded-xl border border-amber-600 bg-amber-600/15 px-4 py-3 text-center text-[13px] font-semibold text-amber-300 hover:bg-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {resettingUserId === selectedEmployee.id ? 'Resetting Password...' : 'Reset Password to Default'}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -343,7 +384,7 @@ export default function TeamMembersPage() {
             <div className="p-7">
               <div className="flex items-start justify-between mb-1">
                 <h3 className="text-[20px] font-bold">Request Contract Extension</h3>
-                <button 
+                <button
                   onClick={() => setExtensionModalOpen(false)}
                   className="text-gray-500 hover:text-white transition-colors"
                 >
@@ -368,7 +409,7 @@ export default function TeamMembersPage() {
                 {/* Duration Input */}
                 <div className="space-y-2">
                   <label className="text-[13px] text-gray-500 font-medium">Extension Duration (months)</label>
-                  <input 
+                  <input
                     type="number"
                     value={extensionDuration}
                     onChange={(e) => setExtensionDuration(e.target.value)}
@@ -397,7 +438,7 @@ export default function TeamMembersPage() {
                 {/* Reason Textarea */}
                 <div className="space-y-2">
                   <label className="text-[13px] text-gray-500 font-medium">Reason for Extension</label>
-                  <textarea 
+                  <textarea
                     value={extensionReason}
                     onChange={(e) => setExtensionReason(e.target.value)}
                     placeholder="Explain why this contract extension is needed..."
@@ -407,21 +448,93 @@ export default function TeamMembersPage() {
                 </div>
 
                 <div className="pt-4 flex justify-end gap-3">
-                  <button 
+                  <button
                     onClick={() => setExtensionModalOpen(false)}
                     className="px-6 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] text-white font-bold text-[14px] rounded-lg transition-colors border border-gray-800"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={handleSubmitExtension}
                     disabled={submitting || !extensionReason}
-                    className="px-6 py-2.5 bg-[#a3a3a3] hover:bg-[#d4d4d4] disabled:bg-[#404040] disabled:text-[#737373] text-black font-bold text-[14px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 bg-white hover:bg-gray-200 disabled:bg-[#404040] disabled:text-[#737373] text-black font-bold text-[14px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                   >
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     Submit Request
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {role === 'HR' && showResetConfirmModal && selectedEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-white">
+            <div className="p-6 space-y-4">
+              <div className="flex items-start justify-between">
+                <h3 className="text-[18px] font-bold">Confirm Password Reset</h3>
+                <button
+                  onClick={() => {
+                    setShowResetConfirmModal(false);
+                    setResetConfirmText('');
+                  }}
+                  className="text-gray-500 hover:text-white transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-[13px] text-gray-300">
+                To prevent accidental reset, type <span className="font-bold text-amber-300">Reset-Password</span> below for <span className="font-semibold">{selectedEmployee.name}</span>.
+              </p>
+              <input
+                type="text"
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder="Type Reset-Password"
+                className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-[14px] outline-none focus:border-amber-500"
+              />
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowResetConfirmModal(false);
+                    setResetConfirmText('');
+                  }}
+                  className="px-4 py-2 border border-gray-700 rounded-lg text-[13px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetPassword}
+                  disabled={resetConfirmText !== 'Reset-Password' || resettingUserId === selectedEmployee.id}
+                  className="px-4 py-2 rounded-lg bg-amber-600 text-black font-semibold text-[13px] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resettingUserId === selectedEmployee.id ? 'Resetting...' : 'Confirm Reset'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {role === 'HR' && resetTempPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-white">
+            <div className="p-6 space-y-4">
+              <h3 className="text-[18px] font-bold">Password Reset Success</h3>
+              <p className="text-[13px] text-gray-300">Temporary password generated. Share this securely to the user:</p>
+              <div className="w-full rounded-lg border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[20px] font-bold tracking-wide text-amber-300">
+                {resetTempPassword}
+              </div>
+              <p className="text-[12px] text-gray-400">User must change password on first login.</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setResetTempPassword(null)}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold"
+                >
+                  Done
+                </button>
               </div>
             </div>
           </div>
