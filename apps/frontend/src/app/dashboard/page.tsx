@@ -30,6 +30,10 @@ export default function DashboardPage() {
       router.push('/login');
       return;
     }
+    if (role === "Marketing") {
+    router.push('/mrkt/dashboard');
+    return;
+  }
 
     if (sessionRole === 'PM') {
       router.push('/pm/dashboard');
