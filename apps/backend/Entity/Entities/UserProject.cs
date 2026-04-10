@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Commons.Enums;
 using Entities.Entities;
@@ -20,6 +20,8 @@ public class UserProject
     public string RoleInProject { get; set; } = string.Empty;
 
     public UserProjectStatus Status { get; set; }
+    
+    public bool IsNotificationRead { get; set; } = false;
 
     [ForeignKey(nameof(UserId))]
     public virtual User User { get; set; } = default!;

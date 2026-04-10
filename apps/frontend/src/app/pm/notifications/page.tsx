@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getProjects } from "@/lib/api";
-import { getSessionUser } from "@/lib/auth";
+import { getProjects, markProjectAsRead } from "@/lib/api";
 import { Bell, ArrowRight, CheckCircle2 } from "lucide-react";
 
 interface PMNotification {
@@ -16,66 +15,46 @@ export default function PMNotificationsPage() {
   const [notifications, setNotifications] = useState<PMNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadNotifs = async () => {
+    try {
+      setIsLoading(true);
+      const projects = await getProjects();
+      
+      const newNotifs: PMNotification[] = projects
+        .filter(p => p.isUnread)
+        .map(p => ({ projectId: p.projectId, projectName: p.projectName }));
+      
+      setNotifications(newNotifs.reverse()); // Newest first
+    } catch (err) {
+      console.error("Failed to load notifications", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadNotifs = async () => {
-      try {
-        const auth = getSessionUser();
-        const userId = auth?.userId || "guest";
-        const cacheKey = `pm_known_projects_${userId}`;
-
-        const projects = await getProjects();
-        const knownStr = localStorage.getItem(cacheKey);
-        const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
-        
-        const newNotifs: PMNotification[] = [];
-        projects.forEach(p => {
-          if (!knownIds.includes(p.projectId)) {
-            newNotifs.push({ projectId: p.projectId, projectName: p.projectName });
-          }
-        });
-        setNotifications(newNotifs.reverse()); // Newest first
-      } catch (err) {
-        console.error("Failed to load notifications", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadNotifs();
   }, []);
 
-  const handleClick = (projectId: number) => {
-    const auth = getSessionUser();
-    const userId = auth?.userId || "guest";
-    const cacheKey = `pm_known_projects_${userId}`;
-
-    const knownStr = localStorage.getItem(cacheKey);
-    const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
-    
-    if (!knownIds.includes(projectId)) {
-      knownIds.push(projectId);
-      localStorage.setItem(cacheKey, JSON.stringify(knownIds));
+  const handleClick = async (projectId: number) => {
+    try {
+      await markProjectAsRead(projectId);
+      router.push(`/pm/projects/${projectId}`);
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+      router.push(`/pm/projects/${projectId}`);
     }
-    
-    router.push(`/pm/projects/${projectId}`);
   };
 
-  const handleMarkAllAsRead = () => {
-    const auth = getSessionUser();
-    const userId = auth?.userId || "guest";
-    const cacheKey = `pm_known_projects_${userId}`;
-
-    const knownStr = localStorage.getItem(cacheKey);
-    const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
-    
-    notifications.forEach(n => {
-      if (!knownIds.includes(n.projectId)) {
-        knownIds.push(n.projectId);
-      }
-    });
-
-    localStorage.setItem(cacheKey, JSON.stringify(knownIds));
-    setNotifications([]);
+  const handleMarkAllAsRead = async () => {
+    try {
+      await Promise.all(notifications.map(n => markProjectAsRead(n.projectId)));
+      setNotifications([]);
+    } catch (err) {
+      console.error("Failed to mark all as read", err);
+      // Refresh list to see what succeeded
+      loadNotifs();
+    }
   };
 
   return (

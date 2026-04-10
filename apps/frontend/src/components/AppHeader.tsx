@@ -51,7 +51,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const [userName, setUserName] = useState("User");
   const [userRole, setUserRole] = useState<string>(role ?? "Staff");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  
+
   const [notifications, setNotifications] = useState<ContractExtensionRequest[]>([]);
   const [pmNotifications, setPmNotifications] = useState<PMNotification[]>([]);
 
@@ -68,20 +68,12 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     // Only load if explicit PM role string check passes
     if (userRole !== "PM") return;
     try {
-      const auth = getSessionUser();
-      const userId = auth?.userId || "guest";
-      const cacheKey = `pm_known_projects_${userId}`;
-
       const projects = await getProjects();
-      const knownStr = localStorage.getItem(cacheKey);
-      const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
       
-      const newNotifs: PMNotification[] = [];
-      projects.forEach(p => {
-        if (!knownIds.includes(p.projectId)) {
-          newNotifs.push({ projectId: p.projectId, projectName: p.projectName });
-        }
-      });
+      const newNotifs: PMNotification[] = projects
+        .filter(p => p.isUnread)
+        .map(p => ({ projectId: p.projectId, projectName: p.projectName }));
+        
       setPmNotifications(newNotifs);
     } catch {
       setPmNotifications([]);
@@ -125,22 +117,19 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     };
   }, [userRole]);
 
-  const handlePMNotificationClick = (notif: PMNotification) => {
-    const auth = getSessionUser();
-    const userId = auth?.userId || "guest";
-    const cacheKey = `pm_known_projects_${userId}`;
-
-    const knownStr = localStorage.getItem(cacheKey);
-    const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
-    
-    if (!knownIds.includes(notif.projectId)) {
-      knownIds.push(notif.projectId);
-      localStorage.setItem(cacheKey, JSON.stringify(knownIds));
+  const handlePMNotificationClick = async (notif: PMNotification) => {
+    try {
+      const { markProjectAsRead } = await import("@/lib/api");
+      await markProjectAsRead(notif.projectId);
+      
+      setPmNotifications(prev => prev.filter(n => n.projectId !== notif.projectId));
+      setIsNotificationOpen(false);
+      router.push(`/pm/projects/${notif.projectId}`);
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+      setIsNotificationOpen(false);
+      router.push(`/pm/projects/${notif.projectId}`);
     }
-    
-    setPmNotifications(prev => prev.filter(n => n.projectId !== notif.projectId));
-    setIsNotificationOpen(false);
-    router.push(`/pm/projects/${notif.projectId}`);
   };
 
   const badgeClass = roleBadgeClass[userRole] ?? roleBadgeClass["Staff"];
@@ -197,8 +186,8 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                 <div className="max-h-72 overflow-y-auto">
                   {/* LIMIT 3 NOTIFICATIONS (Newest First) */}
                   {pmNotifications.slice().reverse().slice(0, 3).map((n) => (
-                    <div 
-                      key={n.projectId} 
+                    <div
+                      key={n.projectId}
                       onClick={() => handlePMNotificationClick(n)}
                       className="px-4 py-3 border-b border-[#2a3041] hover:bg-[#2a3041] transition-colors cursor-pointer"
                     >
@@ -210,9 +199,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       </p>
                     </div>
                   ))}
-                  
+
                   {pmNotifications.length > 3 && (
-                    <div 
+                    <div
                       onClick={() => {
                         setIsNotificationOpen(false);
                         router.push('/pm/notifications');
@@ -225,11 +214,11 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                 </div>
               )}
 
-              {((userRole === "HR" && notifications.length === 0) || 
-                (userRole === "PM" && pmNotifications.length === 0) || 
+              {((userRole === "HR" && notifications.length === 0) ||
+                (userRole === "PM" && pmNotifications.length === 0) ||
                 (userRole !== "HR" && userRole !== "PM")) && (
-                <div className="px-4 py-8 text-center text-[22px] text-[#9aa7c0]">No notifications</div>
-              )}
+                  <div className="px-4 py-8 text-center text-[22px] text-[#9aa7c0]">No notifications</div>
+                )}
             </div>
           )}
         </div>
