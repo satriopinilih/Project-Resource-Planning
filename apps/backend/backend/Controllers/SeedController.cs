@@ -75,7 +75,7 @@ END $$;");
             var rolePm = new Role { RoleName = RoleName.PM };
             var roleMrkt = new Role { RoleName = RoleName.Marketing };
             var roleStaff = new Role { RoleName = RoleName.Staff };
-            _db.Roles.AddRange(roleHr, roleGm, rolePm, roleStaff);
+            _db.Roles.AddRange(roleHr, roleGm, rolePm, roleMrkt, roleStaff);
 
             // Staff roles (display roles)
             var srSeniorBA = new StaffRole { RoleName = "Senior BA" };
@@ -83,7 +83,10 @@ END $$;");
             var srSeniorDev = new StaffRole { RoleName = "Senior Dev" };
             var srJuniorDev = new StaffRole { RoleName = "Junior Dev" };
             var srArchitect = new StaffRole { RoleName = "Architect" };
-            _db.StaffRoles.AddRange(srSeniorBA, srJuniorBA, srSeniorDev, srJuniorDev, srArchitect);
+            var srProjectManager = new StaffRole { RoleName = "Project Manager" };
+            var srSoftwareEngineer = new StaffRole { RoleName = "Software Engineer" };
+            var srQATester = new StaffRole { RoleName = "QA Tester" };
+            _db.StaffRoles.AddRange(srSeniorBA, srJuniorBA, srSeniorDev, srJuniorDev, srArchitect, srProjectManager, srSoftwareEngineer, srQATester);
 
             // Skills
             var skills = new[]
@@ -157,6 +160,7 @@ END $$;");
                 new UserRole { UserId = "HR123", RoleId = roleHr.RoleId },
                 new UserRole { UserId = "GM001", RoleId = roleGm.RoleId },
                 new UserRole { UserId = "PM001", RoleId = rolePm.RoleId },
+                new UserRole { UserId = "MKT001", RoleId = roleMrkt.RoleId },
                 new UserRole { UserId = "EMP001", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP002", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP003", RoleId = roleStaff.RoleId },

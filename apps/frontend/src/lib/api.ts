@@ -227,6 +227,13 @@ export async function getPendingProjects(): Promise<BackendProject[]> {
   return fetchJson<BackendProject[]>('/api/projects?status=Pending');
 }
 
+export async function createProject(projectData: any): Promise<BackendProject> {
+  return fetchJson<BackendProject>('/api/projects', {
+    method: 'POST',
+    body: JSON.stringify(projectData)
+  });
+}
+
 export async function getProjectById(id: string): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`);
 }
