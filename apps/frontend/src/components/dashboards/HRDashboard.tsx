@@ -134,7 +134,14 @@ export default function HRDashboard() {
     const hireRequests = requestHistory.filter((r) => r.requestType === 'Hire New Person');
     const openHire = hireRequests.filter((r) => deriveHireState(r) !== 'Fulfilled').length;
     const pending = contractExtensionRequests.filter((r) => r.status === 'Pending').length;
-    const approvedThisMonth = contractExtensionRequests.filter((r) => r.status === 'Approved').length;
+    const now = new Date();
+    const approvedThisMonth = requestHistory.filter((r) => {
+      const approvedLike = r.status === 'Approved' || r.status === 'Completed' || r.status === 'Fulfilled';
+      if (!approvedLike) return false;
+      const dateToCheck = new Date(r.reviewedDate ?? r.requestedDate);
+      if (Number.isNaN(dateToCheck.getTime())) return false;
+      return dateToCheck.getMonth() === now.getMonth() && dateToCheck.getFullYear() === now.getFullYear();
+    }).length;
     return {
       totalEmployees: employees.length,
       contractsExpiring: expiringEmployees.length,

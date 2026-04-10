@@ -4,6 +4,7 @@ using Contracts.DTOs.User;
 using Entities;
 using Entities.Entities;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -237,6 +238,36 @@ public class EmployeesController : ControllerBase
         };
 
         return Ok(ApiResponse<CreateUserResultDto>.SuccessResponse(result, "Employee created"));
+    }
+
+    [Authorize]
+    [HttpPost("{id}/reset-password")]
+    public async Task<ActionResult<ApiResponse<object>>> ResetPassword(string id)
+    {
+        var isHr = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "HR");
+        if (!isHr)
+        {
+            return StatusCode(403, ApiResponse<object>.ErrorResponse("Only HR can reset user passwords"));
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id);
+        if (user is null)
+        {
+            return NotFound(ApiResponse<object>.ErrorResponse("Employee not found"));
+        }
+
+        var temporaryPassword = BuildTemporaryPassword(user.UserName, user.UserId);
+        user.Password = temporaryPassword;
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "HR";
+
+        await _db.SaveChangesAsync();
+
+        return Ok(ApiResponse<object>.SuccessResponse(new
+        {
+            temporaryPassword,
+            mustChangePassword = true
+        }, "Password has been reset to default temporary password"));
     }
 
     private static string BuildTemporaryPassword(string userName, string userId)
