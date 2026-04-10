@@ -10,11 +10,14 @@ import EmployeeContractTable from '@/app/dashboard/gm/components/EmployeeContrac
 import {
   approveContractExtension,
   createEmployee,
+  declineHireRequest,
   declineContractExtension,
+  fulfillHireRequest,
   getContractExtensionRequests,
   getEmployeeFormOptions,
   getRawEmployees,
   getRequestHistory,
+  startHireRequest,
   EmployeeFormOptions,
   BackendEmployee
 } from '@/lib/api';
@@ -30,7 +33,6 @@ export default function HRDashboard() {
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ContractExtensionRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
-  const [hireRequestState, setHireRequestState] = useState<Record<string, 'Open' | 'In Progress' | 'Fulfilled'>>({});
   const [hireEmployeeModalOpen, setHireEmployeeModalOpen] = useState(false);
   const [selectedHireRequestId, setSelectedHireRequestId] = useState<string | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
@@ -92,33 +94,12 @@ export default function HRDashboard() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = window.localStorage.getItem('hr_hire_request_state');
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, 'Open' | 'In Progress' | 'Fulfilled'>;
-        setHireRequestState(parsed);
-      }
-    } catch {
-      // ignore malformed local state
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem('hr_hire_request_state', JSON.stringify(hireRequestState));
-  }, [hireRequestState]);
-
   const deriveHireState = (item: RequestHistoryItem): 'Open' | 'In Progress' | 'Fulfilled' => {
-    const saved = hireRequestState[item.referenceId];
-    if (saved) return saved;
-
     if (item.status === 'Completed' || item.status === 'Approved' || item.status === 'Fulfilled') {
       return 'Fulfilled';
     }
 
-    if (item.status === 'In Progress') {
+    if (item.status === 'InProgress' || item.status === 'In Progress') {
       return 'In Progress';
     }
 
@@ -149,7 +130,7 @@ export default function HRDashboard() {
       openHireRequests: openHire,
       approvedThisMonth
     };
-  }, [employees, expiringEmployees, contractExtensionRequests, requestHistory, hireRequestState]);
+  }, [employees, expiringEmployees, contractExtensionRequests, requestHistory]);
 
   const hireRequests = useMemo(
     () => requestHistory.filter((r) => r.requestType === 'Hire New Person'),
@@ -158,7 +139,7 @@ export default function HRDashboard() {
 
   const activeHireRequests = useMemo(
     () => hireRequests.filter((r) => deriveHireState(r) !== 'Fulfilled'),
-    [hireRequests, hireRequestState]
+    [hireRequests]
   );
 
   const handleApprove = async () => {
@@ -186,21 +167,29 @@ export default function HRDashboard() {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const updateHireState = (id: string, next: 'Open' | 'In Progress' | 'Fulfilled') => {
-    setHireRequestState((prev) => ({ ...prev, [id]: next }));
-  };
-
   const selectedHireRequest = useMemo(
     () => hireRequests.find((r) => r.referenceId === selectedHireRequestId) ?? null,
     [hireRequests, selectedHireRequestId]
   );
 
-  const handleStartHireRequest = (id: string) => {
-    updateHireState(id, 'In Progress');
+  const parseHireRequestId = (referenceId: string): number | null => {
+    if (!referenceId.startsWith('HIRE-')) return null;
+    const id = Number(referenceId.replace('HIRE-', ''));
+    return Number.isNaN(id) ? null : id;
   };
 
-  const handleFulfillHireRequest = (id: string) => {
-    updateHireState(id, 'Fulfilled');
+  const handleStartHireRequest = async (referenceId: string) => {
+    const id = parseHireRequestId(referenceId);
+    if (!id) return;
+    await startHireRequest(id);
+    await loadData();
+  };
+
+  const handleFulfillHireRequest = async (referenceId: string, hiredEmployeeName?: string) => {
+    const id = parseHireRequestId(referenceId);
+    if (!id) return;
+    await fulfillHireRequest(id, hiredEmployeeName);
+    await loadData();
   };
 
   const openAddEmployeeModal = (requestId: string) => {
@@ -254,7 +243,7 @@ export default function HRDashboard() {
       setShowTempPassword(created.temporaryPassword);
 
       if (selectedHireRequest) {
-        handleFulfillHireRequest(selectedHireRequest.referenceId);
+        await handleFulfillHireRequest(selectedHireRequest.referenceId, hireForm.name);
       }
       setHireEmployeeModalOpen(false);
       setSelectedHireRequestId(null);
@@ -362,6 +351,12 @@ export default function HRDashboard() {
                               {state === 'In Progress' && (
                                 <>
                                   <button onClick={() => openAddEmployeeModal(item.referenceId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-purple-600 text-white hover:bg-purple-700">Add Employee</button>
+                                  <button onClick={async () => {
+                                    const id = Number(item.referenceId.replace('HIRE-', ''));
+                                    if (Number.isNaN(id)) return;
+                                    await declineHireRequest(id, 'Declined by HR');
+                                    await loadData();
+                                  }} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
                                 </>
                               )}
                             </div>

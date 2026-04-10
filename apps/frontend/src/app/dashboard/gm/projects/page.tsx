@@ -12,9 +12,11 @@ interface Project {
   client: string;
   status: "Active" | "Upcoming" | "Completed" | "On Hold";
   timeline: string;
+  startDateRaw: string;
   pm: string;
   team: number;
   budget: string;
+  budgetValue: number;
 }
 
 const mapStatus = (backendStatus: number, startDateStr?: string): Project["status"] => {
@@ -61,6 +63,9 @@ export default function ProjectsPage() {
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [clientFilter, setClientFilter] = useState("All Clients");
+  const [sortBy, setSortBy] = useState("name-asc");
 
   // Jika URL berubah, update tab-nya secara dinamis
   useEffect(() => {
@@ -83,9 +88,11 @@ export default function ProjectsPage() {
             client: p.clientOrganization || "Internal",
             status: mapStatus(p.projectStatus, p.estimatedStartDate),
             timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
+            startDateRaw: p.estimatedStartDate,
             pm: pmMember ? pmMember.userName : "TBD",
             team: p.members?.length || 0,
             budget: "N/A",
+            budgetValue: 0,
           };
         });
         setProjectsData(mappedData);
@@ -99,13 +106,37 @@ export default function ProjectsPage() {
     fetchProjects();
   }, []);
 
+  const clients = ["All Clients", ...Array.from(new Set(projectsData.map((p) => p.client)))];
+
   const filteredProjects = projectsData.filter((project) => {
     const matchesTab = activeTab === "All" || project.status === activeTab;
     const matchesSearch = 
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesClient = clientFilter === "All Clients" || project.client === clientFilter;
     
-    return matchesTab && matchesSearch;
+    return matchesTab && matchesSearch && matchesClient;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "name-asc":
+        return a.name.localeCompare(b.name);
+      case "name-desc":
+        return b.name.localeCompare(a.name);
+      case "newest":
+        return new Date(b.startDateRaw).getTime() - new Date(a.startDateRaw).getTime();
+      case "oldest":
+        return new Date(a.startDateRaw).getTime() - new Date(b.startDateRaw).getTime();
+      case "most-member":
+        return b.team - a.team;
+      case "least-member":
+        return a.team - b.team;
+      case "highest-budget":
+        return b.budgetValue - a.budgetValue;
+      case "lowest-budget":
+        return a.budgetValue - b.budgetValue;
+      default:
+        return 0;
+    }
   });
 
   return (
@@ -130,7 +161,7 @@ export default function ProjectsPage() {
                 className="w-full h-10 pl-10 pr-4 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
               />
             </div>
-            <button className="p-2 text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-colors cursor-pointer">
+            <button onClick={() => setShowFilters((prev) => !prev)} className="p-2 text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-colors cursor-pointer">
               <Filter size={18} strokeWidth={1.8} />
             </button>
           </div>
@@ -154,6 +185,54 @@ export default function ProjectsPage() {
               </button>
             ))}
           </div>
+
+          {showFilters && (
+            <div className="mx-5 mt-4 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg-elevated)] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-[13px] font-semibold text-[var(--dash-text-heading)]">Filters & Sorting</h4>
+                <button
+                  onClick={() => {
+                    setClientFilter("All Clients");
+                    setSortBy("name-asc");
+                  }}
+                  className="text-[12px] font-semibold text-[#3b82f6] hover:text-[#60a5fa]"
+                >
+                  Reset All
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Filter by Client</label>
+                  <select
+                    value={clientFilter}
+                    onChange={(e) => setClientFilter(e.target.value)}
+                    className="w-full h-10 px-3 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg"
+                  >
+                    {clients.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Sort By</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full h-10 px-3 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg"
+                  >
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="newest">Timeline (Newest First)</option>
+                    <option value="oldest">Timeline (Oldest First)</option>
+                    <option value="most-member">Team (Most Members)</option>
+                    <option value="least-member">Team (Least Members)</option>
+                    <option value="highest-budget">Budget (Highest)</option>
+                    <option value="lowest-budget">Budget (Lowest)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Table */}
           <div className="overflow-x-auto">

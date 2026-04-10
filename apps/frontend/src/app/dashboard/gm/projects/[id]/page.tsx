@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import {
   getProjectById,
+  createHireRequest,
   BackendProject,
   BackendProjectMember,
   BackendRequiredRole,
@@ -34,6 +35,7 @@ import {
   assignMemberToProject,
   unassignMemberFromProject,
   AssignMemberPayload,
+  getHireRequests,
 } from "../../../../../lib/api";
 import SmartRecommendationPanel from "../../components/SmartRecommendationPanel";
 
@@ -120,6 +122,15 @@ export default function ProjectDetailsPage() {
 
   // Remove member state
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [hireSubmitting, setHireSubmitting] = useState(false);
+  const [hireRequestOpen, setHireRequestOpen] = useState(false);
+  const [hireAlreadyRequested, setHireAlreadyRequested] = useState(false);
+  const [hireRequestStatus, setHireRequestStatus] = useState<"none" | "Open" | "InProgress" | "Fulfilled" | "Declined">("none");
+  const [hireForm, setHireForm] = useState({
+    roleNeeded: "Senior Dev",
+    quantity: 1,
+    notes: "",
+  });
 
   const numericId = useMemo(() => {
     if (!idStr) return null;
@@ -145,6 +156,22 @@ export default function ProjectDetailsPage() {
 
   useEffect(() => {
     fetchProject();
+  }, [numericId]);
+
+  useEffect(() => {
+    const checkExistingHireRequest = async () => {
+      if (!numericId) return;
+      try {
+        const rows = await getHireRequests(undefined, numericId);
+        const latest = rows[0];
+        setHireRequestStatus(latest?.status ?? "none");
+        setHireAlreadyRequested(rows.some((r) => r.status === "Open" || r.status === "InProgress"));
+      } catch {
+        setHireRequestStatus("none");
+        setHireAlreadyRequested(false);
+      }
+    };
+    checkExistingHireRequest();
   }, [numericId]);
 
   const openAssignModal = async (prefillRole?: string) => {
@@ -253,6 +280,29 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  const handleRequestHireFromProject = async () => {
+    if (!project || project.projectStatus !== 0) return;
+    if (!hireForm.roleNeeded) return;
+    try {
+      setHireSubmitting(true);
+      await createHireRequest({
+        projectId: project.projectId,
+        projectName: project.projectName,
+        roleNeeded: hireForm.roleNeeded,
+        quantity: Math.max(1, hireForm.quantity),
+        startDate: project.estimatedStartDate,
+        endDate: project.estimatedEndDate,
+        notes: hireForm.notes || `Requested from project ${project.projectName}`,
+      });
+      setHireRequestOpen(false);
+      setHireAlreadyRequested(true);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to send hire request");
+    } finally {
+      setHireSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-[#18181b]">
@@ -303,9 +353,24 @@ export default function ProjectDetailsPage() {
                         <p className="text-[12px] text-[#60a5fa]">Marketing has initiated this project. Finalize timeline and staff assignment below.</p>
                      </div>
                   </div>
-                  <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400">
-                     Step 1 of 2: Assign Timeline & Team
-                     <ChevronRight size={14} />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setHireRequestOpen(true)}
+                      disabled={hireSubmitting || hireAlreadyRequested}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold disabled:opacity-50"
+                    >
+                      {hireAlreadyRequested
+                        ? "Already Requested"
+                        : hireRequestStatus === "Declined"
+                          ? "Declined - Request Again"
+                          : hireRequestStatus === "Fulfilled"
+                            ? "Fulfilled - Request Again"
+                            : "Request New Hire"}
+                    </button>
+                    <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400">
+                      Step 1 of 2: Assign Timeline & Team
+                      <ChevronRight size={14} />
+                    </div>
                   </div>
                </div>
             )}
@@ -983,6 +1048,68 @@ export default function ProjectDetailsPage() {
                   Assign
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hireRequestOpen && project && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setHireRequestOpen(false)}>
+          <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-white" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+              <h3 className="text-[17px] font-bold">Request New Hire</h3>
+              <button onClick={() => setHireRequestOpen(false)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800"><X size={18} /></button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[12px] text-gray-400 mb-1">Project</label>
+                <div className="w-full px-3 py-2 rounded-lg bg-[#0f0f0f] border border-gray-800 text-[13px]">{project.projectName}</div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-gray-400 mb-1">Staff Role Needed</label>
+                <select
+                  value={hireForm.roleNeeded}
+                  onChange={(e) => setHireForm((p) => ({ ...p, roleNeeded: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg bg-[#0f0f0f] border border-gray-800 text-[13px]"
+                >
+                  <option>Senior Dev</option>
+                  <option>Junior Dev</option>
+                  <option>Senior BA</option>
+                  <option>Junior BA</option>
+                  <option>Architect</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-gray-400 mb-1">Quantity</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={hireForm.quantity}
+                  onChange={(e) => setHireForm((p) => ({ ...p, quantity: Number(e.target.value) || 1 }))}
+                  className="w-full px-3 py-2 rounded-lg bg-[#0f0f0f] border border-gray-800 text-[13px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-gray-400 mb-1">Notes</label>
+                <textarea
+                  rows={3}
+                  value={hireForm.notes}
+                  onChange={(e) => setHireForm((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Reason and context for HR"
+                  className="w-full px-3 py-2 rounded-lg bg-[#0f0f0f] border border-gray-800 text-[13px]"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-800 flex justify-end gap-2">
+              <button onClick={() => setHireRequestOpen(false)} className="px-4 py-2 bg-[#1f1f1f] border border-gray-800 rounded-lg text-[13px] font-semibold">Cancel</button>
+              <button onClick={handleRequestHireFromProject} disabled={hireSubmitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-[13px] font-semibold text-white disabled:opacity-50">
+                {hireSubmitting ? "Sending..." : "Hire"}
+              </button>
             </div>
           </div>
         </div>
