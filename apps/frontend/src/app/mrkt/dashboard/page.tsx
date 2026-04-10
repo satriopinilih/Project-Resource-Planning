@@ -11,8 +11,11 @@ import {
   Calendar,
   Sun,
   Moon,
-  User
+  User,
+  Loader2
 } from "lucide-react";
+import Link from "next/link";
+import { getProjects, BackendProject } from "@/lib/api";
 
 export default function MarketingDashboard() {
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -23,12 +26,20 @@ export default function MarketingDashboard() {
   });
 
   const [theme, setTheme] = useState("dark");
+  const [projects, setProjects] = useState<BackendProject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Initialize theme based on document class
     if (document.documentElement.classList.contains('light')) {
       setTheme('light');
     }
+
+    // Fetch live projects from backend
+    getProjects()
+      .then(setProjects)
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
   }, []);
 
   const toggleTheme = () => {
@@ -42,6 +53,14 @@ export default function MarketingDashboard() {
       document.documentElement.classList.remove('light');
     }
   };
+
+  // Compute stats
+  const totalSubmitted = projects.length;
+  // Based on Backend enum: 0 = Pending, 1 = Scheduled, 2 = Running, 3 = Completed
+  const awaitingApproval = projects.filter(p => p.projectStatus === 0).length;
+  const scheduled = projects.filter(p => p.projectStatus === 1).length;
+  const running = projects.filter(p => p.projectStatus === 2).length;
+  const completed = projects.filter(p => p.projectStatus === 3).length;
 
   return (
     <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
@@ -79,7 +98,7 @@ export default function MarketingDashboard() {
       <section className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <StatCardCustom
           label="Total Submitted"
-          value="3"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : totalSubmitted}
           icon={LayoutDashboard}
           iconBg="bg-blue-100 dark:bg-[#2A314A]"
           iconColor="text-blue-600 dark:text-[#88a4e6]"
@@ -87,7 +106,7 @@ export default function MarketingDashboard() {
         />
         <StatCardCustom
           label="Awaiting Approval"
-          value="1"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-amber-500" /> : awaitingApproval}
           icon={Clock}
           iconBg="bg-amber-100 dark:bg-[#3a3221]"
           iconColor="text-amber-600 dark:text-yellow-500"
@@ -95,7 +114,7 @@ export default function MarketingDashboard() {
         />
         <StatCardCustom
           label="Scheduled"
-          value="2"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : scheduled}
           icon={TrendingUp}
           iconBg="bg-blue-100 dark:bg-[#262c4a]"
           iconColor="text-blue-600 dark:text-[#5c88f2]"
@@ -103,7 +122,7 @@ export default function MarketingDashboard() {
         />
         <StatCardCustom
           label="Running"
-          value="0"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-emerald-500" /> : running}
           icon={TrendingUp}
           iconBg="bg-emerald-100 dark:bg-[#1f362e]"
           iconColor="text-emerald-600 dark:text-emerald-500"
@@ -111,7 +130,7 @@ export default function MarketingDashboard() {
         />
         <StatCardCustom
           label="Completed"
-          value="0"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" /> : completed}
           icon={CheckCircle2}
           iconBg="bg-gray-100 dark:bg-[#34353a]"
           iconColor="text-gray-600 dark:text-gray-400"
@@ -121,7 +140,7 @@ export default function MarketingDashboard() {
 
       {/* Main Action Cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        <button className="flex items-center gap-5 bg-[#255df5] hover:bg-[#1a4de0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
+        <Link href="/mrkt/add-project" className="flex items-center gap-5 bg-[#255df5] hover:bg-[#1a4de0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
           <div className="bg-white/20 p-4 rounded-xl group-hover:scale-105 transition-transform flex items-center justify-center">
             <Plus size={26} className="text-white" />
           </div>
@@ -129,9 +148,9 @@ export default function MarketingDashboard() {
             <h3 className="text-[19px] font-medium text-white mb-1">Create New Project</h3>
             <p className="text-white/80 text-[13px]">Submit a new project proposal with estimated timeline</p>
           </div>
-        </button>
+        </Link>
 
-        <button className="flex items-center gap-5 bg-[#8b3df6] hover:bg-[#7b2be0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
+        <Link href="/mrkt/projects" className="flex items-center gap-5 bg-[#8b3df6] hover:bg-[#7b2be0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
           <div className="bg-white/20 p-4 rounded-xl group-hover:scale-105 transition-transform flex items-center justify-center">
             <Folder size={26} className="text-white" />
           </div>
@@ -139,34 +158,48 @@ export default function MarketingDashboard() {
             <h3 className="text-[19px] font-medium text-white mb-1">View All Projects</h3>
             <p className="text-white/80 text-[13px]">Track status of all submitted projects</p>
           </div>
-        </button>
+        </Link>
       </section>
 
       {/* Recent Submissions List */}
       <section className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
         <h3 className="text-[17px] font-semibold mb-5 text-gray-900 dark:text-white">Recent Submissions</h3>
         <div className="space-y-4">
-          <SubmissionItem
-            title="Data Analytics Platform"
-            client="FinServe Corp."
-            date="Submitted Jan 5, 2026"
-            status="Pending"
-            statusColor="bg-amber-100 text-amber-700 dark:bg-[#3a3221] dark:text-[#eab308]"
-          />
-          <SubmissionItem
-            title="Customer Portal Development"
-            client="RetailMax Ltd."
-            date="Submitted Dec 20, 2025"
-            status="Scheduled"
-            statusColor="bg-blue-100 text-blue-700 dark:bg-[#262c4a] dark:text-[#608bfa]"
-          />
-          <SubmissionItem
-            title="Digital Transformation Initiative"
-            client="TechCorp Inc."
-            date="Submitted Dec 15, 2025"
-            status="Scheduled"
-            statusColor="bg-blue-100 text-blue-700 dark:bg-[#262c4a] dark:text-[#608bfa]"
-          />
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+            </div>
+          ) : projects.length === 0 ? (
+            <p className="text-gray-500 text-[14px]">No recent submissions found.</p>
+          ) : (
+            // Show the top 3 most recently created/returned projects
+            projects.slice(-3).reverse().map((project) => {
+              let statusLabel = "Pending";
+              let statusColor = "bg-amber-100 text-amber-700 dark:bg-[#3a3221] dark:text-[#eab308]";
+
+              if (project.projectStatus === 1) {
+                statusLabel = "Scheduled";
+                statusColor = "bg-blue-100 text-blue-700 dark:bg-[#262c4a] dark:text-[#608bfa]";
+              } else if (project.projectStatus === 2) {
+                statusLabel = "Running";
+                statusColor = "bg-emerald-100 text-emerald-700 dark:bg-[#1f362e] dark:text-emerald-500";
+              } else if (project.projectStatus === 3) {
+                statusLabel = "Completed";
+                statusColor = "bg-gray-100 text-gray-700 dark:bg-[#34353a] dark:text-gray-400";
+              }
+
+              return (
+                <SubmissionItem
+                  key={project.projectId}
+                  title={project.projectName}
+                  client={project.clientOrganization || 'In-House'}
+                  date={`Start Date: ${project.estimatedStartDate ? new Date(project.estimatedStartDate).toLocaleDateString() : 'TBD'}`}
+                  status={statusLabel}
+                  statusColor={statusColor}
+                />
+              );
+            })
+          )}
         </div>
       </section>
     </div>
@@ -182,7 +215,7 @@ function StatCardCustom({ label, value, icon: Icon, iconBg, iconColor, valueColo
           <Icon size={18} />
         </div>
       </div>
-      <div className={`text-[30px] font-medium ${valueColor} leading-none mt-4 transition-colors duration-300`}>
+      <div className={`text-[30px] font-medium flex items-center ${valueColor} leading-none mt-4 transition-colors duration-300`}>
         {value}
       </div>
     </div>
