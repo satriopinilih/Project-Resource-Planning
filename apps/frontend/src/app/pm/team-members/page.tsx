@@ -75,11 +75,10 @@ export default function TeamMembersPage() {
               <button
                 key={employee.id}
                 onClick={() => setSelectedMember(employee.id)}
-                className={`w-full text-left p-4 rounded-xl transition-all border ${
-                  selectedMember === employee.id
+                className={`w-full text-left p-4 rounded-xl transition-all border ${selectedMember === employee.id
                     ? "border-[#3b82f6] bg-[#1e293b]/50 shadow-sm"
                     : "border-transparent bg-[#1e2532] hover:bg-[#252d3d]"
-                }`}
+                  }`}
               >
                 <div className="font-semibold text-[15px] text-gray-100 truncate">
                   {employee.name}
@@ -89,13 +88,12 @@ export default function TeamMembersPage() {
                 </div>
                 <div className="mt-2 flex items-center gap-2">
                   <span
-                    className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${
-                      employee.contractStatus === "Active"
+                    className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${employee.contractStatus === "Active"
                         ? "bg-[#064e3b]/50 text-[#34d399]"
                         : employee.contractStatus === "Expiring Soon"
                           ? "bg-[#78350f]/50 text-[#fbbf24]"
                           : "bg-gray-800 text-gray-400"
-                    }`}
+                      }`}
                   >
                     {employee.contractStatus}
                   </span>
@@ -159,13 +157,12 @@ export default function TeamMembersPage() {
                     Contract Information
                   </h3>
                   <span
-                    className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg ${
-                      selectedEmployee.contractStatus === "Active"
+                    className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg ${selectedEmployee.contractStatus === "Active"
                         ? "bg-[#064e3b]/30 text-[#34d399] border border-[#064e3b]/50"
                         : selectedEmployee.contractStatus === "Expiring Soon"
                           ? "bg-[#78350f]/30 text-[#fbbf24] border border-[#78350f]/50"
                           : "bg-gray-800 text-gray-400 border border-gray-700"
-                    }`}
+                      }`}
                   >
                     {selectedEmployee.contractStatus}
                   </span>
@@ -190,10 +187,15 @@ export default function TeamMembersPage() {
                   </div>
                 </div>
 
-                {/* Restricted Request Text */}
-                <div className="w-full text-gray-200 text-[13px] py-3 rounded-xl transition-colors flex items-center justify-center gap-2 opacity-80 cursor-not-allowed">
-                  <i>Only GM can request contract extension</i>
-                </div>
+                {selectedEmployee.employmentType === 'Permanent' ? (
+                  <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-[#34d399]">
+                    Permanent Employee
+                  </div>
+                ) : (
+                  <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-gray-300">
+                    Contact GM to request contract extension
+                  </div>
+                )}
               </div>
 
               {/* Card 3: Resource Pipeline */}
@@ -219,13 +221,12 @@ export default function TeamMembersPage() {
                               </div>
                             </div>
                             <span
-                              className={`px-3 py-1 text-[12px] font-medium rounded-lg ${
-                                project.status === "Completed"
+                              className={`px-3 py-1 text-[12px] font-medium rounded-lg ${project.status === "Completed"
                                   ? "bg-gray-800 text-gray-300"
                                   : project.status === "Active"
                                     ? "bg-[#064e3b]/30 text-[#34d399]"
                                     : "bg-[#1e3a8a]/30 text-[#60a5fa]"
-                              }`}
+                                }`}
                             >
                               {project.status}
                             </span>

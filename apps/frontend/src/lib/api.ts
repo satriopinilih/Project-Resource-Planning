@@ -78,6 +78,7 @@ export type BackendProject = {
   estimatedStartDate: string;
   estimatedEndDate: string;
   projectStatus: number; // 0=Pending,1=Running,2=Completed
+  isUnread: boolean;
   members: { userId: string; userName: string; role: string; staffRole: string }[];
 };
 
@@ -290,6 +291,12 @@ export async function createProject(projectData: any): Promise<BackendProject> {
 
 export async function getProjectById(id: string): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`);
+}
+
+export async function markProjectAsRead(projectId: number): Promise<void> {
+  await fetchJson(`/api/projects/mark-read/${projectId}`, {
+    method: 'POST'
+  });
 }
 
 export async function getRawEmployees(): Promise<BackendEmployee[]> {
