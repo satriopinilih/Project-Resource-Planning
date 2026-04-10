@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Commons.Enums;
 using Contracts.DTOs.Common;
 using Contracts.DTOs.User;
@@ -19,6 +20,13 @@ public class EmployeesController : ControllerBase
         _db = db;
     }
 
+    private string? CurrentUserId =>
+        User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+        User.FindFirstValue("sub");
+
+    private bool IsPM =>
+        User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "PM");
+
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetAll([FromQuery] string? search)
     {
@@ -37,6 +45,24 @@ public class EmployeesController : ControllerBase
                 u.UserName.Contains(search) ||
                 u.Email.Contains(search));
         }
+
+        if (IsPM && CurrentUserId is not null)
+        {
+            var pmProjectIds = await _db.UserProjects
+                .Where(up => up.UserId == CurrentUserId)
+                .Select(up => up.ProjectId)
+                .ToListAsync();
+
+            query = query.Where(u =>
+                u.UserProjects.Any(up => pmProjectIds.Contains(up.ProjectId)));
+        }
+
+        // Selalu sembunyikan user bertipe manajerial (PM, GM, HR) — fokus ke staff saja
+        query = query.Where(u =>
+            !u.UserRoles.Any(r =>
+                r.Role.RoleName == RoleName.PM ||
+                r.Role.RoleName == RoleName.GM ||
+                r.Role.RoleName == RoleName.HR));
 
         var users = await query.OrderBy(u => u.UserName).ToListAsync();
         var data = users.Select(MapToUserDto).ToList();

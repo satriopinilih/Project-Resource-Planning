@@ -1,7 +1,9 @@
+using System.Security.Claims;
 using Commons.Enums;
 using Contracts.DTOs.Common;
 using Contracts.DTOs.Project;
 using Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +19,13 @@ public class ProjectsController : ControllerBase
     {
         _db = db;
     }
+
+    private string? CurrentUserId =>
+        User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+        User.FindFirstValue("sub");
+
+    private bool IsPM =>
+        User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "PM");
 
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<ProjectDto>>>> GetAll([FromQuery] string? status)
@@ -35,6 +44,11 @@ public class ProjectsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ProjectStatus>(status, true, out var parsedStatus))
         {
             query = query.Where(p => p.ProjectStatus == parsedStatus);
+        }
+
+        if (IsPM && CurrentUserId is not null)
+        {
+            query = query.Where(p => p.UserProjects.Any(up => up.UserId == CurrentUserId));
         }
 
         var projects = await query.OrderBy(p => p.EstimatedStartDate).ToListAsync();
@@ -60,6 +74,13 @@ public class ProjectsController : ControllerBase
         if (project is null)
             return NotFound(ApiResponse<ProjectDto>.ErrorResponse("Project not found"));
 
+        if (IsPM && CurrentUserId is not null)
+        {
+            var isAssigned = project.UserProjects.Any(up => up.UserId == CurrentUserId);
+            if (!isAssigned)
+                return Forbid();
+        }
+
         return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(project)));
     }
 
@@ -76,15 +97,18 @@ public class ProjectsController : ControllerBase
             EstimatedStartDate = p.EstimatedStartDate,
             EstimatedEndDate = p.EstimatedEndDate,
             ProjectStatus = p.ProjectStatus,
-            Members = p.UserProjects.Select(up => new ProjectMemberDto
-            {
-                UserId = up.UserId,
-                UserName = up.User?.UserName ?? up.UserId,
-                Role = up.RoleInProject,
-                StaffRole = up.User?.UserStaffRoles.Select(s => s.StaffRole.RoleName).FirstOrDefault()
-                            ?? up.User?.UserRoles.Select(r => r.Role.RoleName.ToString()).FirstOrDefault()
-                            ?? "Staff"
-            }).ToList()
+            Members = p.UserProjects
+                // Sembunyikan Project Manager dari daftar member — fokus ke staff saja
+                .Where(up => !up.RoleInProject.Equals("Project Manager", StringComparison.OrdinalIgnoreCase))
+                .Select(up => new ProjectMemberDto
+                {
+                    UserId = up.UserId,
+                    UserName = up.User?.UserName ?? up.UserId,
+                    Role = up.RoleInProject,
+                    StaffRole = up.User?.UserStaffRoles.Select(s => s.StaffRole.RoleName).FirstOrDefault()
+                                ?? up.User?.UserRoles.Select(r => r.Role.RoleName.ToString()).FirstOrDefault()
+                                ?? "Staff"
+                }).ToList()
         };
     }
     [HttpPost]

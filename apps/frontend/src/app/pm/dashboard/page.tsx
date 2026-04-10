@@ -12,18 +12,11 @@ import {
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
-
-interface DashboardStats {
-  total: number;
-  onHold: number;
-  scheduled: number;
-  running: number;
-  completed: number;
-}
+import { getTimelineStats, TimelineStats } from "@/lib/api";
 
 export default function PMDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState<TimelineStats>({
     total: 0,
     onHold: 0,
     scheduled: 0,
@@ -39,13 +32,7 @@ export default function PMDashboard() {
       setLoading(true);
       setError(null);
 
-      const statsRes = await fetch("http://localhost:5103/api/timeline/stats");
-
-      if (!statsRes.ok) {
-        throw new Error("Server merespons, tapi gagal mengambil data.");
-      }
-
-      const statsData = await statsRes.json();
+      const statsData = await getTimelineStats();
       setStats(statsData);
     } catch (err: any) {
       setError("Error connecting to server.");
@@ -60,7 +47,7 @@ export default function PMDashboard() {
   }, []);
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto w-full h-full overflow-y-auto">
+    <div className="p-8 max-w-full mx-auto w-full h-full overflow-y-auto">
       {/* WELCOME SECTION */}
       <div className="mb-10">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">

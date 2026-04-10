@@ -4,33 +4,34 @@ import { useState, useEffect } from "react";
 import { Bell, Sun, Moon, User } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
-import { getContractExtensionRequests } from "@/lib/api";
+import { getContractExtensionRequests, getProjects } from "@/lib/api";
 import { ContractExtensionRequest } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
 
 const roleColors: Record<string, { bg: string; text: string; border: string; avatar: string }> = {
-  GM:        { bg: "#7c3aed/10", text: "#7c3aed", border: "#7c3aed/20", avatar: "#2563eb" },
-  HR:        { bg: "#059669/10", text: "#059669", border: "#059669/20", avatar: "#059669" },
-  PM:        { bg: "#0ea5e9/10", text: "#0ea5e9", border: "#0ea5e9/20", avatar: "#0ea5e9" },
+  GM: { bg: "#7c3aed/10", text: "#7c3aed", border: "#7c3aed/20", avatar: "#2563eb" },
+  HR: { bg: "#059669/10", text: "#059669", border: "#059669/20", avatar: "#059669" },
+  PM: { bg: "#0ea5e9/10", text: "#0ea5e9", border: "#0ea5e9/20", avatar: "#0ea5e9" },
   Marketing: { bg: "#f59e0b/10", text: "#f59e0b", border: "#f59e0b/20", avatar: "#f59e0b" },
-  Staff:     { bg: "#64748b/10", text: "#64748b", border: "#64748b/20", avatar: "#64748b" },
+  Staff: { bg: "#64748b/10", text: "#64748b", border: "#64748b/20", avatar: "#64748b" },
 };
 
 const roleBadgeClass: Record<string, string> = {
-  GM:        "bg-[#7c3aed]/10 text-[#7c3aed] border-[#7c3aed]/20",
-  HR:        "bg-[#059669]/10 text-[#059669] border-[#059669]/20",
-  PM:        "bg-[#0ea5e9]/10 text-[#0ea5e9] border-[#0ea5e9]/20",
+  GM: "bg-[#7c3aed]/10 text-[#7c3aed] border-[#7c3aed]/20",
+  HR: "bg-[#059669]/10 text-[#059669] border-[#059669]/20",
+  PM: "bg-[#0ea5e9]/10 text-[#0ea5e9] border-[#0ea5e9]/20",
   Marketing: "bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20",
-  Staff:     "bg-[#64748b]/10 text-[#64748b] border-[#64748b]/20",
+  Staff: "bg-[#64748b]/10 text-[#64748b] border-[#64748b]/20",
 };
 
 const avatarBgClass: Record<string, string> = {
-  GM:        "bg-[#2563eb]",
-  HR:        "bg-[#059669]",
-  PM:        "bg-[#0ea5e9]",
+  GM: "bg-[#2563eb]",
+  HR: "bg-[#059669]",
+  PM: "bg-[#0ea5e9]",
   Marketing: "bg-[#f59e0b]",
-  Staff:     "bg-[#64748b]",
+  Staff: "bg-[#64748b]",
 };
 
 interface AppHeaderProps {
@@ -38,12 +39,20 @@ interface AppHeaderProps {
   role?: Role;
 }
 
+interface PMNotification {
+  projectId: number;
+  projectName: string;
+}
+
 export default function AppHeader({ title, role }: AppHeaderProps) {
+  const router = useRouter();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [userName, setUserName] = useState("User");
   const [userRole, setUserRole] = useState<string>(role ?? "Staff");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  
   const [notifications, setNotifications] = useState<ContractExtensionRequest[]>([]);
+  const [pmNotifications, setPmNotifications] = useState<PMNotification[]>([]);
 
   const loadNotifications = async () => {
     try {
@@ -51,6 +60,26 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       setNotifications(pending);
     } catch {
       setNotifications([]);
+    }
+  };
+
+  const loadPMNotifications = async () => {
+    // Only load if explicit PM role string check passes
+    if (userRole !== "PM") return;
+    try {
+      const projects = await getProjects();
+      const knownStr = localStorage.getItem("pm_known_projects");
+      const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
+      
+      const newNotifs: PMNotification[] = [];
+      projects.forEach(p => {
+        if (!knownIds.includes(p.projectId)) {
+          newNotifs.push({ projectId: p.projectId, projectName: p.projectName });
+        }
+      });
+      setPmNotifications(newNotifs);
+    } catch {
+      setPmNotifications([]);
     }
   };
 
@@ -69,18 +98,37 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   }, [role]);
 
   useEffect(() => {
-    if (userRole !== "HR") {
+    let timer: NodeJS.Timeout;
+
+    if (userRole === "HR") {
+      loadNotifications();
+      timer = setInterval(loadNotifications, 15000);
+    } else if (userRole === "PM") {
+      loadPMNotifications();
+      timer = setInterval(loadPMNotifications, 15000);
+    } else {
       setNotifications([]);
-      return;
+      setPmNotifications([]);
     }
 
-    loadNotifications();
-    const timer = setInterval(loadNotifications, 15000);
-
     return () => {
-      clearInterval(timer);
+      if (timer) clearInterval(timer);
     };
   }, [userRole]);
+
+  const handlePMNotificationClick = (notif: PMNotification) => {
+    const knownStr = localStorage.getItem("pm_known_projects");
+    const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
+    
+    if (!knownIds.includes(notif.projectId)) {
+      knownIds.push(notif.projectId);
+      localStorage.setItem("pm_known_projects", JSON.stringify(knownIds));
+    }
+    
+    setPmNotifications(prev => prev.filter(n => n.projectId !== notif.projectId));
+    setIsNotificationOpen(false);
+    router.push(`/pm/projects/${notif.projectId}`);
+  };
 
   const badgeClass = roleBadgeClass[userRole] ?? roleBadgeClass["Staff"];
   const avatarClass = avatarBgClass[userRole] ?? avatarBgClass["Staff"];
@@ -97,15 +145,16 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         <div className="relative">
           <button
             onClick={() => {
-              if (!isNotificationOpen && userRole === "HR") {
-                loadNotifications();
+              if (!isNotificationOpen) {
+                if (userRole === "HR") loadNotifications();
+                if (userRole === "PM") loadPMNotifications();
               }
               setIsNotificationOpen((prev) => !prev);
             }}
             className="relative p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
           >
             <Bell size={22} strokeWidth={1.8} />
-            {userRole === "HR" && notifications.length > 0 && (
+            {((userRole === "HR" && notifications.length > 0) || (userRole === "PM" && pmNotifications.length > 0)) && (
               <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
             )}
           </button>
@@ -116,7 +165,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                 <h3 className="text-[23px] font-semibold text-white">Notifications</h3>
               </div>
 
-              {userRole === "HR" && notifications.length > 0 ? (
+              {userRole === "HR" && notifications.length > 0 && (
                 <div className="max-h-72 overflow-y-auto">
                   {notifications.slice(0, 6).map((item) => (
                     <div key={item.id} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
@@ -129,7 +178,31 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                     </div>
                   ))}
                 </div>
-              ) : (
+              )}
+
+              {userRole === "PM" && pmNotifications.length > 0 && (
+                <div className="max-h-72 overflow-y-auto">
+                  {/* LIMIT 3 NOTIFICATIONS (Newest First) */}
+                  {pmNotifications.slice().reverse().slice(0, 3).map((n) => (
+                    <div 
+                      key={n.projectId} 
+                      onClick={() => handlePMNotificationClick(n)}
+                      className="px-4 py-3 border-b border-[#2a3041] last:border-b-0 cursor-pointer hover:bg-[#2a3041] transition-colors"
+                    >
+                      <p className="text-[13px] text-[#d9e0f2] leading-5">
+                        You have been assigned as PM to project: <span className="font-semibold">{n.projectName}</span>
+                      </p>
+                      <p className="text-[12px] text-[#2B7FFC] mt-1 font-semibold">
+                        Click to view details
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {((userRole === "HR" && notifications.length === 0) || 
+                (userRole === "PM" && pmNotifications.length === 0) || 
+                (userRole !== "HR" && userRole !== "PM")) && (
                 <div className="px-4 py-8 text-center text-[22px] text-[#9aa7c0]">No notifications</div>
               )}
             </div>
