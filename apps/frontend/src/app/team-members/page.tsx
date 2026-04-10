@@ -14,7 +14,7 @@ export default function TeamMembersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<'GM' | 'HR' | 'PM' | 'Marketing' | 'Staff' | null>(null);
-  
+
   // Extension Modal State
   const [extensionModalOpen, setExtensionModalOpen] = useState(false);
   const [extensionDuration, setExtensionDuration] = useState("12");
@@ -121,20 +121,17 @@ export default function TeamMembersPage() {
                       }`}
                   >
                     <div className="font-semibold text-[15px] text-gray-100 truncate">{employee.name}</div>
-                    {role === 'HR' && (
-                      <div className="text-[12px] text-gray-500 mt-0.5 truncate">User ID: {employee.id}</div>
-                    )}
                     <div className="text-[13px] text-gray-400 mt-0.5 truncate">{employee.role}</div>
                     {employee.experience && (
                       <div className="text-[12px] text-gray-500 mt-1">Exp: {employee.experience}</div>
                     )}
 
                     <div className="mt-2 flex items-center gap-2">
-                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'bg-[#78350f]/50 text-[#fbbf24]' : 'bg-[#064e3b]/50 text-[#34d399]'}`}>
-                        {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'Expiring Soon' : 'Active'}
+                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'bg-[#78350f]/50 text-[#fbbf24]' : 'bg-[#064e3b]/50 text-[#34d399]'}`}>
+                        {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'Expiring Soon' : 'Active'}
                       </span>
 
-                      {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.daysRemaining !== undefined && (
+                      {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.daysRemaining !== undefined && employee.employmentType !== 'Permanent' && (
                         <div className="flex items-center gap-1 text-[11px] font-medium text-[#fbbf24]">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -161,9 +158,6 @@ export default function TeamMembersPage() {
                         </div>
                         <div>
                           <h2 className="text-[22px] font-bold text-white">{selectedEmployee.name}</h2>
-                          {role === 'HR' && (
-                            <p className="text-[12px] text-gray-500 mt-1">User ID: {selectedEmployee.id}</p>
-                          )}
                           <p className="text-[14px] text-gray-400 mt-1">{selectedEmployee.role}</p>
                         </div>
                       </div>
@@ -199,8 +193,8 @@ export default function TeamMembersPage() {
                   <div className="bg-[#22252e] rounded-xl border border-gray-700/50 p-6">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-[16px] font-bold text-white">Contract Information</h3>
-                      <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg border ${(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'bg-[#78350f]/30 text-[#fbbf24] border-[#78350f]/50' : 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50'}`}>
-                        {(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 ? 'Expiring Soon' : 'Active'}
+                      <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg border ${(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && selectedEmployee.employmentType !== 'Permanent' ? 'bg-[#78350f]/30 text-[#fbbf24] border-[#78350f]/50' : 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50'}`}>
+                        {(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && selectedEmployee.employmentType !== 'Permanent' ? 'Expiring Soon' : 'Active'}
                       </span>
                     </div>
 
@@ -210,7 +204,7 @@ export default function TeamMembersPage() {
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          Start Date
+                          Contract Start
                         </div>
                         <div className="text-[15px] text-white font-medium">{selectedEmployee.contractStart || 'Jan 15, 2025'}</div>
                       </div>
@@ -220,7 +214,7 @@ export default function TeamMembersPage() {
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          End Date
+                          Contract End
                         </div>
                         <div className="text-[15px] text-white font-medium">
                           {selectedEmployee.employmentType === 'Permanent' ? '-' : (selectedEmployee.contractEnd || 'Jan 14, 2027')}
@@ -228,14 +222,20 @@ export default function TeamMembersPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-6">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Duration: 24 months
-                    </div>
+                    {selectedEmployee.employmentType !== 'Permanent' && (
+                      <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-6">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Duration: 24 months
+                      </div>
+                    )}
 
-                    {role === 'GM' ? (
+                    {selectedEmployee.employmentType === 'Permanent' ? (
+                      <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-[#34d399]">
+                        Permanent Employee
+                      </div>
+                    ) : role === 'GM' ? (
                       <>
                         <button
                           onClick={() => {
@@ -351,7 +351,7 @@ export default function TeamMembersPage() {
             <div className="p-7">
               <div className="flex items-start justify-between mb-1">
                 <h3 className="text-[20px] font-bold">Request Contract Extension</h3>
-                <button 
+                <button
                   onClick={() => setExtensionModalOpen(false)}
                   className="text-gray-500 hover:text-white transition-colors"
                 >
@@ -376,7 +376,7 @@ export default function TeamMembersPage() {
                 {/* Duration Input */}
                 <div className="space-y-2">
                   <label className="text-[13px] text-gray-500 font-medium">Extension Duration (months)</label>
-                  <input 
+                  <input
                     type="number"
                     value={extensionDuration}
                     onChange={(e) => setExtensionDuration(e.target.value)}
@@ -405,7 +405,7 @@ export default function TeamMembersPage() {
                 {/* Reason Textarea */}
                 <div className="space-y-2">
                   <label className="text-[13px] text-gray-500 font-medium">Reason for Extension</label>
-                  <textarea 
+                  <textarea
                     value={extensionReason}
                     onChange={(e) => setExtensionReason(e.target.value)}
                     placeholder="Explain why this contract extension is needed..."
@@ -415,16 +415,16 @@ export default function TeamMembersPage() {
                 </div>
 
                 <div className="pt-4 flex justify-end gap-3">
-                  <button 
+                  <button
                     onClick={() => setExtensionModalOpen(false)}
                     className="px-6 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] text-white font-bold text-[14px] rounded-lg transition-colors border border-gray-800"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={handleSubmitExtension}
                     disabled={submitting || !extensionReason}
-                    className="px-6 py-2.5 bg-[#a3a3a3] hover:bg-[#d4d4d4] disabled:bg-[#404040] disabled:text-[#737373] text-black font-bold text-[14px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 bg-white hover:bg-gray-200 disabled:bg-[#404040] disabled:text-[#737373] text-black font-bold text-[14px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                   >
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     Submit Request
