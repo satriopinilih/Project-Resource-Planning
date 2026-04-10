@@ -23,6 +23,7 @@ public class Project
     public PriorityLevel PriorityLevel { get; set; }
 
     public DateTime EstimatedStartDate { get; set; }
+    public DateTime EstimatedEndDate { get; set; }
 
     public ProjectStatus ProjectStatus { get; set; }
 

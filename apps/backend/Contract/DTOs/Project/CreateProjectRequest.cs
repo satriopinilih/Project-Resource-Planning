@@ -20,4 +20,6 @@ public class CreateProjectRequest
     public PriorityLevel PriorityLevel { get; set; }
 
     public DateTime EstimatedStartDate { get; set; }
+
+    public DateTime EstimatedEndDate { get; set; }
 }

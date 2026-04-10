@@ -65,8 +65,6 @@ public class ProjectsController : ControllerBase
 
     private static ProjectDto MapToDto(Entities.Entities.Project p)
     {
-        var endDate = p.EstimatedStartDate.AddDays(p.EstimatedDuration * 7);
-
         return new ProjectDto
         {
             ProjectId = p.ProjectID,
@@ -76,7 +74,7 @@ public class ProjectsController : ControllerBase
             EstimatedDuration = p.EstimatedDuration,
             PriorityLevel = p.PriorityLevel,
             EstimatedStartDate = p.EstimatedStartDate,
-            EstimatedEndDate = endDate,
+            EstimatedEndDate = p.EstimatedEndDate,
             ProjectStatus = p.ProjectStatus,
             Members = p.UserProjects.Select(up => new ProjectMemberDto
             {
@@ -106,6 +104,7 @@ public class ProjectsController : ControllerBase
             EstimatedDuration = request.EstimatedDuration,
             PriorityLevel = request.PriorityLevel,
             EstimatedStartDate = request.EstimatedStartDate,
+            EstimatedEndDate = request.EstimatedEndDate,
             
             // Set default status for new projects
             ProjectStatus = ProjectStatus.Pending, 
@@ -152,6 +151,7 @@ public class ProjectsController : ControllerBase
         project.EstimatedDuration = request.EstimatedDuration;
         project.PriorityLevel = request.PriorityLevel;
         project.EstimatedStartDate = request.EstimatedStartDate;
+        project.EstimatedEndDate = request.EstimatedEndDate;
         project.ProjectStatus = request.ProjectStatus;
 
         project.UpdatedAt = DateTime.UtcNow;

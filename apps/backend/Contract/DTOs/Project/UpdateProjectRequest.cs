@@ -22,5 +22,7 @@ public class UpdateProjectRequest
 
     public DateTime EstimatedStartDate { get; set; }
 
+    public DateTime EstimatedEndDate { get; set; }
+
     public ProjectStatus ProjectStatus { get; set; }
 }
