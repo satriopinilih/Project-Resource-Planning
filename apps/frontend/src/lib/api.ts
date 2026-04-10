@@ -68,6 +68,12 @@ export type BackendProject = {
   members: { userId: string; userName: string; role: string; staffRole: string }[];
 };
 
+export type BackendHoliday = {
+  id: number;
+  name: string;
+  date: string;
+};
+
 export type BackendEmployee = {
   userId: string;
   userName: string;
@@ -245,4 +251,8 @@ export async function login(identifier: string, password: string): Promise<Login
     method: 'POST',
     body: JSON.stringify({ email: identifier, password })
   });
+}
+
+export async function getHolidays(): Promise<BackendHoliday[]> {
+  return fetchJson<BackendHoliday[]>('/api/holidays');
 }

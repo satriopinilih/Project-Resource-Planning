@@ -6,17 +6,98 @@ import {
   Moon,
   User,
   Plus,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  AlertCircle,
+  Trash2
 } from "lucide-react";
+import { getHolidays, BackendHoliday } from "@/lib/api";
 
 export default function AddProjectPage() {
   const [theme, setTheme] = useState("dark");
+  const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
+  const [durationWeeks, setDurationWeeks] = useState<number>(5);
+  const [startDate, setStartDate] = useState<string>("2026-04-10");
+  const [endDateDetails, setEndDateDetails] = useState<{
+    date: Date | null;
+    skippedHolidays: BackendHoliday[];
+    totalWorkingDays: number;
+  }>({ date: null, skippedHolidays: [], totalWorkingDays: 0 });
+
+  const [teamRoles, setTeamRoles] = useState([
+    { id: '1', role: 'Project Manager', count: 1, workingType: 'Dedicated' }
+  ]);
+
+  const handleAddRole = () => {
+    setTeamRoles([...teamRoles, {
+      id: Math.random().toString(36).substring(2, 9),
+      role: 'Senior BA',
+      count: 1,
+      workingType: 'Dedicated'
+    }]);
+  };
+
+  const handleRemoveRole = (idToRemove: string) => {
+    setTeamRoles(teamRoles.filter(r => r.id !== idToRemove));
+  };
+
+  const updateRole = (id: string, field: string, value: any) => {
+    setTeamRoles(teamRoles.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
 
   useEffect(() => {
     if (document.documentElement.classList.contains('light')) {
       setTheme('light');
     }
+    
+    // Fetch holidays
+    getHolidays().then(setHolidays).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (!startDate || durationWeeks <= 0) {
+      setEndDateDetails({ date: null, skippedHolidays: [], totalWorkingDays: 0 });
+      return;
+    }
+
+    const totalTargetWorkingDays = durationWeeks * 5;
+    let current = new Date(startDate);
+    
+    // Check if start date is valid
+    if (isNaN(current.getTime())) return;
+
+    let workingDaysCount = 0;
+    const skippedHolidays: BackendHoliday[] = [];
+
+    while (workingDaysCount < totalTargetWorkingDays) {
+      const dayOfWeek = current.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      const dateString = current.toISOString().split('T')[0];
+      const holidayFound = holidays.find(h => {
+        const hDate = new Date(h.date).toISOString().split('T')[0];
+        return hDate === dateString;
+      });
+
+      if (!isWeekend && !holidayFound) {
+        workingDaysCount++;
+      } else if (holidayFound && !isWeekend) {
+        if (!skippedHolidays.some(sh => sh.id === holidayFound.id)) {
+          skippedHolidays.push(holidayFound);
+        }
+      }
+
+      if (workingDaysCount < totalTargetWorkingDays) {
+        current.setDate(current.getDate() + 1);
+      }
+    }
+
+    setEndDateDetails({
+      date: current,
+      skippedHolidays,
+      totalWorkingDays: totalTargetWorkingDays
+    });
+
+  }, [startDate, durationWeeks, holidays]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -117,7 +198,8 @@ export default function AddProjectPage() {
               </label>
               <input 
                 type="number" 
-                defaultValue={4}
+                value={durationWeeks}
+                onChange={(e) => setDurationWeeks(parseInt(e.target.value) || 0)}
                 className={inputClasses}
                 required
               />
@@ -142,6 +224,8 @@ export default function AddProjectPage() {
             <div className="relative max-w-md">
               <input 
                 type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 className={`${inputClasses} [&::-webkit-calendar-picker-indicator]:opacity-0`}
                 required
               />
@@ -150,6 +234,40 @@ export default function AddProjectPage() {
             <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-2 ml-1">
               End date will be calculated based on working days and holidays
             </p>
+            
+            {/* Auto-calculated End Date Box */}
+            {endDateDetails.date && (
+              <div className="bg-[#f0f4ff] dark:bg-[#1a2138] border border-[#d6e4ff] dark:border-[#2f3b5e] rounded-xl p-4 mt-4 flex flex-col text-gray-900 dark:text-white transition-colors duration-300">
+                <div className="flex items-center gap-3">
+                  <CalendarIcon className="text-blue-600 dark:text-blue-400" />
+                  <div className="text-[16px]">
+                    Estimated End Date: <span className="font-semibold ml-1">
+                      {endDateDetails.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[13px] text-gray-600 dark:text-gray-400 ml-9 mt-1">
+                  Based on {endDateDetails.totalWorkingDays} working days ({durationWeeks} weeks)
+                </div>
+                
+                {endDateDetails.skippedHolidays.length > 0 && (
+                  <>
+                    <div className="w-full h-px bg-gray-200 dark:bg-white/10 my-3"></div>
+                    <div className="ml-9">
+                      <div className="flex items-center gap-2 text-[14px] font-medium text-gray-800 dark:text-gray-200">
+                        <AlertCircle size={15} className="text-gray-500 dark:text-gray-400" />
+                        Holidays within project timeline:
+                      </div>
+                      <ul className="text-[13px] text-gray-600 dark:text-gray-400 mt-2 space-y-1 ml-6 list-disc list-outside">
+                        {endDateDetails.skippedHolidays.map(h => (
+                          <li key={h.id}>{h.name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Required Team Roles */}
@@ -160,39 +278,70 @@ export default function AddProjectPage() {
               </label>
               <button 
                 type="button" 
+                onClick={handleAddRole}
                 className="flex items-center gap-1.5 text-blue-600 dark:text-[#769dfa] hover:text-blue-700 dark:hover:text-[#8cb0ff] text-[13px] font-medium transition-colors bg-blue-50 dark:bg-[#202844] px-4 py-2 rounded-xl border border-blue-100 dark:border-blue-500/20"
               >
                 <Plus size={16} /> Add Role
               </button>
             </div>
             
-            <div className="flex items-end gap-4">
-              <div className="flex-[2]">
-                <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Role</div>
-                <select className={inputClasses}>
-                  <option>Senior BA</option>
-                  <option>Project Manager</option>
-                  <option>Software Engineer</option>
-                  <option>QA Tester</option>
-                </select>
-              </div>
-              <div className="w-[100px]">
-                <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1 flex justify-center">Count</div>
-                <input 
-                  type="number" 
-                  defaultValue={1} 
-                  min={1}
-                  className={`${inputClasses} text-center`} 
-                />
-              </div>
-              <div className="flex-[2]">
-                <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Working Type</div>
-                <select className={inputClasses}>
-                  <option>Dedicated</option>
-                  <option>Part-time</option>
-                  <option>Ad-hoc</option>
-                </select>
-              </div>
+            <div className="space-y-4">
+              {teamRoles.map((roleItem, index) => (
+                <div key={roleItem.id} className="flex items-end gap-4 relative">
+                  <div className="flex-[2]">
+                    {index === 0 && <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Role</div>}
+                    <select 
+                      className={inputClasses}
+                      value={roleItem.role}
+                      onChange={(e) => updateRole(roleItem.id, 'role', e.target.value)}
+                      disabled={index === 0} // First role always Project Manager
+                    >
+                      <option value="Project Manager">Project Manager</option>
+                      {index !== 0 && (
+                        <>
+                          <option value="Senior BA">Senior BA</option>
+                          <option value="Software Engineer">Software Engineer</option>
+                          <option value="QA Tester">QA Tester</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                  <div className="w-[100px]">
+                    {index === 0 && <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1 flex justify-center">Count</div>}
+                    <input 
+                      type="number" 
+                      value={roleItem.count}
+                      onChange={(e) => updateRole(roleItem.id, 'count', parseInt(e.target.value) || 1)}
+                      min={1}
+                      className={`${inputClasses} text-center`} 
+                    />
+                  </div>
+                  <div className="flex-[2]">
+                    {index === 0 && <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Working Type</div>}
+                    <select 
+                      className={inputClasses}
+                      value={roleItem.workingType}
+                      onChange={(e) => updateRole(roleItem.id, 'workingType', e.target.value)}
+                    >
+                      <option value="Dedicated">Dedicated</option>
+                      <option value="Part-time">Part-time</option>
+                      <option value="Ad-hoc">Ad-hoc</option>
+                    </select>
+                  </div>
+                  
+                  {index !== 0 ? (
+                    <button 
+                      type="button"
+                      onClick={() => handleRemoveRole(roleItem.id)}
+                      className="h-[46px] w-[46px] flex items-center justify-center text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors shrink-0"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  ) : (
+                    <div className="h-[46px] w-[46px] shrink-0 pointer-events-none opacity-0"></div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
