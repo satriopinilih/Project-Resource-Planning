@@ -121,6 +121,9 @@ export default function TeamMembersPage() {
                       }`}
                   >
                     <div className="font-semibold text-[15px] text-gray-100 truncate">{employee.name}</div>
+                    {role === 'HR' && (
+                      <div className="text-[12px] text-gray-500 mt-0.5 truncate">User ID: {employee.id}</div>
+                    )}
                     <div className="text-[13px] text-gray-400 mt-0.5 truncate">{employee.role}</div>
                     {employee.experience && (
                       <div className="text-[12px] text-gray-500 mt-1">Exp: {employee.experience}</div>
@@ -158,6 +161,9 @@ export default function TeamMembersPage() {
                         </div>
                         <div>
                           <h2 className="text-[22px] font-bold text-white">{selectedEmployee.name}</h2>
+                          {role === 'HR' && (
+                            <p className="text-[12px] text-gray-500 mt-1">User ID: {selectedEmployee.id}</p>
+                          )}
                           <p className="text-[14px] text-gray-400 mt-1">{selectedEmployee.role}</p>
                         </div>
                       </div>
@@ -204,7 +210,7 @@ export default function TeamMembersPage() {
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          Contract Start
+                          Start Date
                         </div>
                         <div className="text-[15px] text-white font-medium">{selectedEmployee.contractStart || 'Jan 15, 2025'}</div>
                       </div>
@@ -214,9 +220,11 @@ export default function TeamMembersPage() {
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          Contract End
+                          End Date
                         </div>
-                        <div className="text-[15px] text-white font-medium">{selectedEmployee.contractEnd || 'Jan 14, 2027'}</div>
+                        <div className="text-[15px] text-white font-medium">
+                          {selectedEmployee.employmentType === 'Permanent' ? '-' : (selectedEmployee.contractEnd || 'Jan 14, 2027')}
+                        </div>
                       </div>
                     </div>
 

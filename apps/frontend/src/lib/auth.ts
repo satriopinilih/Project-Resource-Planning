@@ -3,6 +3,7 @@ export type SessionUser = {
   userName: string;
   email: string;
   roles: string[];
+  mustChangePassword?: boolean;
 };
 
 export function getSessionUser(): SessionUser | null {
