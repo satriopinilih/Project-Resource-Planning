@@ -218,6 +218,27 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
+// For endpoints that return plain JSON (not wrapped in ApiResponse<T>)
+async function fetchRaw<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {})
+    },
+    cache: 'no-store'
+  });
+
+  if (!res.ok) {
+    throw new Error(`API request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
+}
+
 export async function seedBackendData(): Promise<void> {
   await fetchJson<string>('/api/seed', { method: 'POST' });
 }
@@ -358,6 +379,39 @@ export async function login(identifier: string, password: string): Promise<Login
     method: 'POST',
     body: JSON.stringify({ email: identifier, password })
   });
+}
+
+export interface TimelineStats {
+  total: number;
+  onHold: number;
+  scheduled: number;
+  running: number;
+  completed: number;
+}
+
+export interface TimelineItem {
+  label: string;
+  subLabel: string;
+  id?: number;
+  bars: {
+    title: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+    projectId?: number;
+  }[];
+}
+
+export async function getTimelineStats(): Promise<TimelineStats> {
+  return fetchRaw<TimelineStats>('/api/timeline/stats');
+}
+
+export async function getProjectTimeline(): Promise<TimelineItem[]> {
+  return fetchRaw<TimelineItem[]>('/api/timeline/projects');
+}
+
+export async function getResourceTimeline(): Promise<TimelineItem[]> {
+  return fetchRaw<TimelineItem[]>('/api/timeline/resources');
 }
 
 export async function getHolidays(): Promise<BackendHoliday[]> {
