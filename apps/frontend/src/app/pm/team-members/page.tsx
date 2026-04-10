@@ -174,7 +174,7 @@ export default function TeamMembersPage() {
                 <div className="grid grid-cols-2 gap-8 mb-6">
                   <div>
                     <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-2">
-                      Contract Start
+                      Start Date
                     </div>
                     <div className="text-[15px] text-white font-medium">
                       {selectedEmployee.contractStart || "Jan 15, 2025"}
@@ -182,10 +182,10 @@ export default function TeamMembersPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-2">
-                      Contract End
+                      End Date
                     </div>
                     <div className="text-[15px] text-white font-medium">
-                      {selectedEmployee.contractEnd || "Jan 14, 2027"}
+                      {selectedEmployee.employmentType === "Permanent" ? "-" : (selectedEmployee.contractEnd || "Jan 14, 2027")}
                     </div>
                   </div>
                 </div>

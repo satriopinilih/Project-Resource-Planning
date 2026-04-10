@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
+import { useSearchParams } from "next/navigation";
 import {
     CheckCircle2,
     AlertCircle,
@@ -9,6 +10,7 @@ import {
     Sun,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { changePassword } from "@/lib/api";
 
 interface UserProfile {
     userId: string;
@@ -18,8 +20,16 @@ interface UserProfile {
 }
 
 export default function SettingsPage() {
+    const searchParams = useSearchParams();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+    const [savingPassword, setSavingPassword] = useState(false);
+    const forceChange = searchParams.get("forcePasswordChange") === "1";
 
     useEffect(() => {
         const auth = localStorage.getItem("auth_user");
@@ -31,6 +41,44 @@ export default function SettingsPage() {
             }
         }
     }, []);
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPasswordError(null);
+        setPasswordSuccess(null);
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            setPasswordError("Please fill all password fields");
+            return;
+        }
+        if (newPassword.length < 8) {
+            setPasswordError("New password must be at least 8 characters");
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setPasswordError("New password and confirmation do not match");
+            return;
+        }
+
+        setSavingPassword(true);
+        try {
+            await changePassword(currentPassword, newPassword);
+            const auth = localStorage.getItem("auth_user");
+            if (auth) {
+                const parsed = JSON.parse(auth);
+                parsed.mustChangePassword = false;
+                localStorage.setItem("auth_user", JSON.stringify(parsed));
+            }
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setPasswordSuccess("Password updated successfully");
+        } catch (e) {
+            setPasswordError(e instanceof Error ? e.message : "Failed to change password");
+        } finally {
+            setSavingPassword(false);
+        }
+    };
 
     return (
         <div className="flex flex-col min-h-screen">
@@ -136,6 +184,37 @@ export default function SettingsPage() {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm dark:border-gray-700/50 p-6 mb-6">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Change Password</h2>
+                    {forceChange && (
+                        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                            You must change your temporary password before using other pages.
+                        </div>
+                    )}
+
+                    <form onSubmit={handleChangePassword} className="space-y-4 max-w-xl">
+                        <div>
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                            <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
+                        </div>
+                        {passwordError && <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>}
+                        {passwordSuccess && <p className="text-sm text-green-600 dark:text-green-400">{passwordSuccess}</p>}
+                        <div className="flex justify-center">
+                            <button type="submit" disabled={savingPassword} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                                {savingPassword ? "Saving..." : "Update Password"}
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
                 {/* System Information */}

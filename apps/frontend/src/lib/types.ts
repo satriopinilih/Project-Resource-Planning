@@ -42,3 +42,15 @@ export interface ContractExtensionRequest {
   status: 'Pending' | 'Approved' | 'Declined';
   reviewedDate?: string;
 }
+
+export interface RequestHistoryItem {
+  requestType: 'Contract Extension' | 'Hire New Person';
+  referenceId: string;
+  employeeId: string;
+  employeeName: string;
+  staffRole: string;
+  extension: string;
+  requestedDate: string;
+  status: string;
+  reviewedDate?: string;
+}
