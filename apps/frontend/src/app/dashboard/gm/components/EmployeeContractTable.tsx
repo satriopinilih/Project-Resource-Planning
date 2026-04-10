@@ -52,17 +52,18 @@ function formatDate(iso: string): string {
 }
 
 function mapToContract(u: BackendEmployee): EmployeeContract {
+  const type = mapEmploymentType(u.employeeType);
   return {
     id: u.userId,
     name: u.userName,
     email: u.email,
     role: u.role,
-    employmentType: mapEmploymentType(u.employeeType),
+    employmentType: type,
     contractStart: formatDate(u.contractStart),
-    contractEnd: formatDate(u.contractEnd),
+    contractEnd: type === "Permanent" ? "-" : formatDate(u.contractEnd),
     contractEndRaw: u.contractEnd,
     daysRemaining: u.daysRemaining,
-    status: mapContractStatus(u.contractStatus),
+    status: type === "Permanent" ? "Active" : mapContractStatus(u.contractStatus),
     department: u.departmentName,
     experienceLevel: u.experienceLevel,
     skills: u.skills,
@@ -305,14 +306,16 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                         {emp.contractStart}
                       </td>
                       <td className="py-4 pr-4">
-                        <p className="text-[13px] text-[var(--dash-text-secondary)]">
+                        <p className={`text-[13px] text-[var(--dash-text-secondary)] ${emp.contractEnd === "-" ? "w-[85px] text-center" : ""}`}>
                           {emp.contractEnd}
                         </p>
-                        <p className="text-[10px] text-[var(--dash-text-faint)]">
-                          {emp.daysRemaining >= 0
-                            ? `${emp.daysRemaining} days remaining`
-                            : `Expired ${Math.abs(emp.daysRemaining)} days ago`}
-                        </p>
+                        {emp.employmentType !== "Permanent" && (
+                          <p className="text-[10px] text-[var(--dash-text-faint)]">
+                            {emp.daysRemaining >= 0
+                              ? `${emp.daysRemaining} days remaining`
+                              : `Expired ${Math.abs(emp.daysRemaining)} days ago`}
+                          </p>
+                        )}
                       </td>
                       <td className="py-4 pr-4">
                         <span
@@ -432,7 +435,9 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
               <div className="mt-2 bg-[#161d29] border border-[#1e2636] rounded-xl p-4 space-y-3">
                 <InfoRow label="Start Date:" value={detailModal.contractStart} />
                 <InfoRow label="End Date:" value={detailModal.contractEnd} />
-                <InfoRow label="Duration:" value="24 months" />
+                {detailModal.employmentType !== "Permanent" && (
+                  <InfoRow label="Duration:" value="24 months" />
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-[13px] text-gray-300">Status:</span>
                   <span className={`text-[12px] font-bold ${statusColor[detailModal.status]}`}>
