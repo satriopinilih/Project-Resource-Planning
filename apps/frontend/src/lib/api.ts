@@ -1,4 +1,4 @@
-import { ContractExtensionRequest, Employee, Project } from './types';
+import { ContractExtensionRequest, Employee, Project, RequestHistoryItem } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5103';
 
@@ -15,6 +15,7 @@ export type LoginResponse = {
   userName: string;
   email: string;
   roles: string[];
+  mustChangePassword: boolean;
 };
 
 type BackendUserProject = {
@@ -32,7 +33,7 @@ type BackendUser = {
   role: string;
   departmentId: number;
   departmentName: string;
-  employeeType: 'Contract' | 'Permanent';
+  employeeType: 'Contract' | 'Permanent' | string | number;
   experienceLevel: string;
   contractStart: string;
   contractEnd: string;
@@ -55,6 +56,18 @@ type BackendContractExtension = {
   status: 'Pending' | 'Approved' | 'Declined';
 };
 
+type BackendRequestHistoryItem = {
+  requestType: 'Contract Extension' | 'Hire New Person';
+  referenceId: string;
+  employeeId: string;
+  employeeName: string;
+  staffRole: string;
+  extension: string;
+  requestedDate: string;
+  status: string;
+  reviewedDate: string | null;
+};
+
 export type BackendProject = {
   projectId: number;
   projectName: string;
@@ -66,6 +79,12 @@ export type BackendProject = {
   estimatedEndDate: string;
   projectStatus: number; // 0=Pending,1=Running,2=Completed
   members: { userId: string; userName: string; role: string; staffRole: string }[];
+};
+
+export type BackendHoliday = {
+  id: number;
+  name: string;
+  date: string;
 };
 
 export type BackendEmployee = {
@@ -86,6 +105,18 @@ export type BackendEmployee = {
   projects: BackendUserProject[];
 };
 
+export type LookupItem = {
+  id: number;
+  name: string;
+};
+
+export type EmployeeFormOptions = {
+  departments: LookupItem[];
+  skills: LookupItem[];
+  roles: LookupItem[];
+  staffRoles: LookupItem[];
+};
+
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -98,6 +129,14 @@ const mapProject = (project: BackendUserProject): Project => ({
   status: 'Active'
 });
 
+const normalizeEmploymentType = (value: BackendUser['employeeType']): 'Contract' | 'Permanent' => {
+  if (value === 1 || value === '1') return 'Permanent';
+  if (value === 0 || value === '0') return 'Contract';
+  const v = String(value).toLowerCase();
+  if (v.includes('permanent')) return 'Permanent';
+  return 'Contract';
+};
+
 const mapEmployee = (user: BackendUser): Employee => {
   const contractStatus = user.contractStatus === 'ExpiringSoon' ? 'Expiring Soon' : 'Active';
   return {
@@ -106,7 +145,7 @@ const mapEmployee = (user: BackendUser): Employee => {
     email: user.email,
     role: user.role || user.roles[0] || 'Staff',
     department: user.departmentName,
-    employmentType: user.employeeType,
+    employmentType: normalizeEmploymentType(user.employeeType),
     contractStart: formatDate(user.contractStart),
     contractEnd: formatDate(user.contractEnd),
     contractStatus,
@@ -221,12 +260,23 @@ export async function getPendingProjects(): Promise<BackendProject[]> {
   return fetchJson<BackendProject[]>('/api/projects?status=Pending');
 }
 
+export async function createProject(projectData: any): Promise<BackendProject> {
+  return fetchJson<BackendProject>('/api/projects', {
+    method: 'POST',
+    body: JSON.stringify(projectData)
+  });
+}
+
 export async function getProjectById(id: string): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`);
 }
 
 export async function getRawEmployees(): Promise<BackendEmployee[]> {
   return fetchJson<BackendEmployee[]>('/api/employees');
+}
+
+export async function getEmployeeFormOptions(): Promise<EmployeeFormOptions> {
+  return fetchJson<EmployeeFormOptions>('/api/employees/form-options');
 }
 
 export async function createContractExtension(
@@ -240,9 +290,70 @@ export async function createContractExtension(
   });
 }
 
+export type CreateEmployeeRequest = {
+  userId: string;
+  userName: string;
+  email: string;
+  password: string;
+  departmentId: number;
+  employeeType: number;
+  experienceLevel: string;
+  contractStart: string;
+  contractEnd: string;
+  skillIds: number[];
+  roleIds: number[];
+  staffRoleIds: number[];
+};
+
+export type CreateEmployeeResult = {
+  user: BackendUser;
+  temporaryPassword: string;
+  mustChangePassword: boolean;
+};
+
+export async function createEmployee(payload: CreateEmployeeRequest): Promise<CreateEmployeeResult> {
+  return fetchJson<CreateEmployeeResult>('/api/employees', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await fetchJson('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+}
+
+export async function forgotPassword(identifier: string): Promise<void> {
+  await fetchJson('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ identifier })
+  });
+}
+
+export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryItem[]> {
+  const data = await fetchJson<BackendRequestHistoryItem[]>(`/api/requesthistory?scope=${encodeURIComponent(scope)}`);
+  return data.map((item) => ({
+    requestType: item.requestType,
+    referenceId: item.referenceId,
+    employeeId: item.employeeId,
+    employeeName: item.employeeName,
+    staffRole: item.staffRole,
+    extension: item.extension,
+    requestedDate: formatDate(item.requestedDate),
+    status: item.status,
+    reviewedDate: item.reviewedDate ? formatDate(item.reviewedDate) : undefined
+  }));
+}
+
 export async function login(identifier: string, password: string): Promise<LoginResponse> {
   return fetchJson<LoginResponse>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email: identifier, password })
   });
+}
+
+export async function getHolidays(): Promise<BackendHoliday[]> {
+  return fetchJson<BackendHoliday[]>('/api/holidays');
 }

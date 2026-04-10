@@ -265,10 +265,10 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                       Employment Type
                     </th>
                     <th className="text-left text-[12px] font-semibold text-[var(--dash-text-muted)] py-3 pr-4">
-                      Contract Start
+                      Start Date
                     </th>
                     <th className="text-left text-[12px] font-semibold text-[var(--dash-text-muted)] py-3 pr-4">
-                      Contract End
+                      End Date
                     </th>
                     <th className="text-left text-[12px] font-semibold text-[var(--dash-text-muted)] py-3 pr-4">
                       Contract Status
@@ -307,7 +307,7 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                       </td>
                       <td className="py-4 pr-4">
                         <p className={`text-[13px] text-[var(--dash-text-secondary)] ${emp.contractEnd === "-" ? "w-[85px] text-center" : ""}`}>
-                          {emp.contractEnd}
+                          {emp.employmentType === "Permanent" ? "-" : emp.contractEnd}
                         </p>
                         {emp.employmentType !== "Permanent" && (
                           <p className="text-[10px] text-[var(--dash-text-faint)]">

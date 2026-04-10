@@ -22,4 +22,16 @@ public class CreateProjectRequest
     public DateTime EstimatedStartDate { get; set; }
 
     public DateTime EstimatedEndDate { get; set; }
+
+    public List<CreateProjectRoleDto> RequiredRoles { get; set; } = new List<CreateProjectRoleDto>();
+}
+
+public class CreateProjectRoleDto
+{
+    [Required]
+    public string RoleName { get; set; } = string.Empty;
+
+    public int Count { get; set; }
+
+    public WorkingType WorkingType { get; set; }
 }

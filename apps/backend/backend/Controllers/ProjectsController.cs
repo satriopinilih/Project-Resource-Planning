@@ -118,16 +118,47 @@ public class ProjectsController : ControllerBase
 
         try 
         {
-            _db.Projects.Add(project);
-            await _db.SaveChangesAsync();
+            using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                _db.Projects.Add(project);
+                await _db.SaveChangesAsync();
 
-            // Return 201 Created with the location of the new resource
-            return CreatedAtAction(nameof(GetById), new { id = project.ProjectID }, project);
+                if (request.RequiredRoles != null && request.RequiredRoles.Any())
+                {
+                    foreach (var roleDto in request.RequiredRoles)
+                    {
+                        var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == roleDto.RoleName);
+                        if (staffRole == null)
+                        {
+                            return BadRequest(ApiResponse<string>.ErrorResponse($"Staff Role '{roleDto.RoleName}' not found."));
+                        }
+
+                        var requiredRole = new Entities.Entities.ProjectRequiredRole
+                        {
+                            ProjectID = project.ProjectID,
+                            StaffRoleId = staffRole.StaffRoleId,
+                            RequiredCount = roleDto.Count,
+                            WorkingType = roleDto.WorkingType
+                        };
+                        _db.ProjectRequiredRoles.Add(requiredRole);
+                    }
+                    await _db.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+                return CreatedAtAction(nameof(GetById), new { id = project.ProjectID }, ApiResponse<ProjectDto>.SuccessResponse(MapToDto(project)));
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
         catch (Exception ex)
         {
             // Log exception here
-            return StatusCode(500, "An error occurred while creating the project.");
+            return StatusCode(500, ApiResponse<string>.ErrorResponse("An error occurred while creating the project. " + ex.Message));
         }
     }
 

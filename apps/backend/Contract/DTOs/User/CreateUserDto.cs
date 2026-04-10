@@ -15,4 +15,5 @@ public class CreateUserDto
     public DateTime ContractEnd { get; set; }
     public List<int> SkillIds { get; set; } = new();
     public List<int> RoleIds { get; set; } = new();
+    public List<int> StaffRoleIds { get; set; } = new();
 }
