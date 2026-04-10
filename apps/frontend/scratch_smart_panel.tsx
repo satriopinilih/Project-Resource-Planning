@@ -21,12 +21,8 @@ import {
   getProjectRecommendations,
   RecommendationResponse,
   RecommendationOption as OptionType,
-  RecommendationCandidate,
-  updateProject,
-  assignMemberToProject,
-  getEmployees
+  RecommendationCandidate
 } from "@/lib/api";
-import { Employee } from "@/lib/types";
 
 interface SmartRecommendationPanelProps {
   projectId: number;
@@ -217,126 +213,6 @@ const OptionCard: React.FC<{
           )}
         </div>
       )}
-
-      {/* Option Actions */}
-      <div className="mt-6 flex gap-3">
-        <button
-          disabled={option.requiresHiring || option.requiresReschedule}
-          onClick={() => window.dispatchEvent(new CustomEvent('startProject', { detail: option }))}
-          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
-        >
-          {option.requiresHiring || option.requiresReschedule ? "Unavailable to Start" : "Start Project"}
-        </button>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('customizeOption', { detail: option }))}
-          className="px-5 py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 font-bold text-[13px] rounded-xl border border-gray-700/50 transition-all cursor-pointer"
-        >
-          Customize
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ── Customize Modal ──
-const CustomizeModal: React.FC<{
-  option: OptionType;
-  requiredRoles: any[];
-  employees: Employee[];
-  onClose: () => void;
-  onSave: (assignments: { role: string; userId: string }[]) => void;
-  isProcessing: boolean;
-}> = ({ option, requiredRoles, employees, onClose, onSave, isProcessing }) => {
-  
-  // Transform needed roles into a flat list of slots
-  const initialAssignments: { id: string; role: string; userId: string; originalUserId: string }[] = [];
-  let slotIdx = 0;
-  
-  requiredRoles.forEach(rr => {
-    for (let i = 0; i < rr.requiredCount; i++) {
-        // Find if option originally recommended someone for this role bucket
-        const existingRec = option.candidates.filter(c => c.targetRole === rr.roleName)[i];
-        initialAssignments.push({
-            id: `slot_${slotIdx++}`,
-            role: rr.roleName,
-            userId: existingRec ? existingRec.userId : "",
-            originalUserId: existingRec ? existingRec.userId : ""
-        });
-    }
-  });
-
-  const [assignments, setAssignments] = useState(initialAssignments);
-
-  const updateAssignment = (id: string, userId: string) => {
-    setAssignments(prev => prev.map(a => a.id === id ? { ...a, userId } : a));
-  };
-
-  const handleSave = () => {
-    // Collect valid assignments
-    const valid = assignments.filter(a => a.userId.trim() !== "");
-    onSave(valid);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#111318] border border-[var(--dash-border)] rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl flex flex-col">
-        <div className="p-6 border-b border-gray-800 flex items-center justify-between sticky top-0 bg-[#111318]/90 backdrop-blur-md z-10">
-          <div>
-            <h3 className="text-lg font-bold text-white">Customize Option: {option.title}</h3>
-            <p className="text-[12px] text-gray-400 mt-1">Assign available employees to the required project roles</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400">✕</button>
-        </div>
-
-        <div className="p-6 space-y-5">
-           {assignments.map((slot) => {
-              const selectedEmp = employees.find(e => e.id === slot.userId);
-              const originalEmpName = option.candidates.find(c => c.userId === slot.originalUserId)?.userName;
-              
-              return (
-                <div key={slot.id} className="bg-[#1a1f2e] border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
-                   <div className="flex items-center justify-between">
-                     <span className="text-[13px] font-bold text-gray-200">{slot.role}</span>
-                     {slot.userId !== slot.originalUserId && (
-                         <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-bold">Modified</span>
-                     )}
-                   </div>
-                   <div className="flex flex-col gap-2">
-                       <select 
-                         value={slot.userId} 
-                         onChange={(e) => updateAssignment(slot.id, e.target.value)}
-                         className="w-full bg-[#111318] border border-gray-700 rounded-lg px-3 py-2.5 text-[13px] text-gray-200 focus:outline-none focus:border-blue-500"
-                       >
-                         <option value="">-- Select an Employee --</option>
-                         {employees.map(emp => (
-                           <option key={emp.id} value={emp.id}>
-                             {emp.name} ({emp.role}) {(emp.projects && emp.projects.length > 0) ? `• Busy` : `• Available`}
-                           </option>
-                         ))}
-                       </select>
-                       <p className="text-[11px] text-gray-500">
-                         Recommended originally: {originalEmpName || "None (Hiring Required)"}
-                       </p>
-                   </div>
-                </div>
-              );
-           })}
-        </div>
-
-        <div className="p-6 border-t border-gray-800 flex justify-end gap-3 sticky bottom-0 bg-[#111318] z-10 rounded-b-2xl">
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-bold bg-gray-800 text-gray-200 hover:bg-gray-700 text-[13px]">
-            Cancel
-          </button>
-          <button 
-            onClick={handleSave} 
-            disabled={isProcessing}
-            className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 flex items-center gap-2 text-[13px] disabled:opacity-50"
-          >
-            {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            {isProcessing ? "Processing..." : "Save & Start Project"}
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
@@ -346,16 +222,6 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
   const [data, setData] = useState<RecommendationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Customization and Batch actions state
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [customizingOption, setCustomizingOption] = useState<OptionType | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processStatus, setProcessStatus] = useState("");
-
-  useEffect(() => {
-     getEmployees().then(setEmployees).catch(err => console.error("Could not fetch employees:", err));
-  }, []);
 
   useEffect(() => {
     if (!projectId) return;
@@ -371,45 +237,6 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
       })
       .finally(() => setLoading(false));
   }, [projectId]);
-
-  useEffect(() => {
-    const handleStart = async (e: any) => {
-       const option: OptionType = e.detail;
-       // Quick start uses standard recommendation
-       await processStartProject(option.candidates.map(c => ({ role: c.targetRole, userId: c.userId })));
-    };
-    const handleCustomize = (e: any) => {
-       setCustomizingOption(e.detail);
-    };
-
-    window.addEventListener('startProject', handleStart);
-    window.addEventListener('customizeOption', handleCustomize);
-    return () => {
-      window.removeEventListener('startProject', handleStart);
-      window.removeEventListener('customizeOption', handleCustomize);
-    };
-  }, [projectId]);
-
-  const processStartProject = async (assignments: { role: string, userId: string }[]) => {
-      setIsProcessing(true);
-      try {
-         setProcessStatus("Assigning members...");
-         for (const assign of assignments) {
-            await assignMemberToProject(projectId, {
-               userId: assign.userId,
-               roleInProject: assign.role
-            });
-         }
-         setProcessStatus("Starting project...");
-         await updateProject(projectId, { projectStatus: 1 }); // 1 = Running
-         window.location.reload();
-      } catch (err) {
-         console.error(err);
-         alert("Failed to start project.");
-      } finally {
-         setIsProcessing(false);
-      }
-  };
 
   if (loading) {
     return (
@@ -496,14 +323,7 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
         </div>
 
         {/* Comparison Grid */}
-        <div className="flex flex-col md:flex-row gap-6 mb-4 relative">
-          {/* Overlay loader when processing batch starts */}
-          {isProcessing && (
-            <div className="absolute inset-0 z-20 bg-[#111318]/70 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center border border-gray-800">
-               <Loader2 size={32} className="animate-spin text-blue-500 mb-4" />
-               <p className="text-white font-bold">{processStatus}</p>
-            </div>
-          )}
+        <div className="flex flex-col md:flex-row gap-6 mb-4">
           <OptionCard 
             option={data.optionA}
             isRecommended={data.bestOption === "A"}
@@ -516,17 +336,7 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
           />
         </div>
       </div>
-
-      {customizingOption && (
-        <CustomizeModal 
-           option={customizingOption}
-           requiredRoles={data.requiredRoles}
-           employees={employees}
-           onClose={() => setCustomizingOption(null)}
-           onSave={processStartProject}
-           isProcessing={isProcessing}
-        />
-      )}
     </div>
   );
 }
+
