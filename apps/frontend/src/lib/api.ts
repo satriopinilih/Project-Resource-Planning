@@ -332,6 +332,12 @@ export async function forgotPassword(identifier: string): Promise<void> {
   });
 }
 
+export async function resetEmployeePassword(userId: string): Promise<{ temporaryPassword: string; mustChangePassword: boolean }> {
+  return fetchJson<{ temporaryPassword: string; mustChangePassword: boolean }>(`/api/employees/${encodeURIComponent(userId)}/reset-password`, {
+    method: 'POST'
+  });
+}
+
 export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryItem[]> {
   const data = await fetchJson<BackendRequestHistoryItem[]>(`/api/requesthistory?scope=${encodeURIComponent(scope)}`);
   return data.map((item) => ({

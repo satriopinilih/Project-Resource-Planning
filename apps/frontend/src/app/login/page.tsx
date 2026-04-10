@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { forgotPassword, login } from "@/lib/api";
+import { login } from "@/lib/api";
 import { getDashboardPathByRoles } from "@/lib/auth";
 
 export default function LoginPage() {
@@ -11,8 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,25 +68,6 @@ export default function LoginPage() {
       setError("Invalid User ID or Password");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!userId.trim()) {
-      setError("Enter User ID or Email first");
-      return;
-    }
-
-    setResetLoading(true);
-    setError(null);
-    setResetMessage(null);
-    try {
-      await forgotPassword(userId.trim());
-      setResetMessage("If account exists, password reset has been sent to the registered email.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to send password reset");
-    } finally {
-      setResetLoading(false);
     }
   };
 
@@ -170,23 +149,6 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-
-          {resetMessage && (
-            <div className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-              {resetMessage}
-            </div>
-          )}
-
-          <div className="flex justify-end -mt-1">
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              disabled={resetLoading}
-              className="text-sm font-medium text-[#3366ff] hover:text-[#2952cc] disabled:opacity-50"
-            >
-              {resetLoading ? "Sending..." : "Forgot password?"}
-            </button>
-          </div>
 
           <button
             id="signInButton"

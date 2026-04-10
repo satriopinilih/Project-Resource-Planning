@@ -111,12 +111,17 @@ public class AuthController : ControllerBase
         }
 
         var temporaryPassword = BuildTemporaryPassword(user.UserName, user.UserId);
+
+        var (sent, reason) = await TrySendResetEmail(user.Email, user.UserName, temporaryPassword);
+        if (!sent)
+        {
+            return BadRequest(ApiResponse<object>.ErrorResponse($"Failed to send reset email: {reason}"));
+        }
+
         user.Password = temporaryPassword;
         user.UpdatedAt = DateTime.UtcNow;
         user.UpdatedBy = user.UserId;
         await _db.SaveChangesAsync();
-
-        await TrySendResetEmail(user.Email, user.UserName, temporaryPassword);
 
         return Ok(ApiResponse<object>.SuccessResponse(new { }, "Password reset sent to your email"));
     }
@@ -161,7 +166,7 @@ public class AuthController : ControllerBase
         return $"{firstName}@{digitPart}";
     }
 
-    private async Task TrySendResetEmail(string toEmail, string userName, string temporaryPassword)
+    private async Task<(bool Sent, string Reason)> TrySendResetEmail(string toEmail, string userName, string temporaryPassword)
     {
         var smtp = _configuration.GetSection("Smtp");
         var host = smtp["Host"];
@@ -173,7 +178,7 @@ public class AuthController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
-            return;
+            return (false, "SMTP is not configured. Set Smtp.Host, Smtp.From, Smtp.Username, and Smtp.Password in appsettings.");
         }
 
         using var client = new SmtpClient(host, port)
@@ -191,10 +196,11 @@ public class AuthController : ControllerBase
         try
         {
             await client.SendMailAsync(mail);
+            return (true, string.Empty);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore SMTP failures to avoid exposing mail configuration details
+            return (false, ex.Message);
         }
     }
 }
