@@ -95,8 +95,7 @@ public class ProjectsController : ControllerBase
             RequiredCount = pr.RequiredCount,
             WorkingType = pr.WorkingType.ToString(),
             FilledCount = members.Count(m =>
-                string.Equals(m.Role, pr.StaffRole?.RoleName, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(m.StaffRole, pr.StaffRole?.RoleName, StringComparison.OrdinalIgnoreCase)
+                string.Equals(m.Role, pr.StaffRole?.RoleName, StringComparison.OrdinalIgnoreCase)
             )
         }).ToList();
 

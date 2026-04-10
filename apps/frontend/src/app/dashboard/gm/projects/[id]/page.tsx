@@ -544,8 +544,7 @@ export default function ProjectDetailsPage() {
                       {project.requiredRoles?.map((role) => {
                         const membersInRole = project.members?.filter(
                           (m) =>
-                            m.role.toLowerCase() === role.roleName.toLowerCase() ||
-                            m.staffRole?.toLowerCase() === role.roleName.toLowerCase()
+                            m.role.toLowerCase() === role.roleName.toLowerCase()
                         ) || [];
                         const isDedicated = role.workingType === 'Dedicated';
 
