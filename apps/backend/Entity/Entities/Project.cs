@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Commons.Enums;
 
@@ -39,4 +39,7 @@ public class Project
 
     [InverseProperty(nameof(ProjectRequiredRole.Project))]
     public virtual ICollection<ProjectRequiredRole> ProjectRequiredRoles { get; set; } = new List<ProjectRequiredRole>();
+
+    [InverseProperty(nameof(ProjectRequiredSkill.Project))]
+    public virtual ICollection<ProjectRequiredSkill> ProjectRequiredSkills { get; set; } = new List<ProjectRequiredSkill>();
 }

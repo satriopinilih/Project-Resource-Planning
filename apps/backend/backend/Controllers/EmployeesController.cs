@@ -333,8 +333,8 @@ public class EmployeesController : ControllerBase
                 ProjectId = p.ProjectId,
                 ProjectName = p.Project?.ProjectName ?? string.Empty,
                 RoleInProject = p.RoleInProject,
-                StartDate = p.Project?.EstimatedStartDate ?? DateTime.MinValue,
-                EndDate = null
+                StartDate = p.StartDate ?? p.Project?.EstimatedStartDate ?? DateTime.MinValue,
+                EndDate = p.EndDate ?? p.Project?.EstimatedEndDate
             }).ToList()
         };
     }

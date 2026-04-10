@@ -14,6 +14,8 @@ public class ProjectDto
     public DateTime EstimatedEndDate { get; set; }
     public ProjectStatus ProjectStatus { get; set; }
     public List<ProjectMemberDto> Members { get; set; } = new();
+    public List<ProjectRequiredRoleDto> RequiredRoles { get; set; } = new();
+    public List<string> RequiredSkills { get; set; } = new(); // Project-level skill requirements
 }
 
 public class ProjectMemberDto
@@ -22,4 +24,17 @@ public class ProjectMemberDto
     public string UserName { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public string StaffRole { get; set; } = string.Empty;
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string Status { get; set; } = "Assigned";
+}
+
+public class ProjectRequiredRoleDto
+{
+    public int Id { get; set; }
+    public int StaffRoleId { get; set; }
+    public string RoleName { get; set; } = string.Empty;
+    public int RequiredCount { get; set; }
+    public string WorkingType { get; set; } = "Dedicated";
+    public int FilledCount { get; set; }
 }
