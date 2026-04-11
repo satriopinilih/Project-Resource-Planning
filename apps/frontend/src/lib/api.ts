@@ -140,6 +140,32 @@ export type EmployeeFormOptions = {
   staffRoles: LookupItem[];
 };
 
+export type HireRequest = {
+  hireRequestId: number;
+  requestedBy: string;
+  projectId?: number;
+  projectName: string;
+  roleNeeded: string;
+  quantity: number;
+  startDate: string;
+  endDate: string;
+  notes: string;
+  status: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined';
+  hiredEmployeeName?: string;
+  createdAt: string;
+  fulfilledAt?: string;
+};
+
+export type CreateHireRequestPayload = {
+  projectId?: number;
+  projectName: string;
+  roleNeeded: string;
+  quantity: number;
+  startDate: string;
+  endDate: string;
+  notes: string;
+};
+
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -425,6 +451,39 @@ export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryIte
     status: item.status,
     reviewedDate: item.reviewedDate ? formatDate(item.reviewedDate) : undefined
   }));
+}
+
+export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled', projectId?: number): Promise<HireRequest[]> {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (projectId !== undefined) params.set('projectId', String(projectId));
+  const query = params.toString();
+  return fetchJson<HireRequest[]>(`/api/hirerequests${query ? `?${query}` : ''}`);
+}
+
+export async function createHireRequest(payload: CreateHireRequestPayload): Promise<HireRequest> {
+  return fetchJson<HireRequest>('/api/hirerequests', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function startHireRequest(id: number): Promise<void> {
+  await fetchJson(`/api/hirerequests/${id}/start`, { method: 'POST' });
+}
+
+export async function fulfillHireRequest(id: number, hiredEmployeeName?: string): Promise<void> {
+  await fetchJson(`/api/hirerequests/${id}/fulfill`, {
+    method: 'POST',
+    body: JSON.stringify({ hiredEmployeeName })
+  });
+}
+
+export async function declineHireRequest(id: number, notes?: string): Promise<void> {
+  await fetchJson(`/api/hirerequests/${id}/decline`, {
+    method: 'POST',
+    body: JSON.stringify({ notes })
+  });
 }
 
 export async function login(identifier: string, password: string): Promise<LoginResponse> {

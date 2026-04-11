@@ -54,23 +54,21 @@ public class RequestHistoryController : ControllerBase
             ReviewedDate = c.ProcessedAt
         });
 
-        var hireCandidates = users
-            .Where(u => u.CreatedBy != "system" && !string.IsNullOrWhiteSpace(u.CreatedBy))
-            .ToList();
+        var hireRows = await _db.HireRequests
+            .OrderByDescending(h => h.CreatedAt)
+            .ToListAsync();
 
-        var hireHistory = hireCandidates.Select(u => new RequestHistoryItemDto
+        var hireHistory = hireRows.Select(h => new RequestHistoryItemDto
         {
             RequestType = "Hire New Person",
-            ReferenceId = $"HIRE-{u.UserId}",
-            EmployeeId = u.UserId,
-            EmployeeName = u.UserName,
-            StaffRole = u.UserStaffRoles.Select(x => x.StaffRole.RoleName).FirstOrDefault()
-                ?? u.UserRoles.Select(x => x.Role.RoleName.ToString()).FirstOrDefault()
-                ?? "Staff",
+            ReferenceId = $"HIRE-{h.HireRequestId}",
+            EmployeeId = h.ProjectId?.ToString() ?? "-",
+            EmployeeName = h.ProjectName,
+            StaffRole = h.RoleNeeded,
             Extension = "-",
-            RequestedDate = u.CreatedAt,
-            Status = "Completed",
-            ReviewedDate = u.CreatedAt
+            RequestedDate = h.CreatedAt,
+            Status = h.Status,
+            ReviewedDate = h.FulfilledAt
         });
 
         var result = contractHistory

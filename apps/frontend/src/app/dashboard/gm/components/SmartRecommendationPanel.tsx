@@ -37,21 +37,22 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
   const matchColor = candidate.skillMatchPercent >= 70
     ? "text-green-400"
     : candidate.skillMatchPercent >= 40
-      ? "text-amber-400"
-      : "text-red-400";
+    ? "text-amber-400"
+    : "text-red-400";
 
   const matchBg = candidate.skillMatchPercent >= 70
     ? "bg-green-500/10 border-green-500/20"
     : candidate.skillMatchPercent >= 40
-      ? "bg-amber-500/10 border-amber-500/20"
-      : "bg-red-500/10 border-red-500/20";
+    ? "bg-amber-500/10 border-amber-500/20"
+    : "bg-red-500/10 border-red-500/20";
 
   return (
     <div className="flex items-start gap-4 p-4 bg-[#1a1f2e]/60 rounded-xl border border-[var(--dash-border)] hover:border-gray-600 transition-all group">
       {/* Rank Badge */}
       <div className="flex flex-col items-center gap-1 pt-0.5">
-        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${rank === 1 ? "bg-amber-500/20 text-amber-400" : rank === 2 ? "bg-gray-500/20 text-gray-400" : "bg-gray-800 text-gray-500"
-          }`}>
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${
+          rank === 1 ? "bg-amber-500/20 text-amber-400" : rank === 2 ? "bg-gray-500/20 text-gray-400" : "bg-gray-800 text-gray-500"
+        }`}>
           #{rank}
         </div>
       </div>
@@ -67,6 +68,7 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
         <p className="text-[11px] text-[var(--dash-text-faint)] mb-2">
           {candidate.staffRole} · {candidate.experienceYears}yr experience · For: <span className="text-blue-400">{candidate.targetRole}</span>
         </p>
+        
 
         {/* Skills */}
         <div className="flex flex-wrap gap-1.5 mb-2">
@@ -89,6 +91,7 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
             {candidate.availabilityNote}
             {candidate.currentProjects.length > 0 && (
               <span className="text-[var(--dash-text-faint)]">
+                 ({candidate.currentProjects.join(", ")})
                 ({candidate.currentProjects.join(", ")})
               </span>
             )}

@@ -24,6 +24,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProjectRequiredRole> ProjectRequiredRoles { get; set; }
     public DbSet<ProjectRequiredSkill> ProjectRequiredSkills { get; set; }
     public DbSet<ContractExtension> ContractExtensions { get; set; }
+    public DbSet<HireRequest> HireRequests { get; set; }
     public DbSet<Holiday> Holidays { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,6 +112,18 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<ContractExtension>()
             .Property(ce => ce.Status)
             .HasDefaultValue("Pending");
+
+        modelBuilder.Entity<HireRequest>()
+            .Property(hr => hr.CreatedAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        modelBuilder.Entity<HireRequest>()
+            .Property(hr => hr.UpdatedAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        modelBuilder.Entity<HireRequest>()
+            .Property(hr => hr.Status)
+            .HasDefaultValue("Open");
 
         modelBuilder.Entity<Holiday>().HasData(
             new Holiday { Id = 1, Name = "New Year's Day", Date = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },

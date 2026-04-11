@@ -14,6 +14,7 @@ export default function TeamMembersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<'GM' | 'HR' | 'PM' | 'Marketing' | 'Staff' | null>(null);
+  const [sessionRoles, setSessionRoles] = useState<string[]>([]);
 
   // Extension Modal State
   const [extensionModalOpen, setExtensionModalOpen] = useState(false);
@@ -33,6 +34,7 @@ export default function TeamMembersPage() {
         const user = getSessionUser();
         const currentRole = getPrimaryRole(user?.roles ?? []);
         setRole(currentRole);
+        setSessionRoles(user?.roles ?? []);
 
         setError(null);
         const [data, pendingRequests] = await Promise.all([
@@ -94,6 +96,7 @@ export default function TeamMembersPage() {
   const selectedEmployee = selectedMember
     ? employees.find(e => e.id === selectedMember)
     : null;
+  const canResetPassword = sessionRoles.includes('HR');
   const hasPendingRequest = selectedEmployee ? requestedEmployeeIds.has(selectedEmployee.id) : false;
 
   const getInitials = (name: string) => {
@@ -140,6 +143,9 @@ export default function TeamMembersPage() {
                       }`}
                   >
                     <div className="font-semibold text-[15px] text-gray-100 truncate">{employee.name}</div>
+                    {canResetPassword && (
+                      <div className="text-[12px] text-gray-500 mt-0.5 truncate">User ID: {employee.id}</div>
+                    )}
                     <div className="text-[13px] text-gray-400 mt-0.5 truncate">{employee.role}</div>
                     {employee.experience && (
                       <div className="text-[12px] text-gray-500 mt-1">Exp: {employee.experience}</div>
@@ -177,6 +183,9 @@ export default function TeamMembersPage() {
                         </div>
                         <div>
                           <h2 className="text-[22px] font-bold text-white">{selectedEmployee.name}</h2>
+                          {canResetPassword && (
+                            <p className="text-[12px] text-gray-500 mt-1">User ID: {selectedEmployee.id}</p>
+                          )}
                           <p className="text-[14px] text-gray-400 mt-1">{selectedEmployee.role}</p>
                         </div>
                       </div>
@@ -251,8 +260,22 @@ export default function TeamMembersPage() {
                     )}
 
                     {selectedEmployee.employmentType === 'Permanent' ? (
-                      <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-[#34d399]">
-                        Permanent Employee
+                      <div className="space-y-2">
+                        <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-[#34d399]">
+                          Permanent Employee
+                        </div>
+                        {canResetPassword && (
+                          <button
+                            onClick={() => {
+                              setShowResetConfirmModal(true);
+                              setResetConfirmText('');
+                            }}
+                            disabled={resettingUserId === selectedEmployee.id}
+                            className="w-full rounded-xl border border-amber-600 bg-amber-600/15 px-4 py-3 text-center text-[13px] font-semibold text-amber-300 hover:bg-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {resettingUserId === selectedEmployee.id ? 'Resetting Password...' : 'Reset Password to Default'}
+                          </button>
+                        )}
                       </div>
                     ) : role === 'GM' ? (
                       <>
@@ -279,7 +302,7 @@ export default function TeamMembersPage() {
                         <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-gray-300">
                           Contact GM to request contract extension
                         </div>
-                        {role === 'HR' && (
+                        {canResetPassword && (
                           <button
                             onClick={() => {
                               setShowResetConfirmModal(true);
@@ -469,7 +492,7 @@ export default function TeamMembersPage() {
         </div>
       )}
 
-      {role === 'HR' && showResetConfirmModal && selectedEmployee && (
+      {canResetPassword && showResetConfirmModal && selectedEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-white">
             <div className="p-6 space-y-4">
@@ -518,7 +541,7 @@ export default function TeamMembersPage() {
         </div>
       )}
 
-      {role === 'HR' && resetTempPassword && (
+      {canResetPassword && resetTempPassword && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-white">
             <div className="p-6 space-y-4">

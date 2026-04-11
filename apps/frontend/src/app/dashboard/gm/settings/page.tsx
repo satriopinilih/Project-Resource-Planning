@@ -123,78 +123,55 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
-                {/* Appearance */}
-                <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm  dark:border-gray-700/50 p-6 mb-6">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Appearance</h2>
+                <div className="grid grid-cols-1 xl:grid-cols-[7fr_3fr] gap-6 mb-6">
+                    {/* Appearance */}
+                    <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm dark:border-gray-700/50 p-6 h-full">
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Appearance</h2>
 
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <div className="text-[14px] font-medium text-gray-900 dark:text-gray-100 mb-1">Theme</div>
-                            <div className="text-[13px] text-gray-500 dark:text-gray-400">Switch between light and dark mode</div>
+                        <div className="space-y-4 mb-6">
+                            <div>
+                                <div className="text-[14px] font-medium text-gray-900 dark:text-gray-100 mb-1">Theme</div>
+                                <div className="text-[13px] text-gray-500 dark:text-gray-400">Switch between light and dark mode</div>
+                            </div>
+
+                            <button
+                                onClick={toggleDarkMode}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 dark:bg-[#2c3444] hover:bg-gray-200 dark:hover:bg-[#343d4f] text-gray-700 dark:text-gray-200 rounded-lg transition-colors text-[13px] font-semibold"
+                            >
+                                {isDarkMode ? (
+                                    <>
+                                        <Sun size={16} strokeWidth={2} />
+                                        Light Mode
+                                    </>
+                                ) : (
+                                    <>
+                                        <Moon size={16} strokeWidth={2} />
+                                        Dark Mode
+                                    </>
+                                )}
+                            </button>
                         </div>
 
-                        <button
-                            onClick={toggleDarkMode}
-                            className="flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-[#2c3444] hover:bg-gray-200 dark:hover:bg-[#343d4f] text-gray-700 dark:text-gray-200 rounded-lg transition-colors text-[13px] font-semibold"
-                        >
-                            {isDarkMode ? (
-                                <>
-                                    <Sun size={16} strokeWidth={2} />
-                                    Light Mode
-                                </>
-                            ) : (
-                                <>
-                                    <Moon size={16} strokeWidth={2} />
-                                    Dark Mode
-                                </>
-                            )}
-                        </button>
-                    </div>
-
-                    <div className="border border-gray-200 dark:border-gray-700/70 rounded-xl p-6">
-                        <div className="text-[13px] font-medium text-gray-500 dark:text-gray-400 mb-4">Current Theme Colors:</div>
-
-                        <div className="grid grid-cols-4 gap-4">
-                            {/* Background Color */}
-                            <div>
-                                <div className={`h-12 border rounded-lg mb-3 ${isDarkMode ? 'bg-[#18181b] border-gray-700' : 'bg-[#E9EEF6] border-gray-200'
-                                    }`}></div>
-                                <div className="text-[12px] text-gray-500 dark:text-gray-400 text-center">Background</div>
-                            </div>
-
-                            {/* Card Color */}
-                            <div>
-                                <div className={`h-12 border rounded-lg mb-3 ${isDarkMode ? 'bg-[#22252e] border-gray-700' : 'bg-white border-gray-200'
-                                    }`}></div>
-                                <div className="text-[12px] text-gray-500 dark:text-gray-400 text-center">Card</div>
-                            </div>
-
-                            {/* Sidebar Color */}
-                            <div>
-                                <div className={`h-12 border rounded-lg mb-3 ${isDarkMode ? 'bg-[#111318] border-gray-700' : 'bg-[#f8fafc] border-gray-200'
-                                    }`}></div>
-                                <div className="text-[12px] text-gray-500 dark:text-gray-400 text-center">Sidebar</div>
-                            </div>
-
-                            {/* Text Color */}
-                            <div>
-                                <div className={`h-12 border rounded-lg mb-3 ${isDarkMode ? 'bg-[#f3f4f6] border-gray-700' : 'bg-[#111827] border-gray-200'
-                                    }`}></div>
-                                <div className="text-[12px] text-gray-500 dark:text-gray-400 text-center">Text</div>
+                        <div className="border border-gray-200 dark:border-gray-700/70 rounded-xl p-4">
+                            <div className="text-[13px] font-medium text-gray-500 dark:text-gray-400 mb-3">Current Theme Colors:</div>
+                            <div className="space-y-2">
+                                <ThemeColorRow label="Background" className={isDarkMode ? 'bg-[#18181b] border-gray-700' : 'bg-[#E9EEF6] border-gray-200'} />
+                                <ThemeColorRow label="Card" className={isDarkMode ? 'bg-[#22252e] border-gray-700' : 'bg-white border-gray-200'} />
+                                <ThemeColorRow label="Sidebar" className={isDarkMode ? 'bg-[#111318] border-gray-700' : 'bg-[#f8fafc] border-gray-200'} />
+                                <ThemeColorRow label="Text" className={isDarkMode ? 'bg-[#f3f4f6] border-gray-700' : 'bg-[#111827] border-gray-200'} />
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm dark:border-gray-700/50 p-6 mb-6">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Change Password</h2>
-                    {forceChange && (
-                        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                            You must change your temporary password before using other pages.
-                        </div>
-                    )}
+                    <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm dark:border-gray-700/50 p-6 h-full">
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Change Password</h2>
+                        {forceChange && (
+                            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                                You must change your temporary password before using other pages.
+                            </div>
+                        )}
 
-                    <form onSubmit={handleChangePassword} className="space-y-4 max-w-xl">
+                        <form onSubmit={handleChangePassword} className="space-y-4 w-full">
                         <div>
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
                             <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
@@ -214,7 +191,8 @@ export default function SettingsPage() {
                                 {savingPassword ? "Saving..." : "Update Password"}
                             </button>
                         </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
 
                 {/* System Information */}
@@ -244,6 +222,15 @@ export default function SettingsPage() {
                     </div>
                 </div>
             </div >
+        </div>
+    );
+}
+
+function ThemeColorRow({ label, className }: { label: string; className: string }) {
+    return (
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+            <span className="text-[12px] text-gray-600 dark:text-gray-300">{label}</span>
+            <span className={`h-7 w-1/2 min-w-[220px] rounded-md border ${className}`} />
         </div>
     );
 }

@@ -5,12 +5,13 @@ import {
   Search,
   Eye,
   FileText,
+  UserPlus,
   Filter,
   ChevronDown,
   X,
   Loader2,
 } from "lucide-react";
-import { getRawEmployees, createContractExtension, BackendEmployee } from "@/lib/api";
+import { getRawEmployees, createContractExtension, BackendEmployee, createHireRequest } from "@/lib/api";
 
 interface EmployeeContract {
   id: string;
@@ -106,6 +107,15 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
   const [extensionDuration, setExtensionDuration] = useState("12");
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [hireModalOpen, setHireModalOpen] = useState(false);
+  const [hireSubmitting, setHireSubmitting] = useState(false);
+  const [hireSuccess, setHireSuccess] = useState(false);
+  const [canRequestHire, setCanRequestHire] = useState(false);
+  const [hireForm, setHireForm] = useState({
+    roleNeeded: "",
+    quantity: 1,
+    notes: "",
+  });
 
   useEffect(() => {
     getRawEmployees()
@@ -115,6 +125,16 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
+
+    try {
+      const raw = localStorage.getItem("auth_user");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { roles?: string[] };
+        setCanRequestHire(Boolean(parsed.roles?.includes("GM")));
+      }
+    } catch {
+      setCanRequestHire(false);
+    }
   }, []);
 
   const filteredEmployees = employeesData.filter((emp) => {
@@ -153,6 +173,35 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
       alert("Failed to submit extension request. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleSubmitHireRequest() {
+    if (!hireForm.roleNeeded) return;
+    setHireSubmitting(true);
+    try {
+      const startDate = new Date();
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + 6);
+
+      await createHireRequest({
+        projectName: "General Hiring Request",
+        roleNeeded: hireForm.roleNeeded,
+        quantity: Math.max(1, hireForm.quantity),
+        startDate: startDate.toISOString().slice(0, 10),
+        endDate: endDate.toISOString().slice(0, 10),
+        notes: hireForm.notes,
+      });
+      setHireSuccess(true);
+      setTimeout(() => {
+        setHireModalOpen(false);
+        setHireSuccess(false);
+        setHireForm({ roleNeeded: "", quantity: 1, notes: "" });
+      }, 1200);
+    } catch {
+      alert("Failed to submit hire request");
+    } finally {
+      setHireSubmitting(false);
     }
   }
 
@@ -229,6 +278,15 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
               />
             </div>
           </div>
+
+          {showExtensionAction && canRequestHire && (
+            <button
+              onClick={() => setHireModalOpen(true)}
+              className="h-9 inline-flex items-center gap-2 px-4 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] border border-[#3b82f6] text-white text-[12px] font-bold shadow-[0_0_0_1px_rgba(37,99,235,0.25)] whitespace-nowrap"
+            >
+              <UserPlus size={14} /> Request New Hire
+            </button>
+          )}
         </div>
 
         {/* Loading */}
@@ -554,6 +612,42 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                   </button>
                 </div>
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showExtensionAction && canRequestHire && hireModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setHireModalOpen(false)}>
+          <div className="bg-[var(--dash-bg-modal)] border border-[var(--dash-border)] rounded-2xl p-6 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[17px] font-bold text-[var(--dash-text-heading)]">Request New Hire</h3>
+              <button onClick={() => setHireModalOpen(false)} className="p-1.5 rounded-lg text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)]"><X size={18} /></button>
+            </div>
+
+            {hireSuccess ? (
+              <p className="text-center py-8 text-[14px] font-semibold text-emerald-400">Hire request sent to HR</p>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1 text-[12px] font-semibold text-[var(--dash-text-muted)]">Role needed</label>
+                  <input value={hireForm.roleNeeded} onChange={(e) => setHireForm((p) => ({ ...p, roleNeeded: e.target.value }))} placeholder="e.g. Senior Dev" className="w-full h-10 px-3 text-[14px] text-[var(--dash-text-heading)] placeholder:text-[var(--dash-text-faint)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg" />
+                </div>
+                <div>
+                  <label className="block mb-1 text-[12px] font-semibold text-[var(--dash-text-muted)]">Amount of user needed</label>
+                  <input type="number" min={1} value={hireForm.quantity} onChange={(e) => setHireForm((p) => ({ ...p, quantity: Number(e.target.value) || 1 }))} className="h-10 w-full px-3 text-[14px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg" />
+                </div>
+                <div>
+                  <label className="block mb-1 text-[12px] font-semibold text-[var(--dash-text-muted)]">Notes for HR</label>
+                  <textarea rows={3} value={hireForm.notes} onChange={(e) => setHireForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Add context for HR" className="w-full px-3 py-2 text-[14px] text-[var(--dash-text-heading)] placeholder:text-[var(--dash-text-faint)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg" />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button onClick={() => setHireModalOpen(false)} className="px-4 py-2 text-[13px] border border-[var(--dash-border)] rounded-lg transition-all duration-200 hover:bg-[var(--dash-bg-hover)]">Cancel</button>
+                  <button onClick={handleSubmitHireRequest} disabled={hireSubmitting} className="px-4 py-2 text-[13px] bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] disabled:opacity-50">
+                    {hireSubmitting ? "Submitting..." : "Send Request"}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
