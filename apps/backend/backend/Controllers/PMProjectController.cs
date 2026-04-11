@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Entities;
@@ -16,10 +17,24 @@ public class PMProjectController : ControllerBase
         _context = context;
     }
 
+    private string? CurrentUserId =>
+        User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+        User.FindFirstValue("sub");
+
+    private bool IsPM =>
+        User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "PM");
+
     [HttpGet("projects")]
     public async Task<IActionResult> GetProjectTimeline()
     {
-        var projectsData = await _context.Projects.ToListAsync();
+        var query = _context.Projects.AsQueryable();
+
+        if (IsPM && CurrentUserId is not null)
+        {
+            query = query.Where(p => p.UserProjects.Any(up => up.UserId == CurrentUserId));
+        }
+
+        var projectsData = await query.ToListAsync();
 
         var result = projectsData.Select(p => new {
             label = p.ProjectName,
@@ -29,8 +44,7 @@ public class PMProjectController : ControllerBase
                     title = p.ProjectName,
                     status = p.ProjectStatus.ToString(), 
                     startDate = p.EstimatedStartDate.ToString("yyyy-MM-dd"),
-                    // Menggunakan fungsi hitung minggu yang baru
-                    endDate = CalculateEndDateFromWeeks(p.EstimatedStartDate, p.EstimatedDuration).ToString("yyyy-MM-dd")
+                    endDate = p.EstimatedEndDate.ToString("yyyy-MM-dd")
                 }
             }
         });
@@ -41,24 +55,41 @@ public class PMProjectController : ControllerBase
     [HttpGet("resources")]
     public async Task<IActionResult> GetResourceTimeline()
     {
-        var userData = await _context.Users
-            // 1. Ambil data Project yang dikerjakan user
+        var userQuery = _context.Users
             .Include(u => u.UserProjects)
                 .ThenInclude(up => up.Project)
-            // 2. Ambil data Role Staff (untuk subLabel)
             .Include(u => u.UserStaffRoles)
                 .ThenInclude(usr => usr.StaffRole)
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
             .Where(u => u.UserProjects.Any())
-            .ToListAsync();
+            .Where(u => !u.UserRoles.Any(r =>
+                r.Role.RoleName == RoleName.PM ||
+                r.Role.RoleName == RoleName.GM ||
+                r.Role.RoleName == RoleName.HR));
+
+        List<int> pmProjectIds = new();
+        if (IsPM && CurrentUserId is not null)
+        {
+            pmProjectIds = await _context.UserProjects
+                .Where(up => up.UserId == CurrentUserId)
+                .Select(up => up.ProjectId)
+                .ToListAsync();
+
+            userQuery = userQuery.Where(u =>
+                u.UserProjects.Any(up => pmProjectIds.Contains(up.ProjectId)));
+        }
+
+        var userData = await userQuery.ToListAsync();
 
         var result = userData.Select(u => new {
             label = u.UserName,
-            // Ambil nama role pertama dari list UserStaffRoles
-            // Jika user punya banyak role, kita gabungkan pakai string.Join atau ambil yang pertama
             subLabel = u.UserStaffRoles.Select(usr => usr.StaffRole.RoleName).FirstOrDefault() ?? u.ExperienceLevel,
             
             bars = u.UserProjects
+                .Where(up => !IsPM || pmProjectIds.Contains(up.ProjectId))
                 .Select(up => new {
+                    projectId = up.ProjectId,
                     title = up.Project.ProjectName,
                     status = up.Project.ProjectStatus.ToString(),
                     startDate = (up.StartDate ?? up.Project.EstimatedStartDate).ToString("yyyy-MM-dd"),
@@ -74,11 +105,17 @@ public class PMProjectController : ControllerBase
     public async Task<IActionResult> GetDashboardStats()
     {
         var today = DateTime.UtcNow;
-        var projects = await _context.Projects.ToListAsync();
+        IQueryable<Entities.Entities.Project> query = _context.Projects;
+
+        if (IsPM && CurrentUserId is not null)
+        {
+            query = query.Where(p => p.UserProjects.Any(up => up.UserId == CurrentUserId));
+        }
+
+        var projects = await query.Include(p => p.UserProjects).ToListAsync();
 
         var total = projects.Count;
 
-        // Statistics derived directly from database ProjectStatus enum
         var onHold = projects.Count(p => 
             p.ProjectStatus == ProjectStatus.Pending);
 
@@ -100,36 +137,5 @@ public class PMProjectController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// PERBAIKAN DI SINI:
-    /// Menghitung tanggal akhir berdasarkan durasi MINGGU.
-    /// 1 Minggu dihitung sebagai 5 hari kerja (melompati Sabtu/Minggu).
-    /// </summary>
-    private static DateTime CalculateEndDateFromWeeks(DateTime startDate, int durationInWeeks)
-    {
-        if (durationInWeeks <= 0) return startDate;
-        
-        // Kita konversi minggu ke jumlah hari kerja (1 minggu = 5 hari kerja)
-        int totalWorkDaysNeeded = durationInWeeks * 5;
-        
-        DateTime result = startDate;
-        int addedWorkDays = 0;
 
-        // Cek hari pertama, kalau hari kerja, hitung sebagai hari ke-1
-        if (result.DayOfWeek != DayOfWeek.Saturday && result.DayOfWeek != DayOfWeek.Sunday)
-        {
-            addedWorkDays = 1;
-        }
-
-        while (addedWorkDays < totalWorkDaysNeeded)
-        {
-            result = result.AddDays(1);
-            if (result.DayOfWeek != DayOfWeek.Saturday && result.DayOfWeek != DayOfWeek.Sunday)
-            {
-                addedWorkDays++;
-            }
-        }
-
-        return result;
-    }
 }

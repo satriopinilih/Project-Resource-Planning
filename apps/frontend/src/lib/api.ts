@@ -100,6 +100,8 @@ export type BackendProject = {
   members: BackendProjectMember[];
   requiredRoles: BackendRequiredRole[];
   requiredSkills: string[]; // Project-level skill requirements
+  isUnread: boolean;
+  members: { userId: string; userName: string; role: string; staffRole: string }[];
 };
 
 export type BackendHoliday = {
@@ -239,6 +241,27 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
+// For endpoints that return plain JSON (not wrapped in ApiResponse<T>)
+async function fetchRaw<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {})
+    },
+    cache: 'no-store'
+  });
+
+  if (!res.ok) {
+    throw new Error(`API request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
+}
+
 export async function seedBackendData(): Promise<void> {
   await fetchJson<string>('/api/seed', { method: 'POST' });
 }
@@ -316,6 +339,9 @@ export async function assignMemberToProject(projectId: number, payload: AssignMe
 export async function unassignMemberFromProject(projectId: number, userId: string): Promise<void> {
   await fetchJson(`/api/projects/${projectId}/assign/${encodeURIComponent(userId)}`, {
     method: 'DELETE'
+export async function markProjectAsRead(projectId: number): Promise<void> {
+  await fetchJson(`/api/projects/mark-read/${projectId}`, {
+    method: 'POST'
   });
 }
 
@@ -380,6 +406,12 @@ export async function forgotPassword(identifier: string): Promise<void> {
   });
 }
 
+export async function resetEmployeePassword(userId: string): Promise<{ temporaryPassword: string; mustChangePassword: boolean }> {
+  return fetchJson<{ temporaryPassword: string; mustChangePassword: boolean }>(`/api/employees/${encodeURIComponent(userId)}/reset-password`, {
+    method: 'POST'
+  });
+}
+
 export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryItem[]> {
   const data = await fetchJson<BackendRequestHistoryItem[]>(`/api/requesthistory?scope=${encodeURIComponent(scope)}`);
   return data.map((item) => ({
@@ -400,6 +432,39 @@ export async function login(identifier: string, password: string): Promise<Login
     method: 'POST',
     body: JSON.stringify({ email: identifier, password })
   });
+}
+
+export interface TimelineStats {
+  total: number;
+  onHold: number;
+  scheduled: number;
+  running: number;
+  completed: number;
+}
+
+export interface TimelineItem {
+  label: string;
+  subLabel: string;
+  id?: number;
+  bars: {
+    title: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+    projectId?: number;
+  }[];
+}
+
+export async function getTimelineStats(): Promise<TimelineStats> {
+  return fetchRaw<TimelineStats>('/api/timeline/stats');
+}
+
+export async function getProjectTimeline(): Promise<TimelineItem[]> {
+  return fetchRaw<TimelineItem[]>('/api/timeline/projects');
+}
+
+export async function getResourceTimeline(): Promise<TimelineItem[]> {
+  return fetchRaw<TimelineItem[]>('/api/timeline/resources');
 }
 
 export async function getHolidays(): Promise<BackendHoliday[]> {

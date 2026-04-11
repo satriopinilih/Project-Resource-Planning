@@ -238,7 +238,6 @@ END $$;");
 
             await _db.SaveChangesAsync();
 
-            // Users (from old mock data)
             var users = new[]
             {
                 new User { UserId = "HR123", UserName = "HR Manager", Email = "hr.manager@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "10", ContractStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
@@ -339,6 +338,12 @@ END $$;");
             AddProject("EMP005", "Analytics Dashboard", "Senior Dev", UserProjectStatus.Completed);
             AddProject("EMP006", "Internal Tools Dashboard", "Junior Dev", UserProjectStatus.Assigned);
             AddProject("EMP007", "Mobile App Launch", "Senior BA", UserProjectStatus.Assigned);
+
+            AddProject("PM001", "Customer Portal Development", "Project Manager", UserProjectStatus.Assigned);
+            AddProject("PM001", "E-commerce Platform Rebuild", "Project Manager", UserProjectStatus.Assigned);
+            AddProject("PM001", "Cloud Migration Project", "Project Manager", UserProjectStatus.Assigned);
+            AddProject("PM001", "Digital Transformation Initiative", "Project Manager", UserProjectStatus.Assigned);
+
 
             _db.ContractExtensions.Add(
                 new ContractExtension
