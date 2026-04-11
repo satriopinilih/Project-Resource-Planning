@@ -52,7 +52,7 @@ public class ProjectsController : ControllerBase
         }
 
         var projects = await query.OrderBy(p => p.EstimatedStartDate).ToListAsync();
-        var data = projects.Select(MapToDto).ToList();
+        var data = projects.Select(p => MapToDto(p, CurrentUserId)).ToList();
 
         return Ok(ApiResponse<List<ProjectDto>>.SuccessResponse(data));
     }
@@ -81,10 +81,29 @@ public class ProjectsController : ControllerBase
                 return Forbid();
         }
 
-        return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(project)));
+        return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(project, CurrentUserId)));
     }
 
-    private static ProjectDto MapToDto(Entities.Entities.Project p)
+    [HttpPost("mark-read/{id}")]
+    public async Task<IActionResult> MarkAsRead(int id)
+    {
+        var userId = CurrentUserId;
+        if (userId == null)
+            return Unauthorized();
+
+        var userProject = await _db.UserProjects
+            .FirstOrDefaultAsync(up => up.ProjectId == id && up.UserId == userId);
+
+        if (userProject == null)
+            return NotFound(ApiResponse<string>.ErrorResponse("Project assignment not found"));
+
+        userProject.IsNotificationRead = true;
+        await _db.SaveChangesAsync();
+
+        return Ok(ApiResponse<string>.SuccessResponse("Notification marked as read"));
+    }
+
+    private static ProjectDto MapToDto(Entities.Entities.Project p, string? currentUserId = null)
     {
         return new ProjectDto
         {
@@ -97,6 +116,7 @@ public class ProjectsController : ControllerBase
             EstimatedStartDate = p.EstimatedStartDate,
             EstimatedEndDate = p.EstimatedEndDate,
             ProjectStatus = p.ProjectStatus,
+            IsUnread = currentUserId != null && p.UserProjects.Any(up => up.UserId == currentUserId && !up.IsNotificationRead),
             Members = p.UserProjects
                 // Sembunyikan Project Manager dari daftar member — fokus ke staff saja
                 .Where(up => !up.RoleInProject.Equals("Project Manager", StringComparison.OrdinalIgnoreCase))

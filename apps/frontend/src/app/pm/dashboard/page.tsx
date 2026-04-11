@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import PMStatCard from "@/app/pm/components/PMStatCard";
 import PMTimelineView from "@/app/pm/components/PMGanttChart";
+import DashboardHeader from "@/app/pm/components/PMDashboardHeader";
 import {
   FolderKanban,
   CalendarClock,
@@ -49,15 +50,7 @@ export default function PMDashboard() {
   return (
     <div className="p-8 max-w-full mx-auto w-full h-full overflow-y-auto">
       {/* WELCOME SECTION */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-          Dashboard
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 max-w-2xl leading-relaxed">
-          Monitor progress, resource scheduling and team metrics.
-        </p>
-      </div>
-
+      <DashboardHeader />
       {/* ALERT ERROR SECTION */}
       {error && (
         <div className="mb-8 flex items-center justify-between p-4 bg-red-50 border-l-4 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400 rounded-r-lg shadow-sm">
@@ -76,20 +69,13 @@ export default function PMDashboard() {
       )}
 
       {/* STATS SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_repeat(4,1fr)] gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,2fr)_repeat(3,1fr)] gap-8">
         <PMStatCard
           title="Total Projects"
           value={stats.total}
           icon={<FolderKanban />}
           variant="premium"
           onClick={() => router.push("/pm/projects?filter=All")}
-        />
-        <PMStatCard
-          title="On Hold"
-          value={stats.onHold}
-          icon={<AlertCircle />}
-          variant="amber"
-          onClick={() => router.push("/pm/projects?filter=On Hold")}
         />
         <PMStatCard
           title="Scheduled"
@@ -127,9 +113,7 @@ export default function PMDashboard() {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-80 bg-white/30 dark:bg-black/10 rounded-2xl border border-gray-200 dark:border-gray-800">
-            <p className="text-gray-400 italic font-light">
-              Data not found.
-            </p>
+            <p className="text-gray-400 italic font-light">Data not found.</p>
           </div>
         ) : (
           <PMTimelineView />

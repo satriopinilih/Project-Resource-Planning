@@ -147,14 +147,14 @@ export default function PMTimelineView() {
   }, [timelineData]);
 
   return (
-    <div className="flex flex-col h-[600px] bg-white dark:bg-[var(--dash-bg-card)] rounded-xl border border-gray-800/50 dark:border-[var(--dash-border)] shadow-sm mt-6 overflow-hidden text-gray-900 dark:text-white">
+    <div className="flex flex-col h-[500px] bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border-subtle)] shadow-sm mt-6 overflow-hidden text-[var(--dash-text-heading)]">
       <div className="flex-none p-6 pb-2">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-8">
             <h2 className="text-xl font-semibold tracking-tight">
               Timeline View
             </h2>
-            <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 bg-[var(--dash-bg-input)] px-3 py-1 rounded-lg border border-[var(--dash-border-subtle)]">
               <button
                 onClick={() => setCurrentYear((prev) => prev - 1)}
                 className="hover:text-blue-500"
@@ -172,7 +172,7 @@ export default function PMTimelineView() {
               </button>
             </div>
           </div>
-          <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex bg-[var(--dash-bg-input)] p-1 rounded-lg border border-[var(--dash-border-subtle)]">
             <button
               onClick={() => setViewMode("Projects")}
               className={`px-5 py-1.5 rounded-l-md text-[11px] font-semibold transition-all ${viewMode === "Projects" ? "bg-[#2B7FFC] text-white shadow-md" : "text-gray-400"}`}
@@ -189,17 +189,17 @@ export default function PMTimelineView() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto border-t border-gray-100 dark:border-gray-700/50">
-        <div className="min-w-[1200px] relative">
-          <div className="sticky top-0 z-30 grid grid-cols-[260px_1fr] bg-white dark:bg-[var(--dash-bg-card)] border-b border-gray-100 dark:border-gray-700">
-            <div className="p-4 text-[10px] uppercase font-bold text-gray-400 border-r border-gray-100 dark:border-gray-700/50">
+      <div className="flex-1 overflow-auto border-t border-[var(--dash-border-subtle)]">
+        <div className="relative">
+          <div className="sticky top-0 z-30 grid grid-cols-[260px_1fr] bg-[var(--dash-bg-card)] border-b border-[var(--dash-border-subtle)]">
+            <div className="p-4 text-[10px] uppercase font-bold text-[var(--dash-text-faint)] border-r border-[var(--dash-border-subtle)]">
               {viewMode === "Projects" ? "Project / Client" : "Staff / Role"}
             </div>
             <div className="grid grid-cols-12">
               {MONTHS.map((m) => (
                 <div
                   key={m}
-                  className="py-4 text-center text-[10px] text-gray-500 font-bold tracking-widest uppercase"
+                  className="py-4 text-center text-[10px] text-[var(--dash-text-muted)] font-bold tracking-widest uppercase"
                 >
                   {m}
                 </div>
@@ -264,7 +264,6 @@ export default function PMTimelineView() {
                             key={bIdx}
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Gunakan bar.title (nama proyek) untuk navigasi
                               navigateByName(bar.title);
                             }}
                             className="absolute h-8 rounded-md flex items-center px-3 text-[10px] font-bold text-white shadow-sm transition-all hover:scale-[1.02] hover:brightness-110 hover:z-50 cursor-pointer"
