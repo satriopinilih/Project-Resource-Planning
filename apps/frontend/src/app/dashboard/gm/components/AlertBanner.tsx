@@ -26,16 +26,7 @@ export default function AlertBanner() {
 
   const displayProjects = pendingProjects.length > 0 ? pendingProjects : [
     {
-      projectId: 9999,
-      projectName: "Data Analytics Platform (Dummy Data)",
-      clientOrganization: "FinServe Corp.",
-      projectDescription: "Temporary dummy project",
-      estimatedStartDate: new Date().toISOString(),
-      estimatedEndDate: new Date().toISOString(),
-      estimatedDuration: 12,
-      projectStatus: 0,
-      priorityLevel: 1,
-      members: []
+
     }
   ] as BackendProject[];
 

@@ -218,19 +218,20 @@ END $$;");
                     CreatedBy = "system", 
                     UpdatedBy = "system" 
                 },
+                // ── TEST PROJECT for Smart Recommendation Panel ──
                 new Project { 
-                    ProjectName = "Data Analytics Platform", 
-                    ClientOrganization = "FinServe Corp.", 
-                    ProjectDescription = "New analytics platform", 
-                    EstimatedDuration = 12, 
+                    ProjectName = "Healthcare Management System", 
+                    ClientOrganization = "MediCare Solutions", 
+                    ProjectDescription = "Build an integrated healthcare management platform with patient tracking, appointment scheduling, billing integration, and analytics dashboard. Requires strong BA skills for requirements gathering and senior engineering for the backend API and cloud architecture.", 
+                    EstimatedDuration = 16, 
                     PriorityLevel = PriorityLevel.High, 
-                    EstimatedStartDate = now, 
-                    EstimatedEndDate = now.AddMonths(12),
+                    EstimatedStartDate = now.AddDays(7), 
+                    EstimatedEndDate = now.AddDays(7).AddMonths(16),
                     ProjectStatus = ProjectStatus.Pending, 
                     CreatedAt = now, 
                     UpdatedAt = now, 
-                    CreatedBy = "system", 
-                    UpdatedBy = "system" 
+                    CreatedBy = "MKT001", 
+                    UpdatedBy = "MKT001" 
                 }
             };
             _db.Projects.AddRange(projects);
@@ -250,7 +251,12 @@ END $$;");
                 new User { UserId = "EMP005", UserName = "Rachel Lee", Email = "rachel.lee@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceLevel = "5", ContractStart = new DateTime(2024, 8, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 5, 6, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.ExpiringSoon, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "EMP006", UserName = "Linda Martinez", Email = "linda.martinez@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceLevel = "2", ContractStart = new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 9, 30, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "EMP007", UserName = "David Kim", Email = "david.kim@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "7", ContractStart = new DateTime(2024, 9, 15, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 9, 14, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "PM001", UserName = "Project Manager", Email = "pm@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "10", ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
+                new User { UserId = "PM001", UserName = "Project Manager", Email = "pm@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "10", ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+
+                // ── NEW EMPLOYEES for Smart Recommendation test ──
+                new User { UserId = "EMP008", UserName = "Nina Patel", Email = "nina.patel@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "5", ContractStart = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 5, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP009", UserName = "Omar Hassan", Email = "omar.hassan@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "7", ContractStart = new DateTime(2024, 11, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 10, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP010", UserName = "Yuki Tanaka", Email = "yuki.tanaka@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceLevel = "4", ContractStart = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
             };
             _db.Users.AddRange(users);
             await _db.SaveChangesAsync();
@@ -270,7 +276,10 @@ END $$;");
                 new UserRole { UserId = "EMP004", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP005", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP006", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP007", RoleId = roleStaff.RoleId }
+                new UserRole { UserId = "EMP007", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP008", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP009", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP010", RoleId = roleStaff.RoleId }
             );
 
             // Staff roles (display)
@@ -281,7 +290,11 @@ END $$;");
                 new UserStaffRole { UserId = "EMP004", StaffRoleId = srArchitect.StaffRoleId },
                 new UserStaffRole { UserId = "EMP005", StaffRoleId = srSeniorDev.StaffRoleId },
                 new UserStaffRole { UserId = "EMP006", StaffRoleId = srJuniorDev.StaffRoleId },
-                new UserStaffRole { UserId = "EMP007", StaffRoleId = srSeniorBA.StaffRoleId }
+                new UserStaffRole { UserId = "EMP007", StaffRoleId = srSeniorBA.StaffRoleId },
+                // New employees
+                new UserStaffRole { UserId = "EMP008", StaffRoleId = srJuniorBA.StaffRoleId },      // Nina: Junior BA (available, no project yet)
+                new UserStaffRole { UserId = "EMP009", StaffRoleId = srSeniorDev.StaffRoleId },    // Omar: Senior Dev (available)
+                new UserStaffRole { UserId = "EMP010", StaffRoleId = srProjectManager.StaffRoleId } // Yuki: Project Manager (available)
             );
 
             // Skill mapping
@@ -300,6 +313,10 @@ END $$;");
             AddSkills("EMP005", "Python", "Django", "PostgreSQL", "API Design");
             AddSkills("EMP006", "JavaScript", "React", "CSS", "Git");
             AddSkills("EMP007", "Business Analysis", "Agile", "Scrum", "Product Management");
+            // New employee skills
+            AddSkills("EMP008", "Business Analysis", "Requirements Gathering", "Documentation", "Agile"); // Nina: Strong BA
+            AddSkills("EMP009", "Python", "PostgreSQL", "API Design", "System Design", "React", "Node.js"); // Omar: Full-stack Senior Dev
+            AddSkills("EMP010", "Testing", "Documentation", "JavaScript", "Git", "Agile"); // Yuki: QA + testing
 
             // Project assignments
             void AddProject(string userId, string projectName, string roleInProject, UserProjectStatus status)
@@ -334,7 +351,7 @@ END $$;");
                     RequestedBy = "HR123",
                     UserId = "EMP002",
                     ExtensionDuration = 24,
-                    ReasonForExtension = "Michael Chen has been an exceptional performer and is currently assigned to critical projects. His expertise in Business Analysis and Process Modeling is vital for our upcoming Data Analytics Platform project. We strongly recommend extending his contract to ensure project continuity and maintain our high delivery standards.",
+                    ReasonForExtension = "Michael Chen has been an exceptional performer and is currently assigned to critical projects. His expertise in Business Analysis and Process Modeling is vital for our upcoming Healthcare Management System project. We strongly recommend extending his contract to ensure project continuity and maintain our high delivery standards.",
                     Status = "Pending",
                     CreatedAt = now,
                     UpdatedAt = now,
@@ -342,6 +359,38 @@ END $$;");
                     UpdatedBy = "HR123"
                 }
             );
+
+            // ── ProjectRequiredRoles for Healthcare Management System ──
+            // This is what the Smart Recommendation Panel uses to generate team suggestions
+            var hmsProject = projects.First(p => p.ProjectName == "Healthcare Management System");
+            var staffRoleMap = new Dictionary<string, int>
+            {
+                { "Senior BA",       srSeniorBA.StaffRoleId },
+                { "Junior BA",       srJuniorBA.StaffRoleId },
+                { "Senior Dev",      srSeniorDev.StaffRoleId },
+                { "Junior Dev",      srJuniorDev.StaffRoleId },
+                { "Architect",       srArchitect.StaffRoleId },
+                { "Project Manager", srProjectManager.StaffRoleId },
+            };
+
+            _db.ProjectRequiredRoles.AddRange(
+                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Senior BA"],  RequiredCount = 1, WorkingType = WorkingType.Dedicated },
+                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Junior BA"],  RequiredCount = 1, WorkingType = WorkingType.Dedicated },
+                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Senior Dev"], RequiredCount = 2, WorkingType = WorkingType.Dedicated },
+                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Junior Dev"], RequiredCount = 2, WorkingType = WorkingType.Dedicated },
+                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Architect"],  RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
+                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated }
+            );
+
+            // ── Project-level Required Skills ──
+            // These are the skills needed for this project (separate from roles)
+            // The Smart Recommendation Panel uses these to match employees
+            var projectSkillNames = new[] { "Python", "React", "PostgreSQL", "API Design", "System Design", "Business Analysis", "Testing", "Documentation" };
+            foreach (var skillName in projectSkillNames)
+            {
+                if (byName.TryGetValue(skillName, out var skillId))
+                    _db.ProjectRequiredSkills.Add(new ProjectRequiredSkill { ProjectId = hmsProject.ProjectID, SkillId = skillId });
+            }
 
             await _db.SaveChangesAsync();
 

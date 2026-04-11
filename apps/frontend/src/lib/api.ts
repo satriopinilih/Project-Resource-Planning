@@ -68,6 +68,25 @@ type BackendRequestHistoryItem = {
   reviewedDate: string | null;
 };
 
+export type BackendProjectMember = {
+  userId: string;
+  userName: string;
+  role: string;
+  staffRole: string;
+  startDate: string | null;
+  endDate: string | null;
+  status: string;
+};
+
+export type BackendRequiredRole = {
+  id: number;
+  staffRoleId: number;
+  roleName: string;
+  requiredCount: number;
+  workingType: string;
+  filledCount: number;
+};
+
 export type BackendProject = {
   projectId: number;
   projectName: string;
@@ -78,6 +97,9 @@ export type BackendProject = {
   estimatedStartDate: string;
   estimatedEndDate: string;
   projectStatus: number; // 0=Pending,1=Running,2=Completed
+  members: BackendProjectMember[];
+  requiredRoles: BackendRequiredRole[];
+  requiredSkills: string[]; // Project-level skill requirements
   isUnread: boolean;
   members: { userId: string; userName: string; role: string; staffRole: string }[];
 };
@@ -293,6 +315,30 @@ export async function getProjectById(id: string): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`);
 }
 
+export async function updateProject(id: number, projectData: Partial<BackendProject>): Promise<BackendProject> {
+  return fetchJson<BackendProject>(`/api/projects/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(projectData)
+  });
+}
+
+export type AssignMemberPayload = {
+  userId: string;
+  roleInProject: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+export async function assignMemberToProject(projectId: number, payload: AssignMemberPayload): Promise<BackendProject> {
+  return fetchJson<BackendProject>(`/api/projects/${projectId}/assign`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function unassignMemberFromProject(projectId: number, userId: string): Promise<void> {
+  await fetchJson(`/api/projects/${projectId}/assign/${encodeURIComponent(userId)}`, {
+    method: 'DELETE'
 export async function markProjectAsRead(projectId: number): Promise<void> {
   await fetchJson(`/api/projects/mark-read/${projectId}`, {
     method: 'POST'
@@ -423,4 +469,58 @@ export async function getResourceTimeline(): Promise<TimelineItem[]> {
 
 export async function getHolidays(): Promise<BackendHoliday[]> {
   return fetchJson<BackendHoliday[]>('/api/holidays');
+}
+
+// ── Smart Recommendation Panel Types ──
+
+export type RecommendationCandidate = {
+  userId: string;
+  userName: string;
+  staffRole: string;
+  targetRole: string;
+  experienceYears: number;
+  skills: string[];
+  matchedSkills: string[];
+  skillMatchPercent: number;
+  isAvailable: boolean;
+  availabilityNote: string;
+  currentProjects: string[];
+};
+
+export type RecommendationOption = {
+  title: string;
+  timeline: string;
+  startDate: string;
+  endDate: string;
+  teamSize: number;
+  availableNow: number;
+  requiresHiring: boolean;
+  hiringDetail: string;
+  requiresReschedule: boolean;
+  rescheduleDetail: string;
+  matchScore: number;
+  candidates: RecommendationCandidate[];
+};
+
+export type RecommendationRequiredRole = {
+  staffRoleId: number;
+  roleName: string;
+  requiredCount: number;
+  workingType: string;
+};
+
+export type RecommendationResponse = {
+  projectId: number;
+  projectName: string;
+  estimatedStartDate: string;
+  estimatedEndDate: string;
+  requiredRoles: RecommendationRequiredRole[];
+  optionA: RecommendationOption;
+  optionB: RecommendationOption;
+  bestOption: string;
+  bestOptionReason: string;
+};
+
+export async function getProjectRecommendations(projectId: number): Promise<RecommendationResponse> {
+  return fetchJson<RecommendationResponse>(`/api/recommendations/${projectId}`);
 }

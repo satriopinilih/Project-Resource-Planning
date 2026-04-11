@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Sparkles,
-  Zap,
-  Calendar,
-  Users,
-  Clock,
-  UserPlus,
-  CheckCircle2,
+import { 
+  Sparkles, 
+  Zap, 
+  Calendar, 
+  Users, 
+  Clock, 
+  UserPlus, 
+  CheckCircle2, 
   ChevronRight,
   ChevronDown,
   Loader2,
@@ -21,12 +21,8 @@ import {
   getProjectRecommendations,
   RecommendationResponse,
   RecommendationOption as OptionType,
-  RecommendationCandidate,
-  updateProject,
-  assignMemberToProject,
-  getEmployees
+  RecommendationCandidate
 } from "@/lib/api";
-import { Employee } from "@/lib/types";
 
 interface SmartRecommendationPanelProps {
   projectId: number;
@@ -37,21 +33,22 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
   const matchColor = candidate.skillMatchPercent >= 70
     ? "text-green-400"
     : candidate.skillMatchPercent >= 40
-      ? "text-amber-400"
-      : "text-red-400";
+    ? "text-amber-400"
+    : "text-red-400";
 
   const matchBg = candidate.skillMatchPercent >= 70
     ? "bg-green-500/10 border-green-500/20"
     : candidate.skillMatchPercent >= 40
-      ? "bg-amber-500/10 border-amber-500/20"
-      : "bg-red-500/10 border-red-500/20";
+    ? "bg-amber-500/10 border-amber-500/20"
+    : "bg-red-500/10 border-red-500/20";
 
   return (
     <div className="flex items-start gap-4 p-4 bg-[#1a1f2e]/60 rounded-xl border border-[var(--dash-border)] hover:border-gray-600 transition-all group">
       {/* Rank Badge */}
       <div className="flex flex-col items-center gap-1 pt-0.5">
-        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${rank === 1 ? "bg-amber-500/20 text-amber-400" : rank === 2 ? "bg-gray-500/20 text-gray-400" : "bg-gray-800 text-gray-500"
-          }`}>
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${
+          rank === 1 ? "bg-amber-500/20 text-amber-400" : rank === 2 ? "bg-gray-500/20 text-gray-400" : "bg-gray-800 text-gray-500"
+        }`}>
           #{rank}
         </div>
       </div>
@@ -67,7 +64,7 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
         <p className="text-[11px] text-[var(--dash-text-faint)] mb-2">
           {candidate.staffRole} · {candidate.experienceYears}yr experience · For: <span className="text-blue-400">{candidate.targetRole}</span>
         </p>
-
+        
         {/* Skills */}
         <div className="flex flex-wrap gap-1.5 mb-2">
           {candidate.matchedSkills.map((skill) => (
@@ -89,7 +86,7 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
             {candidate.availabilityNote}
             {candidate.currentProjects.length > 0 && (
               <span className="text-[var(--dash-text-faint)]">
-                ({candidate.currentProjects.join(", ")})
+                 ({candidate.currentProjects.join(", ")})
               </span>
             )}
           </p>
@@ -154,17 +151,19 @@ const OptionCard: React.FC<{
             <span className="text-[10px] text-[var(--dash-text-faint)] uppercase font-bold tracking-tight flex items-center gap-1.5">
               <Award size={12} /> Skill Match Score
             </span>
-            <span className={`text-[13px] font-black ${option.matchScore >= 70 ? "text-green-400" : option.matchScore >= 40 ? "text-amber-400" : "text-red-400"
-              }`}>
+            <span className={`text-[13px] font-black ${
+              option.matchScore >= 70 ? "text-green-400" : option.matchScore >= 40 ? "text-amber-400" : "text-red-400"
+            }`}>
               {option.matchScore.toFixed(0)}%
             </span>
           </div>
           <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-1000 ${option.matchScore >= 70 ? "bg-gradient-to-r from-green-600 to-green-400" :
-                  option.matchScore >= 40 ? "bg-gradient-to-r from-amber-600 to-amber-400" :
-                    "bg-gradient-to-r from-red-600 to-red-400"
-                }`}
+              className={`h-full rounded-full transition-all duration-1000 ${
+                option.matchScore >= 70 ? "bg-gradient-to-r from-green-600 to-green-400" : 
+                option.matchScore >= 40 ? "bg-gradient-to-r from-amber-600 to-amber-400" : 
+                "bg-gradient-to-r from-red-600 to-red-400"
+              }`}
               style={{ width: `${option.matchScore}%` }}
             />
           </div>
@@ -173,8 +172,8 @@ const OptionCard: React.FC<{
         {/* Status Box */}
         <div className={`
           mt-3 p-3 rounded-xl border flex flex-col gap-1.5
-          ${option.requiresHiring
-            ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
+          ${option.requiresHiring 
+            ? "bg-amber-500/5 border-amber-500/20 text-amber-500" 
             : option.requiresReschedule
               ? "bg-[#8b5cf6]/5 border-[#8b5cf6]/20 text-[#a78bfa]"
               : "bg-green-500/5 border-green-500/20 text-green-500"}
@@ -214,124 +213,6 @@ const OptionCard: React.FC<{
           )}
         </div>
       )}
-
-      {/* Option Actions */}
-      <div className="mt-6 flex gap-3">
-        <button
-          disabled={option.requiresHiring || option.requiresReschedule}
-          onClick={() => window.dispatchEvent(new CustomEvent('startProject', { detail: option }))}
-          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
-        >
-          {option.requiresHiring || option.requiresReschedule ? "Unavailable to Start" : "Start Project"}
-        </button>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('customizeOption', { detail: option }))}
-          className="px-5 py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 font-bold text-[13px] rounded-xl border border-gray-700/50 transition-all cursor-pointer"
-        >
-          Customize
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ── Customize Modal ──
-const CustomizeModal: React.FC<{
-  option: OptionType;
-  requiredRoles: any[];
-  employees: Employee[];
-  onClose: () => void;
-  onSave: (assignments: { role: string; userId: string }[]) => void;
-  isProcessing: boolean;
-}> = ({ option, requiredRoles, employees, onClose, onSave, isProcessing }) => {
-
-  // Transform needed roles into a flat list of slots
-  const initialAssignments: { id: string; role: string; userId: string; originalUserId: string }[] = [];
-  let slotIdx = 0;
-
-  requiredRoles.forEach(rr => {
-    for (let i = 0; i < rr.requiredCount; i++) {
-      const existingRec = option.candidates.filter(c => c.targetRole === rr.roleName)[i];
-      initialAssignments.push({
-        id: `slot_${slotIdx++}`,
-        role: rr.roleName,
-        userId: existingRec ? existingRec.userId : "",
-        originalUserId: existingRec ? existingRec.userId : ""
-      });
-    }
-  });
-
-  const [assignments, setAssignments] = useState(initialAssignments);
-
-  const updateAssignment = (id: string, userId: string) => {
-    setAssignments(prev => prev.map(a => a.id === id ? { ...a, userId } : a));
-  };
-
-  const handleSave = () => {
-    const valid = assignments.filter(a => a.userId.trim() !== "");
-    onSave(valid);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#111318] border border-[var(--dash-border)] rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl flex flex-col">
-        <div className="p-6 border-b border-gray-800 flex items-center justify-between sticky top-0 bg-[#111318]/90 backdrop-blur-md z-10">
-          <div>
-            <h3 className="text-lg font-bold text-white">Customize Option: {option.title}</h3>
-            <p className="text-[12px] text-gray-400 mt-1">Assign available employees to the required project roles</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400">✕</button>
-        </div>
-
-        <div className="p-6 space-y-5">
-          {assignments.map((slot) => {
-            const selectedEmp = employees.find(e => e.id === slot.userId);
-            const originalEmpName = option.candidates.find(c => c.userId === slot.originalUserId)?.userName;
-
-            return (
-              <div key={slot.id} className="bg-[#1a1f2e] border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-bold text-gray-200">{slot.role}</span>
-                  {slot.userId !== slot.originalUserId && (
-                    <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-bold">Modified</span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <select
-                    value={slot.userId}
-                    onChange={(e) => updateAssignment(slot.id, e.target.value)}
-                    className="w-full bg-[#111318] border border-gray-700 rounded-lg px-3 py-2.5 text-[13px] text-gray-200 focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="">-- Select an Employee --</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.role}) {(emp.projects && emp.projects.length > 0) ? `• Busy` : `• Available`}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-gray-500">
-                    Recommended originally: {originalEmpName || "None (Hiring Required)"}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="p-6 border-t border-gray-800 flex justify-end gap-3 sticky bottom-0 bg-[#111318] z-10 rounded-b-2xl">
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-bold bg-gray-800 text-gray-200 hover:bg-gray-700 text-[13px]">
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isProcessing}
-            className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 flex items-center gap-2 text-[13px] disabled:opacity-50"
-          >
-            {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            {isProcessing ? "Processing..." : "Save & Start Project"}
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
@@ -342,22 +223,12 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Customization and Batch actions state
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [customizingOption, setCustomizingOption] = useState<OptionType | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processStatus, setProcessStatus] = useState("");
-
-  useEffect(() => {
-    getEmployees().then(setEmployees).catch(err => console.error("Could not fetch employees:", err));
-  }, []);
-
   useEffect(() => {
     if (!projectId) return;
-
+    
     setLoading(true);
     setError(null);
-
+    
     getProjectRecommendations(projectId)
       .then(setData)
       .catch((err) => {
@@ -366,44 +237,6 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
       })
       .finally(() => setLoading(false));
   }, [projectId]);
-
-  useEffect(() => {
-    const handleStart = async (e: any) => {
-      const option: OptionType = e.detail;
-      await processStartProject(option.candidates.map(c => ({ role: c.targetRole, userId: c.userId })));
-    };
-    const handleCustomize = (e: any) => {
-      setCustomizingOption(e.detail);
-    };
-
-    window.addEventListener('startProject', handleStart);
-    window.addEventListener('customizeOption', handleCustomize);
-    return () => {
-      window.removeEventListener('startProject', handleStart);
-      window.removeEventListener('customizeOption', handleCustomize);
-    };
-  }, [projectId]);
-
-  const processStartProject = async (assignments: { role: string, userId: string }[]) => {
-    setIsProcessing(true);
-    try {
-      setProcessStatus("Assigning members...");
-      for (const assign of assignments) {
-        await assignMemberToProject(projectId, {
-          userId: assign.userId,
-          roleInProject: assign.role
-        });
-      }
-      setProcessStatus("Starting project...");
-      await updateProject(projectId, { projectStatus: 1 }); // 1 = Running
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to start project.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -442,9 +275,9 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
     <div className="relative group">
       {/* Glow effect */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-[2.5rem] blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
-
+      
       <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-[var(--dash-border)] rounded-[2.5rem] p-8 overflow-hidden shadow-2xl transition-colors duration-300">
-
+        
         {/* Purple accent border highlight */}
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
         <div className="absolute -left-[1px] top-1/2 -translate-y-1/2 h-40 w-[1px] bg-gradient-to-b from-transparent via-purple-500/50 to-transparent"></div>
@@ -485,42 +318,25 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
             <p className="text-[12px] text-green-400/70 font-medium">{data.bestOptionReason}</p>
           </div>
           <div className="pr-2">
-            <ChevronRight className="text-green-500/40" size={18} />
+             <ChevronRight className="text-green-500/40" size={18} />
           </div>
         </div>
 
         {/* Comparison Grid */}
-        <div className="flex flex-col md:flex-row gap-6 mb-4 relative">
-          {/* Overlay loader when processing batch starts */}
-          {isProcessing && (
-            <div className="absolute inset-0 z-20 bg-[#111318]/70 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center border border-gray-800">
-              <Loader2 size={32} className="animate-spin text-blue-500 mb-4" />
-              <p className="text-white font-bold">{processStatus}</p>
-            </div>
-          )}
-          <OptionCard
+        <div className="flex flex-col md:flex-row gap-6 mb-4">
+          <OptionCard 
             option={data.optionA}
             isRecommended={data.bestOption === "A"}
             label="A"
           />
-          <OptionCard
+          <OptionCard 
             option={data.optionB}
             isRecommended={data.bestOption === "B"}
             label="B"
           />
         </div>
       </div>
-
-      {customizingOption && (
-        <CustomizeModal
-          option={customizingOption}
-          requiredRoles={data.requiredRoles}
-          employees={employees}
-          onClose={() => setCustomizingOption(null)}
-          onSave={processStartProject}
-          isProcessing={isProcessing}
-        />
-      )}
     </div>
   );
 }
+

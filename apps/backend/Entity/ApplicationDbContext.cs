@@ -22,6 +22,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Project> Projects { get; set; }
     public DbSet<UserProject> UserProjects { get; set; }
     public DbSet<ProjectRequiredRole> ProjectRequiredRoles { get; set; }
+    public DbSet<ProjectRequiredSkill> ProjectRequiredSkills { get; set; }
     public DbSet<ContractExtension> ContractExtensions { get; set; }
     public DbSet<Holiday> Holidays { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)

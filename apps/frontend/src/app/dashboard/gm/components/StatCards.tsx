@@ -48,7 +48,7 @@ export default function StatCards() {
       icon: Clock,
       iconColor: "text-[#f59e0b]",
       iconBg: "bg-[#f59e0b]/10",
-      href: "/project?tab=On Hold",
+      href: "/project?tab=Pending",
     },
     {
       label: "Scheduled",
@@ -56,7 +56,7 @@ export default function StatCards() {
       icon: TrendingUp, // Keeping the original icon used
       iconColor: "text-[#a78bfa]",
       iconBg: "bg-[#a78bfa]/10",
-      href: "/project?tab=Upcoming",
+      href: "/project?tab=Scheduled",
     },
     {
       label: "Running",

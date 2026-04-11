@@ -92,8 +92,8 @@ public class PMProjectController : ControllerBase
                     projectId = up.ProjectId,
                     title = up.Project.ProjectName,
                     status = up.Project.ProjectStatus.ToString(),
-                    startDate = up.Project.EstimatedStartDate.ToString("yyyy-MM-dd"),
-                    endDate = up.Project.EstimatedEndDate.ToString("yyyy-MM-dd")
+                    startDate = (up.StartDate ?? up.Project.EstimatedStartDate).ToString("yyyy-MM-dd"),
+                    endDate = (up.EndDate ?? CalculateEndDateFromWeeks(up.Project.EstimatedStartDate, up.Project.EstimatedDuration)).ToString("yyyy-MM-dd")
                 })
                 .ToList()
         });

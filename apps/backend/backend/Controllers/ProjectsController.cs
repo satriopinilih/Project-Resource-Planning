@@ -3,6 +3,7 @@ using Commons.Enums;
 using Contracts.DTOs.Common;
 using Contracts.DTOs.Project;
 using Entities;
+using Entities.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +40,10 @@ public class ProjectsController : ControllerBase
                 .ThenInclude(up => up.User)
                     .ThenInclude(u => u.UserRoles)
                         .ThenInclude(ur => ur.Role)
+            .Include(p => p.ProjectRequiredRoles)
+                .ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills)
+                .ThenInclude(ps => ps.Skill)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ProjectStatus>(status, true, out var parsedStatus))
@@ -69,6 +74,10 @@ public class ProjectsController : ControllerBase
                 .ThenInclude(up => up.User)
                     .ThenInclude(u => u.UserRoles)
                         .ThenInclude(ur => ur.Role)
+            .Include(p => p.ProjectRequiredRoles)
+                .ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills)
+                .ThenInclude(ps => ps.Skill)
             .FirstOrDefaultAsync(p => p.ProjectID == id);
 
         if (project is null)
@@ -105,6 +114,38 @@ public class ProjectsController : ControllerBase
 
     private static ProjectDto MapToDto(Entities.Entities.Project p, string? currentUserId = null)
     {
+        var members = p.UserProjects.Select(up => new ProjectMemberDto
+        {
+            UserId = up.UserId,
+            UserName = up.User?.UserName ?? up.UserId,
+            Role = up.RoleInProject,
+            StaffRole = up.User?.UserStaffRoles.Select(s => s.StaffRole.RoleName).FirstOrDefault()
+                        ?? up.User?.UserRoles.Select(r => r.Role.RoleName.ToString()).FirstOrDefault()
+                        ?? "Staff",
+            StartDate = up.StartDate,
+            EndDate = up.EndDate,
+            Status = up.Status.ToString()
+        }).ToList();
+
+        var requiredRoles = p.ProjectRequiredRoles.Select(pr => new ProjectRequiredRoleDto
+        {
+            Id = pr.Id,
+            StaffRoleId = pr.StaffRoleId,
+            RoleName = pr.StaffRole?.RoleName ?? "Unknown",
+            RequiredCount = pr.RequiredCount,
+            WorkingType = pr.WorkingType.ToString(),
+            FilledCount = members.Count(m =>
+                string.Equals(m.Role, pr.StaffRole?.RoleName, StringComparison.OrdinalIgnoreCase)
+            )
+        }).ToList();
+
+        // Project-level required skills (separate from roles)
+        var requiredSkills = p.ProjectRequiredSkills
+            .Select(ps => ps.Skill.SkillName)
+            .Distinct()
+            .OrderBy(s => s)
+            .ToList();
+
         return new ProjectDto
         {
             ProjectId = p.ProjectID,
@@ -206,6 +247,85 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    // ── Assign a member to a project with timeline ──
+    [HttpPost("{id}/assign")]
+    public async Task<IActionResult> AssignMember(int id, [FromBody] AssignMemberRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var project = await _db.Projects.FindAsync(id);
+        if (project is null)
+            return NotFound(ApiResponse<string>.ErrorResponse("Project not found"));
+
+        var user = await _db.Users.FindAsync(request.UserId);
+        if (user is null)
+            return NotFound(ApiResponse<string>.ErrorResponse("User not found"));
+
+        // Check if already assigned
+        var existing = await _db.UserProjects
+            .FirstOrDefaultAsync(up => up.ProjectId == id && up.UserId == request.UserId);
+
+        if (existing is not null)
+        {
+            // Update the existing assignment
+            existing.RoleInProject = request.RoleInProject;
+            existing.StartDate = request.StartDate ?? project.EstimatedStartDate;
+            existing.EndDate = request.EndDate ?? project.EstimatedEndDate;
+            existing.Status = UserProjectStatus.Assigned;
+        }
+        else
+        {
+            // Create new assignment
+            var userProject = new UserProject
+            {
+                UserId = request.UserId,
+                ProjectId = id,
+                RoleInProject = request.RoleInProject,
+                StartDate = request.StartDate ?? project.EstimatedStartDate,
+                EndDate = request.EndDate ?? project.EstimatedEndDate,
+                Status = UserProjectStatus.Assigned
+            };
+            _db.UserProjects.Add(userProject);
+        }
+
+        await _db.SaveChangesAsync();
+
+        // Re-fetch with includes to return full DTO
+        var updated = await _db.Projects
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+                    .ThenInclude(u => u.UserStaffRoles)
+                        .ThenInclude(usr => usr.StaffRole)
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+                    .ThenInclude(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role)
+            .Include(p => p.ProjectRequiredRoles)
+                .ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills)
+                .ThenInclude(ps => ps.Skill)
+            .FirstAsync(p => p.ProjectID == id);
+
+        return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(updated), "Member assigned successfully"));
+    }
+
+    // ── Remove a member from a project ──
+    [HttpDelete("{id}/assign/{userId}")]
+    public async Task<IActionResult> UnassignMember(int id, string userId)
+    {
+        var assignment = await _db.UserProjects
+            .FirstOrDefaultAsync(up => up.ProjectId == id && up.UserId == userId);
+
+        if (assignment is null)
+            return NotFound(ApiResponse<string>.ErrorResponse("Assignment not found"));
+
+        _db.UserProjects.Remove(assignment);
+        await _db.SaveChangesAsync();
+
+        return Ok(ApiResponse<string>.SuccessResponse("Member removed from project"));
+    }
+
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectRequest request)
     {
@@ -214,7 +334,12 @@ public class ProjectsController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        var project = await _db.Projects.FindAsync(id);
+        var project = await _db.Projects
+            .Include(p => p.ProjectRequiredRoles)
+            .Include(p => p.ProjectRequiredSkills)
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+            .FirstOrDefaultAsync(p => p.ProjectID == id);
         if (project == null)
         {
             return NotFound(ApiResponse<ProjectDto>.ErrorResponse("Project not found"));

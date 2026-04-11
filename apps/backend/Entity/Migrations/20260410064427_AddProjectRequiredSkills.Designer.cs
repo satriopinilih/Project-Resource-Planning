@@ -3,6 +3,7 @@ using System;
 using Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Entities.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260410064427_AddProjectRequiredSkills")]
+    partial class AddProjectRequiredSkills
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -289,7 +292,7 @@ namespace Entities.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ProjectId")
+                    b.Property<int>("ProjectRequiredRoleId")
                         .HasColumnType("integer");
 
                     b.Property<int>("SkillId")
@@ -297,7 +300,7 @@ namespace Entities.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProjectId");
+                    b.HasIndex("ProjectRequiredRoleId");
 
                     b.HasIndex("SkillId");
 
@@ -444,8 +447,6 @@ namespace Entities.Migrations
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("timestamp with time zone");
-                    b.Property<bool>("IsNotificationRead")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("ProjectId")
                         .HasColumnType("integer");
@@ -591,9 +592,9 @@ namespace Entities.Migrations
 
             modelBuilder.Entity("Entities.Entities.ProjectRequiredSkill", b =>
                 {
-                    b.HasOne("Entities.Entities.Project", "Project")
-                        .WithMany("ProjectRequiredSkills")
-                        .HasForeignKey("ProjectId")
+                    b.HasOne("Entities.Entities.ProjectRequiredRole", "ProjectRequiredRole")
+                        .WithMany("RequiredSkills")
+                        .HasForeignKey("ProjectRequiredRoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -603,7 +604,7 @@ namespace Entities.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Project");
+                    b.Navigation("ProjectRequiredRole");
 
                     b.Navigation("Skill");
                 });
@@ -704,9 +705,12 @@ namespace Entities.Migrations
                 {
                     b.Navigation("ProjectRequiredRoles");
 
-                    b.Navigation("ProjectRequiredSkills");
-
                     b.Navigation("UserProjects");
+                });
+
+            modelBuilder.Entity("Entities.Entities.ProjectRequiredRole", b =>
+                {
+                    b.Navigation("RequiredSkills");
                 });
 
             modelBuilder.Entity("Entities.Entities.Role", b =>
