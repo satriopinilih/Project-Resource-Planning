@@ -3,6 +3,7 @@ using System;
 using Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Entities.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260410101829_AddIsNotificationRead")]
+    partial class AddIsNotificationRead
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -281,29 +284,6 @@ namespace Entities.Migrations
                     b.ToTable("ProjectRequiredRoles");
                 });
 
-            modelBuilder.Entity("Entities.Entities.ProjectRequiredSkill", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SkillId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProjectId");
-
-                    b.HasIndex("SkillId");
-
-                    b.ToTable("ProjectRequiredSkills");
-                });
-
             modelBuilder.Entity("Entities.Entities.Role", b =>
                 {
                     b.Property<int>("RoleId")
@@ -442,8 +422,6 @@ namespace Entities.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("timestamp with time zone");
                     b.Property<bool>("IsNotificationRead")
                         .HasColumnType("boolean");
 
@@ -454,9 +432,6 @@ namespace Entities.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -589,25 +564,6 @@ namespace Entities.Migrations
                     b.Navigation("StaffRole");
                 });
 
-            modelBuilder.Entity("Entities.Entities.ProjectRequiredSkill", b =>
-                {
-                    b.HasOne("Entities.Entities.Project", "Project")
-                        .WithMany("ProjectRequiredSkills")
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Entities.Entities.Skill", "Skill")
-                        .WithMany()
-                        .HasForeignKey("SkillId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Project");
-
-                    b.Navigation("Skill");
-                });
-
             modelBuilder.Entity("Entities.Entities.User", b =>
                 {
                     b.HasOne("Entities.Entities.Department", "Department")
@@ -703,8 +659,6 @@ namespace Entities.Migrations
             modelBuilder.Entity("Entities.Entities.Project", b =>
                 {
                     b.Navigation("ProjectRequiredRoles");
-
-                    b.Navigation("ProjectRequiredSkills");
 
                     b.Navigation("UserProjects");
                 });

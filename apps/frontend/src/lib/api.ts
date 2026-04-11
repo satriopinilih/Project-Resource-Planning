@@ -100,6 +100,8 @@ export type BackendProject = {
   members: BackendProjectMember[];
   requiredRoles: BackendRequiredRole[];
   requiredSkills: string[]; // Project-level skill requirements
+  isUnread: boolean;
+  members: { userId: string; userName: string; role: string; staffRole: string }[];
 };
 
 export type BackendHoliday = {
@@ -363,6 +365,9 @@ export async function assignMemberToProject(projectId: number, payload: AssignMe
 export async function unassignMemberFromProject(projectId: number, userId: string): Promise<void> {
   await fetchJson(`/api/projects/${projectId}/assign/${encodeURIComponent(userId)}`, {
     method: 'DELETE'
+export async function markProjectAsRead(projectId: number): Promise<void> {
+  await fetchJson(`/api/projects/mark-read/${projectId}`, {
+    method: 'POST'
   });
 }
 

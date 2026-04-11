@@ -10,7 +10,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Active" | "Upcoming" | "Completed" | "On Hold";
+  status: "Active" | "Scheduled" | "Pending" | "Completed";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -20,28 +20,22 @@ interface Project {
 }
 
 const mapStatus = (backendStatus: number, startDateStr?: string): Project["status"] => {
+  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
   switch (backendStatus) {
-    case 0: // Pending
-      return "On Hold";
-    case 1: // Scheduled
-      return "Upcoming";
-    case 2: // Running
-      // Cek ulang menggunakan tanggal untuk jaga-jaga
+    case 0: return "Pending";    // Belum di-assign
+    case 1: return "Scheduled";  // Sudah assign, belum mulai
+    case 2: {                    // Running
       if (startDateStr) {
         const startDate = new Date(startDateStr);
         const today = new Date();
         startDate.setHours(0, 0, 0, 0);
         today.setHours(0, 0, 0, 0);
-        
-        if (startDate > today) {
-          return "Upcoming";
-        }
+        if (startDate > today) return "Scheduled";
       }
       return "Active";
-    case 3: // Completed
-      return "Completed";
-    default:
-      return "On Hold";
+    }
+    case 3: return "Completed";
+    default: return "Pending";
   }
 };
 
@@ -52,7 +46,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Active", "Upcoming", "Completed", "On Hold"];
+const tabs = ["All", "Pending", "Scheduled", "Active", "Completed"];
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -290,14 +284,14 @@ export default function ProjectsPage() {
                       <td className="py-4 px-4">
                         <span
                           className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${
-                            project.status === "Upcoming"
-                              ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                            project.status === "Pending"
+                              ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                              : project.status === "Scheduled"
+                              ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                               : project.status === "Active"
                               ? "bg-green-500/10 text-green-400 border-green-500/20"
                               : project.status === "Completed"
-                              ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
-                              : project.status === "On Hold"
-                              ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                              ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
                               : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                           }`}
                         >

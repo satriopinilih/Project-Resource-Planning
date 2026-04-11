@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
 import { getProjects } from "@/lib/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface Project {
   id: string;
@@ -33,7 +34,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "On Hold", "Active", "Upcoming", "Completed"];
+const tabs = ["All", "Active", "Upcoming", "Completed"];
 
 function PMProjectsContent() {
   const router = useRouter();
@@ -55,10 +56,13 @@ function PMProjectsContent() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        const auth = getSessionUser();
+        const currentPmId = auth?.userId || "N/A";
+
         const data = await getProjects();
         const mappedData: Project[] = data.map((p) => {
           const pmMember = p.members?.find((m) =>
-            m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase().includes("lead")
+            m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase() === "pm"
           );
           return {
             id: `proj${String(p.projectId).padStart(3, "0")}`,
@@ -66,7 +70,7 @@ function PMProjectsContent() {
             client: p.clientOrganization || "Internal",
             status: mapStatus(p.projectStatus),
             timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
-            pm: pmMember ? pmMember.userName : "TBD",
+            pm: pmMember ? pmMember.userId : currentPmId,
             team: p.members?.length || 0,
             budget: "N/A",
           };
@@ -140,7 +144,7 @@ function PMProjectsContent() {
                 <th className="font-semibold py-4 px-4">Client</th>
                 <th className="font-semibold py-4 px-4">Status</th>
                 <th className="font-semibold py-4 px-4">Timeline</th>
-                <th className="font-semibold py-4 px-4">PM</th>
+                <th className="font-semibold py-4 px-4 text-center">PM</th>
                 <th className="font-semibold py-4 px-4">Team</th>
                 <th className="font-semibold py-4 pr-6 pl-4">Budget</th>
               </tr>
@@ -203,7 +207,7 @@ function PMProjectsContent() {
                     <td className="py-4 px-4 text-[12px] font-medium text-[var(--dash-text-secondary)]">
                       {project.timeline}
                     </td>
-                    <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-secondary)]">
+                    <td className="py-4 px-4 text-center text-[13px] font-medium text-[var(--dash-text-secondary)]">
                       {project.pm}
                     </td>
                     <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-secondary)]">

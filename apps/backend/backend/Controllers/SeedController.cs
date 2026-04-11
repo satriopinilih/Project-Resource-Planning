@@ -342,6 +342,8 @@ END $$;");
             AddProject("PM001", "Customer Portal Development", "Project Manager", UserProjectStatus.Assigned);
             AddProject("PM001", "E-commerce Platform Rebuild", "Project Manager", UserProjectStatus.Assigned);
             AddProject("PM001", "Cloud Migration Project", "Project Manager", UserProjectStatus.Assigned);
+            AddProject("PM001", "Digital Transformation Initiative", "Project Manager", UserProjectStatus.Assigned);
+
 
             _db.ContractExtensions.Add(
                 new ContractExtension

@@ -51,7 +51,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const [userName, setUserName] = useState("User");
   const [userRole, setUserRole] = useState<string>(role ?? "Staff");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  
+
   const [notifications, setNotifications] = useState<ContractExtensionRequest[]>([]);
   const [hireNotifications, setHireNotifications] = useState<HireRequest[]>([]);
   const [gmHireNotifications, setGmHireNotifications] = useState<HireRequest[]>([]);
@@ -77,15 +77,11 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     if (userRole !== "PM") return;
     try {
       const projects = await getProjects();
-      const knownStr = localStorage.getItem("pm_known_projects");
-      const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
       
-      const newNotifs: PMNotification[] = [];
-      projects.forEach(p => {
-        if (!knownIds.includes(p.projectId)) {
-          newNotifs.push({ projectId: p.projectId, projectName: p.projectName });
-        }
-      });
+      const newNotifs: PMNotification[] = projects
+        .filter(p => p.isUnread)
+        .map(p => ({ projectId: p.projectId, projectName: p.projectName }));
+        
       setPmNotifications(newNotifs);
     } catch {
       setPmNotifications([]);
@@ -130,25 +126,26 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     };
   }, [userRole]);
 
-  const handlePMNotificationClick = (notif: PMNotification) => {
-    const knownStr = localStorage.getItem("pm_known_projects");
-    const knownIds: number[] = knownStr ? JSON.parse(knownStr) : [];
-    
-    if (!knownIds.includes(notif.projectId)) {
-      knownIds.push(notif.projectId);
-      localStorage.setItem("pm_known_projects", JSON.stringify(knownIds));
+  const handlePMNotificationClick = async (notif: PMNotification) => {
+    try {
+      const { markProjectAsRead } = await import("@/lib/api");
+      await markProjectAsRead(notif.projectId);
+      
+      setPmNotifications(prev => prev.filter(n => n.projectId !== notif.projectId));
+      setIsNotificationOpen(false);
+      router.push(`/pm/projects/${notif.projectId}`);
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+      setIsNotificationOpen(false);
+      router.push(`/pm/projects/${notif.projectId}`);
     }
-    
-    setPmNotifications(prev => prev.filter(n => n.projectId !== notif.projectId));
-    setIsNotificationOpen(false);
-    router.push(`/pm/projects/${notif.projectId}`);
   };
 
   const badgeClass = roleBadgeClass[userRole] ?? roleBadgeClass["Staff"];
   const avatarClass = avatarBgClass[userRole] ?? avatarBgClass["Staff"];
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-[80px] px-8 bg-[var(--dash-bg-header)] backdrop-blur-xl border-b border-[var(--dash-border)] transition-colors duration-300">
+    <header className="sticky top-0 z-50 flex items-center justify-between h-[80px] px-8 bg-[var(--dash-bg-header)] backdrop-blur-xl border-b border-[var(--dash-border)] transition-colors duration-300">
       {/* Page Title */}
       <h2 className="text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight">
         {title}
@@ -208,10 +205,10 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                 <div className="max-h-72 overflow-y-auto">
                   {/* LIMIT 3 NOTIFICATIONS (Newest First) */}
                   {pmNotifications.slice().reverse().slice(0, 3).map((n) => (
-                    <div 
-                      key={n.projectId} 
+                    <div
+                      key={n.projectId}
                       onClick={() => handlePMNotificationClick(n)}
-                      className="px-4 py-3 border-b border-[#2a3041] last:border-b-0 cursor-pointer hover:bg-[#2a3041] transition-colors"
+                      className="px-4 py-3 border-b border-[#2a3041] hover:bg-[#2a3041] transition-colors cursor-pointer"
                     >
                       <p className="text-[13px] text-[#d9e0f2] leading-5">
                         You have been assigned as PM to project: <span className="font-semibold">{n.projectName}</span>
@@ -221,6 +218,18 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       </p>
                     </div>
                   ))}
+
+                  {pmNotifications.length > 3 && (
+                    <div
+                      onClick={() => {
+                        setIsNotificationOpen(false);
+                        router.push('/pm/notifications');
+                      }}
+                      className="px-4 py-3 text-center text-[13px] font-semibold text-[#2B7FFC] cursor-pointer hover:bg-[#2a3041] transition-colors border-t border-[#30374a]"
+                    >
+                      View All Notifications ({pmNotifications.length})
+                    </div>
+                  )}
                 </div>
               )}
 

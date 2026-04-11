@@ -20,6 +20,11 @@ public class UserProject
     public string RoleInProject { get; set; } = string.Empty;
 
     public UserProjectStatus Status { get; set; }
+    
+    public bool IsNotificationRead { get; set; } = false;
+
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }

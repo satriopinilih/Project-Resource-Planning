@@ -44,7 +44,7 @@ public class PMProjectController : ControllerBase
                     title = p.ProjectName,
                     status = p.ProjectStatus.ToString(), 
                     startDate = p.EstimatedStartDate.ToString("yyyy-MM-dd"),
-                    endDate = CalculateEndDateFromWeeks(p.EstimatedStartDate, p.EstimatedDuration).ToString("yyyy-MM-dd")
+                    endDate = p.EstimatedEndDate.ToString("yyyy-MM-dd")
                 }
             }
         });
@@ -137,29 +137,5 @@ public class PMProjectController : ControllerBase
         });
     }
 
-    private static DateTime CalculateEndDateFromWeeks(DateTime startDate, int durationInWeeks)
-    {
-        if (durationInWeeks <= 0) return startDate;
-        
-        int totalWorkDaysNeeded = durationInWeeks * 5;
-        
-        DateTime result = startDate;
-        int addedWorkDays = 0;
 
-        if (result.DayOfWeek != DayOfWeek.Saturday && result.DayOfWeek != DayOfWeek.Sunday)
-        {
-            addedWorkDays = 1;
-        }
-
-        while (addedWorkDays < totalWorkDaysNeeded)
-        {
-            result = result.AddDays(1);
-            if (result.DayOfWeek != DayOfWeek.Saturday && result.DayOfWeek != DayOfWeek.Sunday)
-            {
-                addedWorkDays++;
-            }
-        }
-
-        return result;
-    }
 }

@@ -9,7 +9,6 @@ import {
   Loader2,
   Briefcase,
   UserPlus,
-  Clock,
   LayoutGrid,
   ChevronRight,
   X,
@@ -39,12 +38,24 @@ import {
 } from "../../../../../lib/api";
 import SmartRecommendationPanel from "../../components/SmartRecommendationPanel";
 
-const mapStatus = (backendStatus: number) => {
+const mapStatus = (backendStatus: number, startDateStr?: string) => {
+  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
+  // Same as dashboard StatCards and project list
   switch (backendStatus) {
-    case 0: return { label: "Scheduled", class: "bg-[#1e3a8a]/30 text-[#60a5fa] border-transparent" };
-    case 1: return { label: "Active", class: "bg-[#064e3b]/30 text-[#34d399] border-transparent" };
-    case 2: return { label: "Completed", class: "bg-[#1e293b] text-gray-300 border-transparent" };
-    default: return { label: "On Hold", class: "bg-gray-800 text-gray-400 border-transparent" };
+    case 0: return { label: "Pending",   class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+    case 1: return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
+    case 2: {
+      if (startDateStr) {
+        const startDate = new Date(startDateStr);
+        const today = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        if (startDate > today) return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
+      }
+      return { label: "Active", class: "bg-green-500/10 text-green-400 border-green-500/20" };
+    }
+    case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
+    default: return { label: "Pending",  class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
   }
 };
 
@@ -303,35 +314,56 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  if (loading) {
+    setAssigning(true);
+    try {
+      const payload: AssignMemberPayload = { userId: selectedEmp.userId, roleInProject: assignRole.trim() };
+      if (assignStart) payload.startDate = new Date(assignStart).toISOString();
+      if (assignEnd) payload.endDate = new Date(assignEnd).toISOString();
+      const updated = await assignMemberToProject(project.projectId, payload);
+      setProject(updated);
+      setAssignModalOpen(false);
+    } catch (err: any) {
+      setAssignError(err?.message || "Failed to assign member.");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!project) return;
+    setRemovingUserId(userId);
+    try {
+      await unassignMemberFromProject(project.projectId, userId);
+      await fetchProject();
+    } catch (err) {
+      console.error("Failed to remove member:", err);
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
+
+  if (loading || !project) {
     return (
       <div className="flex flex-col min-h-screen bg-[#18181b]">
         <AppHeader title="Project Details" role="GM" />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" />
+          {loading ? <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" /> : <p className="text-gray-400">Project not found.</p>}
         </div>
       </div>
     );
   }
 
-  if (!project) {
-    return (
-      <div className="flex flex-col min-h-screen bg-[#18181b]">
+  const statusInfo = mapStatus(project.projectStatus, project.estimatedStartDate);
+  const totalNeeded = project.requiredRoles?.reduce((s, r) => s + r.requiredCount, 0) || 0;
+  const totalFilled = project.requiredRoles?.reduce((s, r) => s + r.filledCount, 0) || 0;
+  const staffingPct = totalNeeded > 0 ? Math.round((totalFilled / totalNeeded) * 100) : 0;
+
+  return (
+    <>
+      <div className="flex-1 overflow-auto min-h-screen bg-[#1e1e20]">
         <AppHeader title="Project Details" role="GM" />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center">
-            <Briefcase size={24} className="text-gray-500" />
-          </div>
-          <p className="text-[16px] text-gray-400 font-medium">Project not found.</p>
-          <button onClick={() => router.back()} className="text-[#3b82f6] flex items-center gap-2 hover:underline">
-            Go back to Projects
-          </button>
-        </div>
-      </div>
-    );
-  }
 
-  const statusInfo = mapStatus(project.projectStatus);
+        <main className="flex-1 p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 pb-12">
 
   return (
     <>
@@ -846,8 +878,8 @@ export default function ProjectDetailsPage() {
                         {project.estimatedDuration || 8} weeks
                       </div>
                     </div>
-                  </div>
-                </section>
+                  );
+                })}
               </div>
             )}
 
