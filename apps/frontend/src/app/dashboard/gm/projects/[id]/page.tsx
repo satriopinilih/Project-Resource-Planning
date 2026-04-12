@@ -279,19 +279,6 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
-    if (!project) return;
-    setRemovingUserId(userId);
-    try {
-      await unassignMemberFromProject(project.projectId, userId);
-      await fetchProject();
-    } catch (err) {
-      console.error("Failed to remove member:", err);
-    } finally {
-      setRemovingUserId(null);
-    }
-  };
-
   const handleRequestHireFromProject = async () => {
     if (!project || project.projectStatus !== 0) return;
     if (!hireForm.roleNeeded) return;
