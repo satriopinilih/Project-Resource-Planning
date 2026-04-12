@@ -43,7 +43,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
   // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
   // Same as dashboard StatCards and project list
   switch (backendStatus) {
-    case 0: return { label: "Pending",   class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+    case 0: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
     case 1: return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
     case 2: {
       if (startDateStr) {
@@ -56,7 +56,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
       return { label: "Active", class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
-    default: return { label: "Pending",  class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+    default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
   }
 };
 
@@ -313,10 +313,8 @@ export default function ProjectDetailsPage() {
     } finally {
       setHireSubmitting(false);
     }
+
   };
-
-
-
 
   if (loading || !project) {
     return (
@@ -341,39 +339,39 @@ export default function ProjectDetailsPage() {
 
         <main className="flex-1 p-8 overflow-y-auto">
           <div className="w-full space-y-8 pb-12">
-            
+
             {/* Status Context Header */}
             {project.projectStatus === 0 && (
-               <div className="bg-[#1e3a8a]/20 border border-[#1e3a8a]/40 rounded-xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                     <div className="p-2 bg-[#1e3a8a]/40 text-[#60a5fa] rounded-lg">
-                        <LayoutGrid size={20} />
-                     </div>
-                     <div>
-                        <p className="text-[14px] font-bold text-white">Project Setup Phase</p>
-                        <p className="text-[12px] text-[#60a5fa]">Marketing has initiated this project. Finalize timeline and staff assignment below.</p>
-                     </div>
+              <div className="bg-[#1e3a8a]/20 border border-[#1e3a8a]/40 rounded-xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[#1e3a8a]/40 text-[#60a5fa] rounded-lg">
+                    <LayoutGrid size={20} />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setHireRequestOpen(true)}
-                      disabled={hireSubmitting || hireAlreadyRequested}
-                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold disabled:opacity-50"
-                    >
-                      {hireAlreadyRequested
-                        ? "Already Requested"
-                        : hireRequestStatus === "Declined"
-                          ? "Declined - Request Again"
-                          : hireRequestStatus === "Fulfilled"
-                            ? "Fulfilled - Request Again"
-                            : "Request New Hire"}
-                    </button>
-                    <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400">
-                      Step 1 of 2: Assign Timeline & Team
-                      <ChevronRight size={14} />
-                    </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-white">Project Setup Phase</p>
+                    <p className="text-[12px] text-[#60a5fa]">Marketing has initiated this project. Finalize timeline and staff assignment below.</p>
                   </div>
-               </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setHireRequestOpen(true)}
+                    disabled={hireSubmitting || hireAlreadyRequested}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold disabled:opacity-50"
+                  >
+                    {hireAlreadyRequested
+                      ? "Already Requested"
+                      : hireRequestStatus === "Declined"
+                        ? "Declined - Request Again"
+                        : hireRequestStatus === "Fulfilled"
+                          ? "Fulfilled - Request Again"
+                          : "Request New Hire"}
+                  </button>
+                  <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400">
+                    Step 1 of 2: Assign Timeline & Team
+                    <ChevronRight size={14} />
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* ── 1. Project Summary Banner ── */}
@@ -464,21 +462,19 @@ export default function ProjectDetailsPage() {
                       return (
                         <div
                           key={role.id}
-                          className={`relative p-4 rounded-xl border transition-all ${
-                            isFilled
-                              ? "bg-green-500/5 border-green-500/25"
-                              : isPartial
+                          className={`relative p-4 rounded-xl border transition-all ${isFilled
+                            ? "bg-green-500/5 border-green-500/25"
+                            : isPartial
                               ? "bg-amber-500/5 border-amber-500/25"
                               : "bg-[#202532] border-gray-700/40"
-                          }`}
+                            }`}
                         >
                           {/* Fill indicator */}
                           <div className="flex items-start justify-between mb-3">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                              role.workingType === "Dedicated"
-                                ? "bg-blue-500/15 text-blue-400"
-                                : "bg-purple-500/15 text-purple-400"
-                            }`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${role.workingType === "Dedicated"
+                              ? "bg-blue-500/15 text-blue-400"
+                              : "bg-purple-500/15 text-purple-400"
+                              }`}>
                               {role.workingType}
                             </span>
                             {isFilled ? (
@@ -499,21 +495,19 @@ export default function ProjectDetailsPage() {
                               <span className="text-[11px] text-gray-500">
                                 {role.filledCount}/{role.requiredCount} filled
                               </span>
-                              <span className={`text-[11px] font-bold ${
-                                isFilled ? "text-green-400" : isPartial ? "text-amber-400" : "text-gray-600"
-                              }`}>
+                              <span className={`text-[11px] font-bold ${isFilled ? "text-green-400" : isPartial ? "text-amber-400" : "text-gray-600"
+                                }`}>
                                 {isFilled ? "Complete" : isPartial ? "Partial" : "Open"}
                               </span>
                             </div>
                             <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  isFilled
-                                    ? "bg-green-500"
-                                    : isPartial
+                                className={`h-full rounded-full transition-all duration-500 ${isFilled
+                                  ? "bg-green-500"
+                                  : isPartial
                                     ? "bg-amber-500"
                                     : "bg-gray-700"
-                                }`}
+                                  }`}
                                 style={{ width: `${Math.min(100, (role.filledCount / role.requiredCount) * 100)}%` }}
                               />
                             </div>
@@ -555,17 +549,15 @@ export default function ProjectDetailsPage() {
                         <div className="flex-1">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[12px] text-gray-400 font-medium">Overall Staffing Progress</span>
-                            <span className={`text-[12px] font-bold ${
-                              pct === 100 ? "text-green-400" : pct > 0 ? "text-amber-400" : "text-gray-500"
-                            }`}>{pct}%</span>
+                            <span className={`text-[12px] font-bold ${pct === 100 ? "text-green-400" : pct > 0 ? "text-amber-400" : "text-gray-500"
+                              }`}>{pct}%</span>
                           </div>
                           <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all duration-700 ${
-                                pct === 100
-                                  ? "bg-gradient-to-r from-green-600 to-green-400"
-                                  : "bg-gradient-to-r from-amber-600 to-amber-400"
-                              }`}
+                              className={`h-full rounded-full transition-all duration-700 ${pct === 100
+                                ? "bg-gradient-to-r from-green-600 to-green-400"
+                                : "bg-gradient-to-r from-amber-600 to-amber-400"
+                                }`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -583,10 +575,9 @@ export default function ProjectDetailsPage() {
               <div className="border-t border-gray-700/50 px-6 py-3 flex items-center gap-2">
                 <FileText size={13} className="text-gray-600" />
                 <span className="text-[12px] text-gray-500">Priority:</span>
-                <span className={`text-[12px] font-bold ${
-                  project.priorityLevel === 2 ? "text-red-400" :
+                <span className={`text-[12px] font-bold ${project.priorityLevel === 2 ? "text-red-400" :
                   project.priorityLevel === 1 ? "text-amber-400" : "text-green-400"
-                }`}>
+                  }`}>
                   {mapPriority(project.priorityLevel)}
                 </span>
                 <span className="mx-2 text-gray-700">·</span>
@@ -595,7 +586,7 @@ export default function ProjectDetailsPage() {
                 <span className="text-[12px] text-gray-300 font-medium">{project.clientOrganization}</span>
               </div>
             </section>
-            
+
             {project.projectStatus === 0 ? (
               /* ── PLANNING UI (For Upcoming Projects) ── */
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -623,16 +614,15 @@ export default function ProjectDetailsPage() {
                               <div className="space-y-1.5">
                                 <div className="flex items-center gap-3">
                                   <h3 className="text-white font-black text-[16px] tracking-tight">{role.roleName}</h3>
-                                  <span className={`text-[10px] px-2.5 py-0.5 rounded border font-bold uppercase tracking-wider ${
-                                    isDedicated 
-                                      ? 'bg-[#8b5cf6]/10 text-[#a78bfa] border-[#8b5cf6]/20' 
-                                      : 'bg-[#10b981]/10 text-[#34d399] border-[#10b981]/20'
-                                  }`}>
+                                  <span className={`text-[10px] px-2.5 py-0.5 rounded border font-bold uppercase tracking-wider ${isDedicated
+                                    ? 'bg-[#8b5cf6]/10 text-[#a78bfa] border-[#8b5cf6]/20'
+                                    : 'bg-[#10b981]/10 text-[#34d399] border-[#10b981]/20'
+                                    }`}>
                                     {role.workingType}
                                   </span>
                                 </div>
                                 <p className="text-[13px] text-gray-400 font-medium">Need {role.requiredCount} <span className="mx-1">•</span> Selected {membersInRole.length}</p>
-                                
+
                                 {isDedicated ? (
                                   <p className="text-[11px] text-amber-500/90 font-medium flex items-center gap-1.5 mt-2">
                                     <AlertCircle size={13} /> Must not have overlapping assignments
@@ -643,7 +633,7 @@ export default function ProjectDetailsPage() {
                                   </p>
                                 )}
                               </div>
-                              
+
                               {membersInRole.length < role.requiredCount && (
                                 <button
                                   onClick={() => openAssignModal(role.roleName)}
@@ -667,20 +657,20 @@ export default function ProjectDetailsPage() {
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-4">
-                                     <div className="text-right">
-                                       <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Timeline</span>
-                                       <span className="text-[11px] text-gray-300 font-medium bg-[#2a2f3e] px-2 py-1 rounded">
-                                         {member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)} — {member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}
-                                       </span>
-                                     </div>
-                                     <button
-                                        onClick={() => handleRemoveMember(member.userId)}
-                                        disabled={removingUserId === member.userId}
-                                        className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer disabled:opacity-50"
-                                        title="Remove from project"
-                                      >
-                                        {removingUserId === member.userId ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                      </button>
+                                    <div className="text-right">
+                                      <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Timeline</span>
+                                      <span className="text-[11px] text-gray-300 font-medium bg-[#2a2f3e] px-2 py-1 rounded">
+                                        {member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)} — {member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}
+                                      </span>
+                                    </div>
+                                    <button
+                                      onClick={() => handleRemoveMember(member.userId)}
+                                      disabled={removingUserId === member.userId}
+                                      className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer disabled:opacity-50"
+                                      title="Remove from project"
+                                    >
+                                      {removingUserId === member.userId ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                    </button>
                                   </div>
                                 </div>
                               ))}
@@ -696,13 +686,13 @@ export default function ProjectDetailsPage() {
                       })}
 
                       {(!project.requiredRoles || project.requiredRoles.length === 0) && (
-                         <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-gray-700/50 rounded-xl bg-[#1a1c1e]/30">
-                            <Briefcase size={36} className="text-gray-600 mb-4" />
-                            <p className="text-gray-400 text-[14px] font-medium">No roles required for this project.</p>
-                            <button onClick={() => openAssignModal()} className="text-blue-400 text-[13px] mt-2 font-bold hover:underline">
-                              Assign members manually
-                            </button>
-                         </div>
+                        <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-gray-700/50 rounded-xl bg-[#1a1c1e]/30">
+                          <Briefcase size={36} className="text-gray-600 mb-4" />
+                          <p className="text-gray-400 text-[14px] font-medium">No roles required for this project.</p>
+                          <button onClick={() => openAssignModal()} className="text-blue-400 text-[13px] mt-2 font-bold hover:underline">
+                            Assign members manually
+                          </button>
+                        </div>
                       )}
                     </div>
                   </section>
@@ -721,19 +711,19 @@ export default function ProjectDetailsPage() {
 
                     <div className="space-y-6">
                       <div className="space-y-2">
-                         <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">Start Date</p>
-                         <div className="flex items-center gap-3 p-3 bg-[#202532] border border-gray-700/30 rounded-lg text-[14px] font-medium text-gray-200">
-                           <Calendar size={16} className="text-[#3b82f6]" />
-                           {project.estimatedStartDate ? formatDate(project.estimatedStartDate) : 'Click to Set Date'}
-                         </div>
+                        <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">Start Date</p>
+                        <div className="flex items-center gap-3 p-3 bg-[#202532] border border-gray-700/30 rounded-lg text-[14px] font-medium text-gray-200">
+                          <Calendar size={16} className="text-[#3b82f6]" />
+                          {project.estimatedStartDate ? formatDate(project.estimatedStartDate) : 'Click to Set Date'}
+                        </div>
                       </div>
 
                       <div className="space-y-2">
-                         <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">End Date</p>
-                         <div className="flex items-center gap-3 p-3 bg-[#202532] border border-gray-700/30 rounded-lg text-[14px] font-medium text-gray-200">
-                           <Calendar size={16} className="text-[#3b82f6]" />
-                           {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Click to Set Date'}
-                         </div>
+                        <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">End Date</p>
+                        <div className="flex items-center gap-3 p-3 bg-[#202532] border border-gray-700/30 rounded-lg text-[14px] font-medium text-gray-200">
+                          <Calendar size={16} className="text-[#3b82f6]" />
+                          {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Click to Set Date'}
+                        </div>
                       </div>
 
                       <div className="pt-4 border-t border-gray-700/50">
@@ -927,18 +917,16 @@ export default function ProjectDetailsPage() {
                             if (!assignRole) setAssignRole(emp.role || "");
                           }}
                           disabled={!avail.available}
-                          className={`w-full text-left px-3 py-3 rounded-xl border transition-all flex items-center gap-3 ${
-                            !avail.available
-                              ? "border-gray-800/50 bg-[#0f0f0f]/50 opacity-50 cursor-not-allowed"
-                              : isSelected
-                                ? "border-[#3b82f6] bg-[#3b82f6]/10 cursor-pointer"
-                                : "border-gray-800 bg-[#0f0f0f] hover:border-gray-700 hover:bg-[#151515] cursor-pointer"
-                          }`}
+                          className={`w-full text-left px-3 py-3 rounded-xl border transition-all flex items-center gap-3 ${!avail.available
+                            ? "border-gray-800/50 bg-[#0f0f0f]/50 opacity-50 cursor-not-allowed"
+                            : isSelected
+                              ? "border-[#3b82f6] bg-[#3b82f6]/10 cursor-pointer"
+                              : "border-gray-800 bg-[#0f0f0f] hover:border-gray-700 hover:bg-[#151515] cursor-pointer"
+                            }`}
                         >
                           {/* Avatar */}
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[12px] flex-shrink-0 ${
-                            !avail.available ? "bg-gray-800 text-gray-600" : "bg-[#1e3a8a]/30 text-[#60a5fa]"
-                          }`}>
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[12px] flex-shrink-0 ${!avail.available ? "bg-gray-800 text-gray-600" : "bg-[#1e3a8a]/30 text-[#60a5fa]"
+                            }`}>
                             {emp.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                           </div>
 
