@@ -15,6 +15,8 @@ import {
   FileText,
   ShieldAlert,
   Clock,
+  ChevronRight,
+  UserPlus,
 } from "lucide-react";
 import { getProjectById, BackendProject } from "@/lib/api";
 
