@@ -22,6 +22,7 @@ import {
   Building2,
   FileText,
   ShieldAlert,
+  Clock,
 } from "lucide-react";
 import {
   getProjectById,
@@ -314,20 +315,7 @@ export default function ProjectDetailsPage() {
     }
   };
 
-    setAssigning(true);
-    try {
-      const payload: AssignMemberPayload = { userId: selectedEmp.userId, roleInProject: assignRole.trim() };
-      if (assignStart) payload.startDate = new Date(assignStart).toISOString();
-      if (assignEnd) payload.endDate = new Date(assignEnd).toISOString();
-      const updated = await assignMemberToProject(project.projectId, payload);
-      setProject(updated);
-      setAssignModalOpen(false);
-    } catch (err: any) {
-      setAssignError(err?.message || "Failed to assign member.");
-    } finally {
-      setAssigning(false);
-    }
-  };
+
 
   const handleRemoveMember = async (userId: string) => {
     if (!project) return;
@@ -357,13 +345,6 @@ export default function ProjectDetailsPage() {
   const totalNeeded = project.requiredRoles?.reduce((s, r) => s + r.requiredCount, 0) || 0;
   const totalFilled = project.requiredRoles?.reduce((s, r) => s + r.filledCount, 0) || 0;
   const staffingPct = totalNeeded > 0 ? Math.round((totalFilled / totalNeeded) * 100) : 0;
-
-  return (
-    <>
-      <div className="flex-1 overflow-auto min-h-screen bg-[#1e1e20]">
-        <AppHeader title="Project Details" role="GM" />
-
-        <main className="flex-1 p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 pb-12">
 
   return (
     <>
@@ -878,8 +859,8 @@ export default function ProjectDetailsPage() {
                         {project.estimatedDuration || 8} weeks
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                </section>
               </div>
             )}
 
