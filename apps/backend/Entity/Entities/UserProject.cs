@@ -26,9 +26,6 @@ public class UserProject
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
-
     [ForeignKey(nameof(UserId))]
     public virtual User User { get; set; } = default!;
 

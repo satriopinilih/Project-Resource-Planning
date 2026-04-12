@@ -101,7 +101,6 @@ export type BackendProject = {
   requiredRoles: BackendRequiredRole[];
   requiredSkills: string[]; // Project-level skill requirements
   isUnread: boolean;
-  members: { userId: string; userName: string; role: string; staffRole: string }[];
 };
 
 export type BackendHoliday = {
@@ -365,221 +364,224 @@ export async function assignMemberToProject(projectId: number, payload: AssignMe
 export async function unassignMemberFromProject(projectId: number, userId: string): Promise<void> {
   await fetchJson(`/api/projects/${projectId}/assign/${encodeURIComponent(userId)}`, {
     method: 'DELETE'
+  });
+}
+
 export async function markProjectAsRead(projectId: number): Promise<void> {
-  await fetchJson(`/api/projects/mark-read/${projectId}`, {
-    method: 'POST'
-  });
-}
+    await fetchJson(`/api/projects/mark-read/${projectId}`, {
+      method: 'POST'
+    });
+  }
 
-export async function getRawEmployees(): Promise<BackendEmployee[]> {
-  return fetchJson<BackendEmployee[]>('/api/employees');
-}
+  export async function getRawEmployees(): Promise<BackendEmployee[]> {
+    return fetchJson<BackendEmployee[]>('/api/employees');
+  }
 
-export async function getEmployeeFormOptions(): Promise<EmployeeFormOptions> {
-  return fetchJson<EmployeeFormOptions>('/api/employees/form-options');
-}
+  export async function getEmployeeFormOptions(): Promise<EmployeeFormOptions> {
+    return fetchJson<EmployeeFormOptions>('/api/employees/form-options');
+  }
 
-export async function createContractExtension(
-  userId: string,
-  extensionDuration: number,
-  reasonForExtension: string
-): Promise<void> {
-  await fetchJson('/api/contractextensions', {
-    method: 'POST',
-    body: JSON.stringify({ userId, extensionDuration, reasonForExtension })
-  });
-}
+  export async function createContractExtension(
+    userId: string,
+    extensionDuration: number,
+    reasonForExtension: string
+  ): Promise<void> {
+    await fetchJson('/api/contractextensions', {
+      method: 'POST',
+      body: JSON.stringify({ userId, extensionDuration, reasonForExtension })
+    });
+  }
 
-export type CreateEmployeeRequest = {
-  userId: string;
-  userName: string;
-  email: string;
-  password: string;
-  departmentId: number;
-  employeeType: number;
-  experienceLevel: string;
-  contractStart: string;
-  contractEnd: string;
-  skillIds: number[];
-  roleIds: number[];
-  staffRoleIds: number[];
-};
+  export type CreateEmployeeRequest = {
+    userId: string;
+    userName: string;
+    email: string;
+    password: string;
+    departmentId: number;
+    employeeType: number;
+    experienceLevel: string;
+    contractStart: string;
+    contractEnd: string;
+    skillIds: number[];
+    roleIds: number[];
+    staffRoleIds: number[];
+  };
 
-export type CreateEmployeeResult = {
-  user: BackendUser;
-  temporaryPassword: string;
-  mustChangePassword: boolean;
-};
+  export type CreateEmployeeResult = {
+    user: BackendUser;
+    temporaryPassword: string;
+    mustChangePassword: boolean;
+  };
 
-export async function createEmployee(payload: CreateEmployeeRequest): Promise<CreateEmployeeResult> {
-  return fetchJson<CreateEmployeeResult>('/api/employees', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
+  export async function createEmployee(payload: CreateEmployeeRequest): Promise<CreateEmployeeResult> {
+    return fetchJson<CreateEmployeeResult>('/api/employees', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
 
-export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  await fetchJson('/api/auth/change-password', {
-    method: 'POST',
-    body: JSON.stringify({ currentPassword, newPassword })
-  });
-}
+  export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await fetchJson('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+  }
 
-export async function forgotPassword(identifier: string): Promise<void> {
-  await fetchJson('/api/auth/forgot-password', {
-    method: 'POST',
-    body: JSON.stringify({ identifier })
-  });
-}
+  export async function forgotPassword(identifier: string): Promise<void> {
+    await fetchJson('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ identifier })
+    });
+  }
 
-export async function resetEmployeePassword(userId: string): Promise<{ temporaryPassword: string; mustChangePassword: boolean }> {
-  return fetchJson<{ temporaryPassword: string; mustChangePassword: boolean }>(`/api/employees/${encodeURIComponent(userId)}/reset-password`, {
-    method: 'POST'
-  });
-}
+  export async function resetEmployeePassword(userId: string): Promise<{ temporaryPassword: string; mustChangePassword: boolean }> {
+    return fetchJson<{ temporaryPassword: string; mustChangePassword: boolean }>(`/api/employees/${encodeURIComponent(userId)}/reset-password`, {
+      method: 'POST'
+    });
+  }
 
-export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryItem[]> {
-  const data = await fetchJson<BackendRequestHistoryItem[]>(`/api/requesthistory?scope=${encodeURIComponent(scope)}`);
-  return data.map((item) => ({
-    requestType: item.requestType,
-    referenceId: item.referenceId,
-    employeeId: item.employeeId,
-    employeeName: item.employeeName,
-    staffRole: item.staffRole,
-    extension: item.extension,
-    requestedDate: formatDate(item.requestedDate),
-    status: item.status,
-    reviewedDate: item.reviewedDate ? formatDate(item.reviewedDate) : undefined
-  }));
-}
+  export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryItem[]> {
+    const data = await fetchJson<BackendRequestHistoryItem[]>(`/api/requesthistory?scope=${encodeURIComponent(scope)}`);
+    return data.map((item) => ({
+      requestType: item.requestType,
+      referenceId: item.referenceId,
+      employeeId: item.employeeId,
+      employeeName: item.employeeName,
+      staffRole: item.staffRole,
+      extension: item.extension,
+      requestedDate: formatDate(item.requestedDate),
+      status: item.status,
+      reviewedDate: item.reviewedDate ? formatDate(item.reviewedDate) : undefined
+    }));
+  }
 
-export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled', projectId?: number): Promise<HireRequest[]> {
-  const params = new URLSearchParams();
-  if (status) params.set('status', status);
-  if (projectId !== undefined) params.set('projectId', String(projectId));
-  const query = params.toString();
-  return fetchJson<HireRequest[]>(`/api/hirerequests${query ? `?${query}` : ''}`);
-}
+  export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled', projectId?: number): Promise<HireRequest[]> {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (projectId !== undefined) params.set('projectId', String(projectId));
+    const query = params.toString();
+    return fetchJson<HireRequest[]>(`/api/hirerequests${query ? `?${query}` : ''}`);
+  }
 
-export async function createHireRequest(payload: CreateHireRequestPayload): Promise<HireRequest> {
-  return fetchJson<HireRequest>('/api/hirerequests', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
+  export async function createHireRequest(payload: CreateHireRequestPayload): Promise<HireRequest> {
+    return fetchJson<HireRequest>('/api/hirerequests', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
 
-export async function startHireRequest(id: number): Promise<void> {
-  await fetchJson(`/api/hirerequests/${id}/start`, { method: 'POST' });
-}
+  export async function startHireRequest(id: number): Promise<void> {
+    await fetchJson(`/api/hirerequests/${id}/start`, { method: 'POST' });
+  }
 
-export async function fulfillHireRequest(id: number, hiredEmployeeName?: string): Promise<void> {
-  await fetchJson(`/api/hirerequests/${id}/fulfill`, {
-    method: 'POST',
-    body: JSON.stringify({ hiredEmployeeName })
-  });
-}
+  export async function fulfillHireRequest(id: number, hiredEmployeeName?: string): Promise<void> {
+    await fetchJson(`/api/hirerequests/${id}/fulfill`, {
+      method: 'POST',
+      body: JSON.stringify({ hiredEmployeeName })
+    });
+  }
 
-export async function declineHireRequest(id: number, notes?: string): Promise<void> {
-  await fetchJson(`/api/hirerequests/${id}/decline`, {
-    method: 'POST',
-    body: JSON.stringify({ notes })
-  });
-}
+  export async function declineHireRequest(id: number, notes?: string): Promise<void> {
+    await fetchJson(`/api/hirerequests/${id}/decline`, {
+      method: 'POST',
+      body: JSON.stringify({ notes })
+    });
+  }
 
-export async function login(identifier: string, password: string): Promise<LoginResponse> {
-  return fetchJson<LoginResponse>('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email: identifier, password })
-  });
-}
+  export async function login(identifier: string, password: string): Promise<LoginResponse> {
+    return fetchJson<LoginResponse>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: identifier, password })
+    });
+  }
 
-export interface TimelineStats {
-  total: number;
-  onHold: number;
-  scheduled: number;
-  running: number;
-  completed: number;
-}
+  export interface TimelineStats {
+    total: number;
+    onHold: number;
+    scheduled: number;
+    running: number;
+    completed: number;
+  }
 
-export interface TimelineItem {
-  label: string;
-  subLabel: string;
-  id?: number;
-  bars: {
+  export interface TimelineItem {
+    label: string;
+    subLabel: string;
+    id?: number;
+    bars: {
+      title: string;
+      status: string;
+      startDate: string;
+      endDate: string;
+      projectId?: number;
+    }[];
+  }
+
+  export async function getTimelineStats(): Promise<TimelineStats> {
+    return fetchRaw<TimelineStats>('/api/timeline/stats');
+  }
+
+  export async function getProjectTimeline(): Promise<TimelineItem[]> {
+    return fetchRaw<TimelineItem[]>('/api/timeline/projects');
+  }
+
+  export async function getResourceTimeline(): Promise<TimelineItem[]> {
+    return fetchRaw<TimelineItem[]>('/api/timeline/resources');
+  }
+
+  export async function getHolidays(): Promise<BackendHoliday[]> {
+    return fetchJson<BackendHoliday[]>('/api/holidays');
+  }
+
+  // ── Smart Recommendation Panel Types ──
+
+  export type RecommendationCandidate = {
+    userId: string;
+    userName: string;
+    staffRole: string;
+    targetRole: string;
+    experienceYears: number;
+    skills: string[];
+    matchedSkills: string[];
+    skillMatchPercent: number;
+    isAvailable: boolean;
+    availabilityNote: string;
+    currentProjects: string[];
+  };
+
+  export type RecommendationOption = {
     title: string;
-    status: string;
+    timeline: string;
     startDate: string;
     endDate: string;
-    projectId?: number;
-  }[];
-}
+    teamSize: number;
+    availableNow: number;
+    requiresHiring: boolean;
+    hiringDetail: string;
+    requiresReschedule: boolean;
+    rescheduleDetail: string;
+    matchScore: number;
+    candidates: RecommendationCandidate[];
+  };
 
-export async function getTimelineStats(): Promise<TimelineStats> {
-  return fetchRaw<TimelineStats>('/api/timeline/stats');
-}
+  export type RecommendationRequiredRole = {
+    staffRoleId: number;
+    roleName: string;
+    requiredCount: number;
+    workingType: string;
+  };
 
-export async function getProjectTimeline(): Promise<TimelineItem[]> {
-  return fetchRaw<TimelineItem[]>('/api/timeline/projects');
-}
+  export type RecommendationResponse = {
+    projectId: number;
+    projectName: string;
+    estimatedStartDate: string;
+    estimatedEndDate: string;
+    requiredRoles: RecommendationRequiredRole[];
+    optionA: RecommendationOption;
+    optionB: RecommendationOption;
+    bestOption: string;
+    bestOptionReason: string;
+  };
 
-export async function getResourceTimeline(): Promise<TimelineItem[]> {
-  return fetchRaw<TimelineItem[]>('/api/timeline/resources');
-}
-
-export async function getHolidays(): Promise<BackendHoliday[]> {
-  return fetchJson<BackendHoliday[]>('/api/holidays');
-}
-
-// ── Smart Recommendation Panel Types ──
-
-export type RecommendationCandidate = {
-  userId: string;
-  userName: string;
-  staffRole: string;
-  targetRole: string;
-  experienceYears: number;
-  skills: string[];
-  matchedSkills: string[];
-  skillMatchPercent: number;
-  isAvailable: boolean;
-  availabilityNote: string;
-  currentProjects: string[];
-};
-
-export type RecommendationOption = {
-  title: string;
-  timeline: string;
-  startDate: string;
-  endDate: string;
-  teamSize: number;
-  availableNow: number;
-  requiresHiring: boolean;
-  hiringDetail: string;
-  requiresReschedule: boolean;
-  rescheduleDetail: string;
-  matchScore: number;
-  candidates: RecommendationCandidate[];
-};
-
-export type RecommendationRequiredRole = {
-  staffRoleId: number;
-  roleName: string;
-  requiredCount: number;
-  workingType: string;
-};
-
-export type RecommendationResponse = {
-  projectId: number;
-  projectName: string;
-  estimatedStartDate: string;
-  estimatedEndDate: string;
-  requiredRoles: RecommendationRequiredRole[];
-  optionA: RecommendationOption;
-  optionB: RecommendationOption;
-  bestOption: string;
-  bestOptionReason: string;
-};
-
-export async function getProjectRecommendations(projectId: number): Promise<RecommendationResponse> {
-  return fetchJson<RecommendationResponse>(`/api/recommendations/${projectId}`);
-}
+  export async function getProjectRecommendations(projectId: number): Promise<RecommendationResponse> {
+    return fetchJson<RecommendationResponse>(`/api/recommendations/${projectId}`);
+  }
