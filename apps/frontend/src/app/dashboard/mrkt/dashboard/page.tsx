@@ -140,7 +140,7 @@ export default function MarketingDashboard() {
 
       {/* Main Action Cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        <Link href="/mrkt/add-project" className="flex items-center gap-5 bg-[#255df5] hover:bg-[#1a4de0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
+        <Link href="/dashboard/mrkt/add-project" className="flex items-center gap-5 bg-[#255df5] hover:bg-[#1a4de0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
           <div className="bg-white/20 p-4 rounded-xl group-hover:scale-105 transition-transform flex items-center justify-center">
             <Plus size={26} className="text-white" />
           </div>

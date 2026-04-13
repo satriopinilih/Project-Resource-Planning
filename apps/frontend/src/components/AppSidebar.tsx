@@ -42,7 +42,7 @@ const navByRole: Record<string, NavItem[]> = {
   Marketing: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
-    { label: "Add Project", href: "/mrkt/add-project", icon: PlusCircle },
+    { label: "Add Project", href: "/dashboard/mrkt/add-project", icon: PlusCircle },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   Staff: [
