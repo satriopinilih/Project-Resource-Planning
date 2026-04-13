@@ -12,10 +12,11 @@ import {
   Sun,
   Moon,
   User,
-  Loader2
+  Loader2,
+  Bell, // added for notifications icon
 } from "lucide-react";
 import Link from "next/link";
-import { getProjects, BackendProject } from "@/lib/api";
+import { getProjects, BackendProject, getTimelineEditRequests, TimelineEditRequest } from "@/lib/api";
 
 export default function MarketingDashboard() {
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -28,6 +29,8 @@ export default function MarketingDashboard() {
   const [theme, setTheme] = useState("dark");
   const [projects, setProjects] = useState<BackendProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [notifications, setNotifications] = useState<TimelineEditRequest[]>([]);
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState(true);
 
   useEffect(() => {
     // Initialize theme based on document class
@@ -40,6 +43,12 @@ export default function MarketingDashboard() {
       .then(setProjects)
       .catch(console.error)
       .finally(() => setIsLoading(false));
+
+    // Fetch timeline edit requests (notifications)
+    getTimelineEditRequests()
+      .then(setNotifications)
+      .catch(console.error)
+      .finally(() => setIsNotificationsLoading(false));
   }, []);
 
   const toggleTheme = () => {
@@ -161,47 +170,76 @@ export default function MarketingDashboard() {
         </Link>
       </section>
 
-      {/* Recent Submissions List */}
-      <section className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
-        <h3 className="text-[17px] font-semibold mb-5 text-gray-900 dark:text-white">Recent Submissions</h3>
-        <div className="space-y-4">
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
-            </div>
-          ) : projects.length === 0 ? (
-            <p className="text-gray-500 text-[14px]">No recent submissions found.</p>
-          ) : (
-            // Show the top 3 most recently created/returned projects
-            projects.slice(-3).reverse().map((project) => {
-              let statusLabel = "Pending";
-              let statusColor = "bg-amber-100 text-amber-700 dark:bg-[#3a3221] dark:text-[#eab308]";
+      {/* Two-column layout for Recent Submissions and Notifications */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Submissions */}
+        <section className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
+          <h3 className="text-[17px] font-semibold mb-5 text-gray-900 dark:text-white">Recent Submissions</h3>
+          <div className="space-y-4">
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+              </div>
+            ) : projects.length === 0 ? (
+              <p className="text-gray-500 text-[14px]">No recent submissions found.</p>
+            ) : (
+              projects.slice(-3).reverse().map((project) => {
+                let statusLabel = "Pending";
+                let statusColor = "bg-amber-100 text-amber-700 dark:bg-[#3a3221] dark:text-[#eab308]";
 
-              if (project.projectStatus === 1) {
-                statusLabel = "Scheduled";
-                statusColor = "bg-blue-100 text-blue-700 dark:bg-[#262c4a] dark:text-[#608bfa]";
-              } else if (project.projectStatus === 2) {
-                statusLabel = "Running";
-                statusColor = "bg-emerald-100 text-emerald-700 dark:bg-[#1f362e] dark:text-emerald-500";
-              } else if (project.projectStatus === 3) {
-                statusLabel = "Completed";
-                statusColor = "bg-gray-100 text-gray-700 dark:bg-[#34353a] dark:text-gray-400";
-              }
+                if (project.projectStatus === 1) {
+                  statusLabel = "Scheduled";
+                  statusColor = "bg-blue-100 text-blue-700 dark:bg-[#262c4a] dark:text-[#608bfa]";
+                } else if (project.projectStatus === 2) {
+                  statusLabel = "Running";
+                  statusColor = "bg-emerald-100 text-emerald-700 dark:bg-[#1f362e] dark:text-emerald-500";
+                } else if (project.projectStatus === 3) {
+                  statusLabel = "Completed";
+                  statusColor = "bg-gray-100 text-gray-700 dark:bg-[#34353a] dark:text-gray-400";
+                }
 
-              return (
-                <SubmissionItem
-                  key={project.projectId}
-                  title={project.projectName}
-                  client={project.clientOrganization || 'In-House'}
-                  date={`Start Date: ${project.estimatedStartDate ? new Date(project.estimatedStartDate).toLocaleDateString() : 'TBD'}`}
-                  status={statusLabel}
-                  statusColor={statusColor}
+                return (
+                  <SubmissionItem
+                    key={project.projectId}
+                    title={project.projectName}
+                    client={project.clientOrganization || 'In-House'}
+                    date={`Start Date: ${project.estimatedStartDate ? new Date(project.estimatedStartDate).toLocaleDateString() : 'TBD'}`}
+                    status={statusLabel}
+                    statusColor={statusColor}
+                  />
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {/* Notifications Card - Timeline Edit Requests */}
+        <section className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
+          <div className="flex items-center gap-2 mb-5">
+            <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+            <h3 className="text-[17px] font-semibold text-gray-900 dark:text-white">Timeline Edit Requests</h3>
+          </div>
+          <div className="space-y-4">
+            {isNotificationsLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+              </div>
+            ) : notifications.length === 0 ? (
+              <p className="text-gray-500 text-[14px]">No pending edit requests.</p>
+            ) : (
+              notifications.map((req) => (
+                <NotificationItem
+                  key={req.id}
+                  projectName={req.projectName}
+                  notes={req.notes}
+                  currentStartDate={req.currentStartDate}
+                  currentEndDate={req.currentEndDate}
                 />
-              );
-            })
-          )}
-        </div>
-      </section>
+              ))
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -236,3 +274,28 @@ function SubmissionItem({ title, client, date, status, statusColor }: any) {
     </div>
   );
 }
+<<<<<<< HEAD:apps/frontend/src/app/dashboard/mrkt/dashboard/page.tsx
+=======
+
+// New component for displaying a single notification (timeline edit request)
+function NotificationItem({ projectName, notes, currentStartDate, currentEndDate }: any) {
+  return (
+    <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl border border-gray-100 dark:border-white/[0.02] transition-colors duration-300">
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between items-start">
+          <h4 className="font-medium text-[15px] text-gray-900 dark:text-white">{projectName}</h4>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            Pending Review
+          </span>
+        </div>
+        {notes && (
+          <p className="text-[13px] text-gray-600 dark:text-gray-300 italic">“{notes}”</p>
+        )}
+        <div className="text-[12px] text-gray-500 dark:text-[#717b96] mt-1">
+          Current timeline: {new Date(currentStartDate).toLocaleDateString()} → {new Date(currentEndDate).toLocaleDateString()}
+        </div>
+      </div>
+    </div>
+  );
+}
+>>>>>>> 7cd16be (Added notification item for marketing):apps/frontend/src/app/mrkt/dashboard/page.tsx

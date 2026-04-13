@@ -83,8 +83,8 @@ export type BackendRequiredRole = {
   staffRoleId: number;
   roleName: string;
   requiredCount: number;
-  workingType: string;
-  filledCount: number;
+  workingType: string | number;
+  filledCount?: number;
 };
 
 export type BackendProject = {
@@ -323,7 +323,9 @@ export async function declineContractExtension(contractExtensionRequestID: numbe
 }
 
 export async function getProjects(): Promise<BackendProject[]> {
-  return fetchJson<BackendProject[]>('/api/projects');
+  const res = await fetch('/api/projects');
+  if (!res.ok) throw new Error('Failed to fetch projects');
+  return res.json();
 }
 
 export async function getPendingProjects(): Promise<BackendProject[]> {
@@ -471,6 +473,32 @@ export async function createHireRequest(payload: CreateHireRequestPayload): Prom
   });
 }
 
+<<<<<<< HEAD
+=======
+export async function createTimelineEditRequest(payload: {
+  projectId: number;
+  projectName: string;
+  notes: string;
+  currentStartDate: string;
+  currentEndDate: string;
+}): Promise<HireRequest> {
+  return fetchJson<HireRequest>('/api/hirerequests', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: payload.projectId,
+      projectName: payload.projectName,
+      roleNeeded: 'Timeline Edit Request',
+      quantity: 1,
+      startDate: payload.currentStartDate,
+      endDate: payload.currentEndDate,
+      notes: `[TIMELINE EDIT REQUEST] ${payload.notes}`,
+    } satisfies CreateHireRequestPayload)
+  });
+}
+
+
+
+>>>>>>> 7cd16be (Added notification item for marketing)
 export async function startHireRequest(id: number): Promise<void> {
   await fetchJson(`/api/hirerequests/${id}/start`, { method: 'POST' });
 }
@@ -516,6 +544,15 @@ export interface TimelineItem {
     projectId?: number;
   }[];
 }
+export interface TimelineEditRequest {
+  id: number;
+  projectId: number;
+  projectName: string;
+  notes: string;
+  currentStartDate: string;
+  currentEndDate: string;
+  status?: 'pending' | 'approved' | 'rejected';
+}
 
 export async function getTimelineStats(): Promise<TimelineStats> {
   return fetchRaw<TimelineStats>('/api/timeline/stats');
@@ -531,6 +568,34 @@ export async function getResourceTimeline(): Promise<TimelineItem[]> {
 
 export async function getHolidays(): Promise<BackendHoliday[]> {
   return fetchJson<BackendHoliday[]>('/api/holidays');
+}
+
+export async function getTimelineEditRequests(): Promise<TimelineEditRequest[]> {
+  const allHireRequests = await getHireRequests();
+
+  const timelineEditRequests = allHireRequests.filter(
+    (req) =>
+      req.roleNeeded === 'Timeline Edit Request' &&
+      (req.status === 'Open' || req.status === 'InProgress')
+  );
+
+  return timelineEditRequests.map((req) => {
+    let notes = req.notes;
+    const prefix = '[TIMELINE EDIT REQUEST] ';
+    if (notes.startsWith(prefix)) {
+      notes = notes.substring(prefix.length);
+    }
+
+    return {
+      id: req.hireRequestId,
+      projectId: req.projectId ?? 0,
+      projectName: req.projectName,
+      notes: notes,
+      currentStartDate: req.startDate,
+      currentEndDate: req.endDate,
+      status: 'pending', // ✅ always 'pending' for these filtered requests
+    };
+  });
 }
 
 // ── Smart Recommendation Panel Types ──

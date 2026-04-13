@@ -139,7 +139,11 @@ public class ProjectsController : ControllerBase
             )
         }).ToList();
 
+<<<<<<< HEAD
         // Project-level required skills (separate from roles)
+=======
+        // Project-level required skills (names + ids)
+>>>>>>> 7cd16be (Added notification item for marketing)
         var requiredSkillNames = p.ProjectRequiredSkills
             .Select(ps => ps.Skill.SkillName)
             .Distinct()
@@ -166,8 +170,12 @@ public class ProjectsController : ControllerBase
             RequiredSkills = requiredSkillNames,
             RequiredSkillIds = requiredSkillIds,
             RequiredRoles = requiredRoles,
+<<<<<<< HEAD
+=======
+            RequiredSkills = requiredSkillNames,
+            RequiredSkillIds = requiredSkillIds,   // Added from first controller
+>>>>>>> 7cd16be (Added notification item for marketing)
             Members = p.UserProjects
-                // Sembunyikan Project Manager dari daftar member — fokus ke staff saja
                 .Where(up => !up.RoleInProject.Equals("Project Manager", StringComparison.OrdinalIgnoreCase))
                 .Select(up => new ProjectMemberDto
                 {
@@ -180,6 +188,7 @@ public class ProjectsController : ControllerBase
                 }).ToList()
         };
     }
+
     [HttpPost]
     public async Task<IActionResult> CreateProject([FromBody] CreateProjectRequest request)
     {
@@ -188,7 +197,11 @@ public class ProjectsController : ControllerBase
             return BadRequest(ModelState);
         }
 
+<<<<<<< HEAD
         // 1. Pre-validate Role Names (Outside Transaction)
+=======
+        // Pre‑validate Role Names (optional but keeps transaction clean)
+>>>>>>> 7cd16be (Added notification item for marketing)
         var roleMappings = new List<(CreateProjectRoleDto Dto, int StaffRoleId)>();
         if (request.RequiredRoles != null && request.RequiredRoles.Any())
         {
@@ -203,7 +216,10 @@ public class ProjectsController : ControllerBase
             }
         }
 
+<<<<<<< HEAD
         // 2. Map Base Entity
+=======
+>>>>>>> 7cd16be (Added notification item for marketing)
         var project = new Entities.Entities.Project
         {
             ProjectName = request.ProjectName,
@@ -213,6 +229,7 @@ public class ProjectsController : ControllerBase
             PriorityLevel = request.PriorityLevel,
             EstimatedStartDate = request.EstimatedStartDate,
             EstimatedEndDate = request.EstimatedEndDate,
+<<<<<<< HEAD
             ProjectStatus = ProjectStatus.Pending, 
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -224,11 +241,27 @@ public class ProjectsController : ControllerBase
         using (var transaction = await _db.Database.BeginTransactionAsync())
         {
             try 
+=======
+            ProjectStatus = ProjectStatus.Pending,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedBy = "SystemUser",
+            UpdatedBy = "SystemUser"
+        };
+
+        using (var transaction = await _db.Database.BeginTransactionAsync())
+        {
+            try
+>>>>>>> 7cd16be (Added notification item for marketing)
             {
                 _db.Projects.Add(project);
                 await _db.SaveChangesAsync();
 
+<<<<<<< HEAD
                 // Add Roles (Already validated)
+=======
+                // Add roles
+>>>>>>> 7cd16be (Added notification item for marketing)
                 foreach (var mapping in roleMappings)
                 {
                     _db.ProjectRequiredRoles.Add(new Entities.Entities.ProjectRequiredRole
@@ -240,7 +273,11 @@ public class ProjectsController : ControllerBase
                     });
                 }
 
+<<<<<<< HEAD
                 // Add Skills
+=======
+                // Add skills
+>>>>>>> 7cd16be (Added notification item for marketing)
                 if (request.RequiredSkillIds != null && request.RequiredSkillIds.Any())
                 {
                     foreach (var skillId in request.RequiredSkillIds)
@@ -259,6 +296,7 @@ public class ProjectsController : ControllerBase
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
+<<<<<<< HEAD
                 
                 // Construct a detailed error message including the inner exception for DB failures
                 var detailedError = ex.Message;
@@ -267,21 +305,34 @@ public class ProjectsController : ControllerBase
                     detailedError += " | Details: " + ex.InnerException.Message;
                 }
                 
+=======
+                var detailedError = ex.Message;
+                if (ex.InnerException != null)
+                    detailedError += " | Details: " + ex.InnerException.Message;
+>>>>>>> 7cd16be (Added notification item for marketing)
                 return StatusCode(500, ApiResponse<string>.ErrorResponse("Database Error: " + detailedError));
             }
         }
 
+<<<<<<< HEAD
         // 4. Re-fetch project with all necessary includes outside the transaction scope for safe mapping
+=======
+        // Re‑fetch with all includes for correct mapping
+>>>>>>> 7cd16be (Added notification item for marketing)
         var createdProject = await _db.Projects
             .Include(p => p.ProjectRequiredRoles).ThenInclude(pr => pr.StaffRole)
             .Include(p => p.ProjectRequiredSkills).ThenInclude(ps => ps.Skill)
             .Include(p => p.UserProjects).ThenInclude(up => up.User)
             .FirstAsync(p => p.ProjectID == project.ProjectID);
 
+<<<<<<< HEAD
         return CreatedAtAction(nameof(GetById), new { id = project.ProjectID }, ApiResponse<ProjectDto>.SuccessResponse(MapToDto(createdProject)));
+=======
+        return CreatedAtAction(nameof(GetById), new { id = project.ProjectID },
+            ApiResponse<ProjectDto>.SuccessResponse(MapToDto(createdProject)));
+>>>>>>> 7cd16be (Added notification item for marketing)
     }
 
-    // ── Assign a member to a project with timeline ──
     [HttpPost("{id}/assign")]
     public async Task<IActionResult> AssignMember(int id, [FromBody] AssignMemberRequest request)
     {
@@ -296,13 +347,11 @@ public class ProjectsController : ControllerBase
         if (user is null)
             return NotFound(ApiResponse<string>.ErrorResponse("User not found"));
 
-        // Check if already assigned
         var existing = await _db.UserProjects
             .FirstOrDefaultAsync(up => up.ProjectId == id && up.UserId == request.UserId);
 
         if (existing is not null)
         {
-            // Update the existing assignment
             existing.RoleInProject = request.RoleInProject;
             existing.StartDate = request.StartDate ?? project.EstimatedStartDate;
             existing.EndDate = request.EndDate ?? project.EstimatedEndDate;
@@ -310,7 +359,6 @@ public class ProjectsController : ControllerBase
         }
         else
         {
-            // Create new assignment
             var userProject = new UserProject
             {
                 UserId = request.UserId,
@@ -325,7 +373,6 @@ public class ProjectsController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        // Re-fetch with includes to return full DTO
         var updated = await _db.Projects
             .Include(p => p.UserProjects)
                 .ThenInclude(up => up.User)
@@ -344,7 +391,6 @@ public class ProjectsController : ControllerBase
         return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(updated), "Member assigned successfully"));
     }
 
-    // ── Remove a member from a project ──
     [HttpDelete("{id}/assign/{userId}")]
     public async Task<IActionResult> UnassignMember(int id, string userId)
     {
@@ -364,9 +410,7 @@ public class ProjectsController : ControllerBase
     public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectRequest request)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
         // 1. Pre-fetch and Pre-validate Role Names (Outside Transaction)
         var project = await _db.Projects
@@ -374,12 +418,30 @@ public class ProjectsController : ControllerBase
             .Include(p => p.ProjectRequiredSkills)
             .Include(p => p.UserProjects).ThenInclude(up => up.User)
             .FirstOrDefaultAsync(p => p.ProjectID == id);
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> 7cd16be (Added notification item for marketing)
         if (project == null)
-        {
             return NotFound(ApiResponse<ProjectDto>.ErrorResponse("Project not found"));
+
+        // Pre‑validate roles
+        var roleMappings = new List<(CreateProjectRoleDto Dto, int StaffRoleId)>();
+        if (request.RequiredRoles != null)
+        {
+            foreach (var roleDto in request.RequiredRoles)
+            {
+                var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == roleDto.RoleName);
+                if (staffRole == null)
+                {
+                    return BadRequest(ApiResponse<string>.ErrorResponse($"Staff Role '{roleDto.RoleName}' not found. Please ensure it exists in the HR system."));
+                }
+                roleMappings.Add((roleDto, staffRole.StaffRoleId));
+            }
         }
 
+<<<<<<< HEAD
         var roleMappings = new List<(CreateProjectRoleDto Dto, int StaffRoleId)>();
         if (request.RequiredRoles != null)
         {
@@ -395,6 +457,9 @@ public class ProjectsController : ControllerBase
         }
 
         // 2. Update Basic Fields
+=======
+        // Update basic fields
+>>>>>>> 7cd16be (Added notification item for marketing)
         project.ProjectName = request.ProjectName;
         project.ClientOrganization = request.ClientOrganization;
         project.ProjectDescription = request.ProjectDescription;
@@ -404,16 +469,27 @@ public class ProjectsController : ControllerBase
         project.EstimatedEndDate = request.EstimatedEndDate;
         project.ProjectStatus = request.ProjectStatus;
         project.UpdatedAt = DateTime.UtcNow;
+<<<<<<< HEAD
         project.UpdatedBy = "SystemUser"; 
 
         // 3. Transaction Block
+=======
+        project.UpdatedBy = "SystemUser";
+
+>>>>>>> 7cd16be (Added notification item for marketing)
         using (var transaction = await _db.Database.BeginTransactionAsync())
         {
             try
             {
+<<<<<<< HEAD
                 await _db.SaveChangesAsync();
 
                 // Update Skills
+=======
+                await _db.SaveChangesAsync(); // save basic changes
+
+                // Update skills
+>>>>>>> 7cd16be (Added notification item for marketing)
                 if (request.RequiredSkillIds != null)
                 {
                     var existingSkills = await _db.ProjectRequiredSkills
@@ -430,8 +506,13 @@ public class ProjectsController : ControllerBase
                         });
                     }
                 }
+<<<<<<< HEAD
                 
                 // Update Roles
+=======
+
+                // Update roles
+>>>>>>> 7cd16be (Added notification item for marketing)
                 if (request.RequiredRoles != null)
                 {
                     var existingRoles = await _db.ProjectRequiredRoles
@@ -446,8 +527,12 @@ public class ProjectsController : ControllerBase
                             ProjectID = id,
                             StaffRoleId = mapping.StaffRoleId,
                             RequiredCount = mapping.Dto.Count,
+<<<<<<< HEAD
                             WorkingType = mapping.Dto.WorkingType,
                             RequiredSkill = "" // Legacy field
+=======
+                            WorkingType = mapping.Dto.WorkingType
+>>>>>>> 7cd16be (Added notification item for marketing)
                         });
                     }
                 }
@@ -458,6 +543,7 @@ public class ProjectsController : ControllerBase
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
+<<<<<<< HEAD
                 
                 var detailedError = ex.Message;
                 if (ex.InnerException != null)
@@ -471,12 +557,27 @@ public class ProjectsController : ControllerBase
             
         // 4. Re-fetch project with all necessary includes outside the transaction scope for safe mapping
         var updated = await _db.Projects
+=======
+                var detailedError = ex.Message;
+                if (ex.InnerException != null)
+                    detailedError += " | Details: " + ex.InnerException.Message;
+                return StatusCode(500, ApiResponse<string>.ErrorResponse("Database Error: " + detailedError));
+            }
+        }
+
+        // Re‑fetch with all includes for correct mapping
+        var updatedProject = await _db.Projects
+>>>>>>> 7cd16be (Added notification item for marketing)
             .Include(p => p.ProjectRequiredRoles).ThenInclude(pr => pr.StaffRole)
             .Include(p => p.ProjectRequiredSkills).ThenInclude(ps => ps.Skill)
             .Include(p => p.UserProjects).ThenInclude(up => up.User)
             .FirstAsync(p => p.ProjectID == id);
 
+<<<<<<< HEAD
         return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(updated)));
+=======
+        return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(updatedProject)));
+>>>>>>> 7cd16be (Added notification item for marketing)
     }
 
     [HttpDelete("{id}")]
@@ -496,7 +597,6 @@ public class ProjectsController : ControllerBase
         }
         catch (Exception)
         {
-            // Log exception here
             return StatusCode(500, "An error occurred while deleting the project.");
         }
     }
