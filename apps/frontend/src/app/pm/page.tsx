@@ -7,7 +7,7 @@ export default function PMPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/pm/dashboard");
+    router.replace("/dashboard");
   }, [router]);
 
   return null;

@@ -39,10 +39,10 @@ export default function PMNotificationsPage() {
   const handleClick = async (projectId: number) => {
     try {
       await markProjectAsRead(projectId);
-      router.push(`/pm/projects/${projectId}`);
+      router.push(`/project/${projectId}`);
     } catch (err) {
       console.error("Failed to mark notification as read", err);
-      router.push(`/pm/projects/${projectId}`);
+      router.push(`/project/${projectId}`);
     }
   };
 

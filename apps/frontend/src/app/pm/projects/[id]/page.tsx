@@ -120,6 +120,10 @@ export default function PMProjectDetailsPage() {
         <div className="flex-1 flex items-center justify-center">
           {loading ? <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" /> : <p className="text-gray-400">Project not found.</p>}
         </div>
+        <p className="text-[16px] text-gray-400 font-medium">Project not found.</p>
+        <button onClick={() => router.push('/project')} className="text-[#3b82f6] flex items-center gap-2 hover:underline">
+          Go back to Projects
+        </button>
       </div>
     );
   }
@@ -414,7 +418,15 @@ export default function PMProjectDetailsPage() {
                 </div>
               </section>
             </div>
+          </section>
 
+          <button
+            onClick={() => router.push('/project')}
+            className="mt-4 text-[#3b82f6] flex items-center gap-2 hover:underline text-[14px] font-medium transition-all"
+          >
+            &larr; Back to Project List
+          </button>
+        </div>
       </div>
     </div>
   );

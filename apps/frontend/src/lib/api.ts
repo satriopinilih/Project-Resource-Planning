@@ -455,7 +455,7 @@ export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryIte
   }));
 }
 
-export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled', projectId?: number): Promise<HireRequest[]> {
+export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined', projectId?: number): Promise<HireRequest[]> {
   const params = new URLSearchParams();
   if (status) params.set('status', status);
   if (projectId !== undefined) params.set('projectId', String(projectId));

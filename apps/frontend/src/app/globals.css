@@ -85,6 +85,9 @@ html {
   --dash-border-subtle: rgba(30, 45, 61, 0.5);
 
   --dash-sidebar-hover: #151d28;
+  --dash-sidebar-active-bg: rgba(30, 58, 95, 0.6);
+  --dash-sidebar-active-text: #60a5fa;
+  --dash-sidebar-active-border: rgba(96, 165, 250, 0.25);
   --dash-badge-contract-bg: rgba(107, 138, 171, 0.1);
   --dash-badge-contract-text: #8896ab;
   --dash-badge-contract-border: rgba(107, 138, 171, 0.2);
@@ -108,10 +111,13 @@ html.light {
   --dash-text-muted: #64748b;
   --dash-text-faint: #94a3b8;
 
-  --dash-border: #e2e8f0;
-  --dash-border-subtle: rgba(226, 232, 240, 0.6);
+  --dash-border: #cbd5e1;
+  --dash-border-subtle: rgba(148, 163, 184, 0.35);
 
   --dash-sidebar-hover: #f1f5f9;
+  --dash-sidebar-active-bg: #dbeafe;
+  --dash-sidebar-active-text: #1d4ed8;
+  --dash-sidebar-active-border: #bfdbfe;
   --dash-badge-contract-bg: rgba(100, 116, 139, 0.1);
   --dash-badge-contract-text: #64748b;
   --dash-badge-contract-border: rgba(100, 116, 139, 0.2);
