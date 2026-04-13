@@ -1,227 +1,327 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Sun,
-  Moon,
-  User,
-  Search,
-  Filter,
-  Loader2
-} from "lucide-react";
-import { getProjects, BackendProject } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import AppHeader from "@/components/AppHeader";
+import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
+import { getProjects } from "@/lib/api";
 
-type TabOption = "All" | "Active" | "Upcoming" | "Completed" | "On Hold";
+interface Project {
+  id: string;
+  name: string;
+  client: string;
+  status: "Active" | "Scheduled" | "Pending" | "Completed";
+  timeline: string;
+  startDateRaw: string;
+  pm: string;
+  team: number;
+  budget: string;
+  budgetValue: number;
+}
 
-export default function MarketingProjects() {
-  const [theme, setTheme] = useState("dark");
-  const [projects, setProjects] = useState<BackendProject[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const mapStatus = (backendStatus: number, startDateStr?: string): Project["status"] => {
+  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
+  switch (backendStatus) {
+    case 0: return "Pending";    // Belum di-assign
+    case 1: return "Scheduled";  // Sudah assign, belum mulai
+    case 2: {                    // Running
+      if (startDateStr) {
+        const startDate = new Date(startDateStr);
+        const today = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        if (startDate > today) return "Scheduled";
+      }
+      return "Active";
+    }
+    case 3: return "Completed";
+    default: return "Pending";
+  }
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return "TBD";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "TBD";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+const tabs = ["All", "Pending", "Scheduled", "Active", "Completed"];
+
+export default function ProjectsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabQuery = searchParams.get("tab");
+
+  const [activeTab, setActiveTab] = useState(tabs.includes(tabQuery || "") ? tabQuery! : "All");
+  const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<TabOption>("All");
+  const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [clientFilter, setClientFilter] = useState("All Clients");
+  const [sortBy, setSortBy] = useState("name-asc");
+
+  // Jika URL berubah, update tab-nya secara dinamis
+  useEffect(() => {
+    if (tabQuery && tabs.includes(tabQuery)) {
+      setActiveTab(tabQuery);
+    }
+  }, [tabQuery]);
 
   useEffect(() => {
-    if (document.documentElement.classList.contains('light')) {
-      setTheme('light');
-    }
+    const fetchProjects = async () => {
+      try {
+        const data = await getProjects();
+        const mappedData: Project[] = data.map((p) => {
+          const pmMember = p.members?.find((m) =>
+            m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase().includes("lead")
+          );
+          return {
+            id: `proj${String(p.projectId).padStart(3, "0")}`,
+            name: p.projectName,
+            client: p.clientOrganization || "Internal",
+            status: mapStatus(p.projectStatus, p.estimatedStartDate),
+            timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
+            startDateRaw: p.estimatedStartDate,
+            pm: pmMember ? pmMember.userName : "TBD",
+            team: p.members?.length || 0,
+            budget: "N/A",
+            budgetValue: 0,
+          };
+        });
+        setProjectsData(mappedData);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    getProjects()
-      .then(setProjects)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+    fetchProjects();
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    if (newTheme === 'light') {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
+  const clients = ["All Clients", ...Array.from(new Set(projectsData.map((p) => p.client)))];
+
+  const filteredProjects = projectsData.filter((project) => {
+    const matchesTab = activeTab === "All" || project.status === activeTab;
+    const matchesSearch =
+      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesClient = clientFilter === "All Clients" || project.client === clientFilter;
+
+    return matchesTab && matchesSearch && matchesClient;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "name-asc":
+        return a.name.localeCompare(b.name);
+      case "name-desc":
+        return b.name.localeCompare(a.name);
+      case "newest":
+        return new Date(b.startDateRaw).getTime() - new Date(a.startDateRaw).getTime();
+      case "oldest":
+        return new Date(a.startDateRaw).getTime() - new Date(b.startDateRaw).getTime();
+      case "most-member":
+        return b.team - a.team;
+      case "least-member":
+        return a.team - b.team;
+      case "highest-budget":
+        return b.budgetValue - a.budgetValue;
+      case "lowest-budget":
+        return a.budgetValue - b.budgetValue;
+      default:
+        return 0;
     }
-  };
-
-  // Status mapping
-  // 0 = Pending/On Hold, 1 = Scheduled/Upcoming, 2 = Running/Active, 3 = Completed
-  const getStatusLabelText = (status: number) => {
-    if (status === 0) return "On Hold";
-    if (status === 1) return "Upcoming";
-    if (status === 2) return "Active";
-    if (status === 3) return "Completed";
-    return "Unknown";
-  };
-
-  const filteredProjects = projects.filter(p => {
-    // Search match
-    const searchMatch = p.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.clientOrganization.toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Tab match
-    const sLabel = getStatusLabelText(p.projectStatus);
-    const tabMatch = activeTab === "All" || sLabel === activeTab;
-
-    return searchMatch && tabMatch;
   });
 
   return (
-    <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
-      {/* Header Section */}
-      <header className="mb-8 flex justify-between items-center">
-        <h1 className="text-[22px] font-semibold text-gray-900 dark:text-white">Projects</h1>
+    <>
+      <AppHeader title="Projects" role="GM" />
 
-        <div className="flex items-center gap-4">
-          <button onClick={toggleTheme} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-            {theme === 'dark' ? <Sun className="w-5 h-5 cursor-pointer" /> : <Moon className="w-5 h-5 cursor-pointer" />}
-          </button>
-          <div className="flex flex-col items-end">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">Marketing Lead</span>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">Marketing</span>
-          </div>
-          <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center shadow-lg cursor-pointer">
-            <User className="text-white w-5 h-5" />
-          </div>
-          <div className="px-3 py-1 bg-blue-100 dark:bg-[#252c41] text-blue-700 dark:text-[#93a5e8] text-[12px] font-medium rounded-full cursor-pointer">
-            Marketing
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Card */}
-      <div className="bg-white dark:bg-[#242427] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300 min-h-[500px]">
-        {/* Toolbar */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Search size={18} className="text-gray-400" />
-              </div>
+      <div className="p-6">
+        <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl transition-colors duration-300">
+          {/* Top Actions: Search and Filter */}
+          <div className="flex items-center justify-between p-5 pb-0">
+            <div className="relative w-[300px]">
+              <Search
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]"
+                strokeWidth={1.8}
+              />
               <input
                 type="text"
                 placeholder="Search projects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-11 pr-4 py-2.5 w-[300px] bg-gray-50 dark:bg-[#1f2433] border border-gray-200 dark:border-white/5 rounded-xl text-[14px] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                className="w-full h-10 pl-10 pr-4 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
               />
             </div>
-            <div className="text-[14px] text-gray-500 dark:text-gray-400">
-              Showing <strong className="text-gray-900 dark:text-white">{filteredProjects.length}</strong> of <strong className="text-gray-900 dark:text-white">{projects.length}</strong> projects
-            </div>
-          </div>
-          <button className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-            <Filter size={20} />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-8 border-b border-gray-200 dark:border-white/5 mb-6 px-2">
-          {(["All", "Active", "Upcoming", "Completed", "On Hold"] as TabOption[]).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-4 text-[14px] font-medium transition-colors relative ${activeTab === tab
-                  ? "text-gray-900 dark:text-white"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-            >
-              {tab}
-              {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-600 dark:bg-white rounded-t-full" />
-              )}
+            <button onClick={() => setShowFilters((prev) => !prev)} className="p-2 text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-colors cursor-pointer">
+              <Filter size={18} strokeWidth={1.8} />
             </button>
-          ))}
-        </div>
+          </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+          {/* Tabs */}
+          <div className="flex items-center gap-6 px-5 mt-6 border-b border-[var(--dash-border-subtle)]">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`pb-3 text-[13px] font-semibold transition-all relative ${activeTab === tab
+                  ? "text-[var(--dash-text-heading)]"
+                  : "text-[var(--dash-text-faint)] hover:text-[var(--dash-text-muted)]"
+                  } cursor-pointer`}
+              >
+                {tab}
+                {activeTab === tab && (
+                  <span className="absolute bottom-0 left-0 w-full h-[2px] bg-white rounded-t-sm" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {showFilters && (
+            <div className="mx-5 mt-4 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg-elevated)] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-[13px] font-semibold text-[var(--dash-text-heading)]">Filters & Sorting</h4>
+                <button
+                  onClick={() => {
+                    setClientFilter("All Clients");
+                    setSortBy("name-asc");
+                  }}
+                  className="text-[12px] font-semibold text-[#3b82f6] hover:text-[#60a5fa]"
+                >
+                  Reset All
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Filter by Client</label>
+                  <select
+                    value={clientFilter}
+                    onChange={(e) => setClientFilter(e.target.value)}
+                    className="w-full h-10 px-3 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg"
+                  >
+                    {clients.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Sort By</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full h-10 px-3 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg"
+                  >
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="newest">Timeline (Newest First)</option>
+                    <option value="oldest">Timeline (Oldest First)</option>
+                    <option value="most-member">Team (Most Members)</option>
+                    <option value="least-member">Team (Least Members)</option>
+                    <option value="highest-budget">Budget (Highest)</option>
+                    <option value="lowest-budget">Budget (Lowest)</option>
+                  </select>
+                </div>
+              </div>
             </div>
-          ) : (
-            <table className="w-full text-left border-collapse min-w-max">
+          )}
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-white/5 text-[13px] text-gray-500 dark:text-gray-400 font-medium">
-                  <th className="pb-4 pt-2 font-medium w-[25%] px-4">Project Name</th>
-                  <th className="pb-4 pt-2 font-medium w-[20%] px-4">Client</th>
-                  <th className="pb-4 pt-2 font-medium w-[12%] px-4">Status</th>
-                  <th className="pb-4 pt-2 font-medium w-[20%] px-4">Timeline</th>
-                  <th className="pb-4 pt-2 font-medium w-[8%] px-4">PM</th>
-                  <th className="pb-4 pt-2 font-medium w-[7%] px-4">Team</th>
-                  <th className="pb-4 pt-2 font-medium w-[8%] px-4">Budget</th>
+                <tr className="border-b border-[var(--dash-border-subtle)] text-[11px] font-semibold text-[var(--dash-text-muted)]">
+                  <th className="font-semibold py-4 pl-6 pr-4">Project Name</th>
+                  <th className="font-semibold py-4 px-4">Client</th>
+                  <th className="font-semibold py-4 px-4">Status</th>
+                  <th className="font-semibold py-4 px-4">Timeline</th>
+                  <th className="font-semibold py-4 px-4">PM</th>
+                  <th className="font-semibold py-4 px-4">Team</th>
+                  <th className="font-semibold py-4 pr-6 pl-4">Budget</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredProjects.length === 0 ? (
+                {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-gray-500 dark:text-gray-400">
-                      No projects found matching your criteria.
+                    <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <Loader2 className="w-6 h-6 animate-spin text-[#3b82f6]" />
+                        <span className="text-[13px]">Loading projects...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredProjects.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                      No projects found.
                     </td>
                   </tr>
                 ) : (
-                  filteredProjects.map((project) => {
-                    const statusLabel = getStatusLabelText(project.projectStatus);
-                    let statusColor = "bg-amber-100 text-amber-700 dark:bg-[#3a3221] dark:text-[#eab308]";
-                    if (statusLabel === "Upcoming") {
-                      statusColor = "bg-blue-100 text-blue-700 dark:bg-[#262c4a] dark:text-[#608bfa]";
-                    } else if (statusLabel === "Active") {
-                      statusColor = "bg-emerald-100 text-emerald-700 dark:bg-[#1f362e] dark:text-emerald-500";
-                    } else if (statusLabel === "Completed") {
-                      statusColor = "bg-gray-100 text-gray-700 dark:bg-[#34353a] dark:text-gray-400";
-                    }
-
-                    const pmMember = project.members?.find(m => m.role === "PM" || m.staffRole === "Project Manager");
-                    const pmName = pmMember ? pmMember.userName : "TBD";
-                    const teamCount = project.members ? project.members.length : 0;
-
-                    // Format dates safely
-                    const startDate = project.estimatedStartDate
-                      ? new Date(project.estimatedStartDate).toISOString().split('T')[0]
-                      : '—';
-                    const endDate = project.estimatedEndDate
-                      ? new Date(project.estimatedEndDate).toISOString().split('T')[0]
-                      : '';
-                    const timeline = endDate ? `${startDate} — ${endDate}` : startDate;
-
-                    // Mock budget based on projectId to keep it stable
-                    const mockedBudget = `$${(100 + ((project.projectId * 17) % 150))},000`;
-
-                    return (
-                      <tr key={project.projectId} className="border-b border-gray-100 dark:border-white/[0.02] hover:bg-gray-50 dark:hover:bg-[#252b3d]/50 transition-colors">
-                        <td className="py-5 px-4 align-top">
-                          <div className="text-[14px] font-medium text-blue-600 dark:text-blue-400 leading-snug">{project.projectName}</div>
-                          <div className="text-[12px] text-gray-500 dark:text-gray-500 mt-1">proj00{project.projectId}</div>
-                        </td>
-                        <td className="py-5 px-4 align-top text-[14px] text-gray-900 dark:text-white">
-                          {project.clientOrganization || 'Internal'}
-                        </td>
-                        <td className="py-5 px-4 align-top">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-[12px] font-medium tracking-wide ${statusColor}`}>
-                            {statusLabel}
-                          </span>
-                        </td>
-                        <td className="py-5 px-4 align-top text-[13px] text-gray-500 dark:text-gray-400">
-                          {timeline}
-                        </td>
-                        <td className="py-5 px-4 align-top text-[14px] text-gray-900 dark:text-white">
-                          {pmName}
-                        </td>
-                        <td className="py-5 px-4 align-top text-[14px] text-gray-900 dark:text-white">
-                          {teamCount}
-                        </td>
-                        <td className="py-5 px-4 align-top text-[14px] text-gray-900 dark:text-white">
-                          {mockedBudget}
-                        </td>
-                      </tr>
-                    );
-                  })
+                  filteredProjects.map((project) => (
+                    <tr
+                      key={project.id}
+                      onClick={() => router.push(`/mrkt/projects/${project.id}`)}
+                      className="border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer group"
+                    >
+                      <td className="py-4 pl-6 pr-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div>
+                            <p className="text-[13px] font-bold text-white group-hover:text-blue-400 transition-colors">
+                              {project.name}
+                            </p>
+                            <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5 font-medium">
+                              {project.id}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-primary)]">
+                        {project.client}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span
+                          className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${project.status === "Pending"
+                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            : project.status === "Scheduled"
+                              ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                              : project.status === "Active"
+                                ? "bg-green-500/10 text-green-400 border-green-500/20"
+                                : project.status === "Completed"
+                                  ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                                  : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                            }`}
+                        >
+                          {project.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-[12px] font-medium text-[var(--dash-text-secondary)]">
+                        {project.timeline}
+                      </td>
+                      <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-secondary)]">
+                        {project.pm}
+                      </td>
+                      <td className="py-4 px-4 text-[13px] font-medium text-[var(--dash-text-secondary)]">
+                        <div className="flex items-center gap-1.5">
+                          <Users size={14} className="text-gray-500" />
+                          {project.team}
+                        </div>
+                      </td>
+                      <td className="py-4 pr-6 pl-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[13px] font-medium text-[var(--dash-text-primary)]">{project.budget}</span>
+                          <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
-          )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
