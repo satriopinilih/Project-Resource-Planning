@@ -100,6 +100,7 @@ export type BackendProject = {
   members: BackendProjectMember[];
   requiredRoles: BackendRequiredRole[];
   requiredSkills: string[]; // Project-level skill requirements
+  requiredSkillIds: number[];
   isUnread: boolean;
 };
 
@@ -340,7 +341,7 @@ export async function getProjectById(id: string): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`);
 }
 
-export async function updateProject(id: number, projectData: Partial<BackendProject>): Promise<BackendProject> {
+export async function updateProject(id: number, projectData: any): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`, {
     method: 'PUT',
     body: JSON.stringify(projectData)

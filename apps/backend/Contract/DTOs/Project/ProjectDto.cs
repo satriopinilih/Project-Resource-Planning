@@ -17,6 +17,7 @@ public class ProjectDto
     public List<ProjectMemberDto> Members { get; set; } = new();
     public List<ProjectRequiredRoleDto> RequiredRoles { get; set; } = new();
     public List<string> RequiredSkills { get; set; } = new(); // Project-level skill requirements
+    public List<int> RequiredSkillIds { get; set; } = new(); 
 }
 
 public class ProjectMemberDto

@@ -10,6 +10,7 @@ import {
   LogOut,
   UserCheck,
   FileText,
+  PlusCircle,
 } from "lucide-react";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
@@ -41,6 +42,7 @@ const navByRole: Record<string, NavItem[]> = {
   Marketing: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
+    { label: "Add Project", href: "/mrkt/add-project", icon: PlusCircle },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   Staff: [

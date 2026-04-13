@@ -4,7 +4,6 @@ using Contracts.DTOs.Common;
 using Contracts.DTOs.User;
 using Entities;
 using Entities.Entities;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

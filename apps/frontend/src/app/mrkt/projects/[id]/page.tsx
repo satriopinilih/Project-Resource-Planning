@@ -13,12 +13,18 @@ import {
   Building2,
   FileText,
   Clock,
+  Plus,
+  Trash2,
+  AlertCircle,
+  Check
 } from "lucide-react";
 import {
   getProjectById,
   createHireRequest,
   BackendProject,
   updateProject,
+  getEmployeeFormOptions,
+  EmployeeFormOptions
 } from "@/lib/api";
 
 const mapStatus = (backendStatus: number, startDateStr?: string) => {
@@ -74,7 +80,10 @@ export default function ProjectDetailsPage() {
     estimatedStartDate: "",
     estimatedEndDate: "",
     projectStatus: 0,
+    requiredRoles: [] as any[],
+    requiredSkillIds: [] as number[],
   });
+  const [formOptions, setFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
 
   const numericId = useMemo(() => {
     if (!idStr) return null;
@@ -100,6 +109,7 @@ export default function ProjectDetailsPage() {
 
   useEffect(() => {
     fetchProject();
+    getEmployeeFormOptions().then(setFormOptions).catch(console.error);
   }, [numericId]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -116,6 +126,17 @@ export default function ProjectDetailsPage() {
         estimatedStartDate: editForm.estimatedStartDate ? new Date(editForm.estimatedStartDate).toISOString() : project.estimatedStartDate,
         estimatedEndDate: editForm.estimatedEndDate ? new Date(editForm.estimatedEndDate).toISOString() : project.estimatedEndDate,
         projectStatus: editForm.projectStatus,
+        requiredRoles: editForm.requiredRoles.map(r => {
+          const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Part-time": 1, "Ad-hoc": 1 };
+          return {
+            id: typeof r.id === 'string' && r.id.includes('.') ? 0 : Number(r.id),
+            staffRoleId: r.staffRoleId || 0,
+            roleName: r.role,
+            requiredCount: r.count,
+            workingType: workingTypeMap[r.workingType] ?? 1
+          };
+        }),
+        requiredSkillIds: editForm.requiredSkillIds
       });
       await fetchProject();
       setEditModalOpen(false);
@@ -180,6 +201,13 @@ export default function ProjectDetailsPage() {
                         estimatedStartDate: project.estimatedStartDate ? project.estimatedStartDate.split('T')[0] : '',
                         estimatedEndDate: project.estimatedEndDate ? project.estimatedEndDate.split('T')[0] : '',
                         projectStatus: project.projectStatus,
+                        requiredRoles: project.requiredRoles?.map(r => ({
+                          id: r.id || Math.random().toString(36).substring(2, 9),
+                          role: r.roleName,
+                          count: r.requiredCount,
+                          workingType: r.workingType || "Dedicated"
+                        })) || [],
+                        requiredSkillIds: project.requiredSkillIds || [],
                       });
                       setEditModalOpen(true);
                     }}
@@ -267,6 +295,104 @@ export default function ProjectDetailsPage() {
               </div>
             </section>
 
+            {/* Project Requirements Section */}
+            <section className="bg-[#292B2F] border border-gray-700/50 rounded-xl p-8 shadow-sm transition-all duration-300">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <FileText size={18} className="text-blue-400" />
+                </div>
+                <h2 className="text-[18px] font-bold text-white tracking-tight">Project Requirements</h2>
+              </div>
+
+              <div className="space-y-10">
+                {/* Skills Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-4 w-1 bg-blue-500 rounded-full"></div>
+                    <h3 className="text-[12px] text-gray-400 font-bold uppercase tracking-widest">Required Skills</h3>
+                  </div>
+                  
+                  {project.requiredSkills && project.requiredSkills.length > 0 ? (
+                    <div className="flex flex-wrap gap-2.5 ml-3">
+                      {project.requiredSkills.map((skill, idx) => (
+                        <div 
+                          key={idx} 
+                          className="px-4 py-2 bg-[#1a1a1b] border border-gray-800 hover:border-blue-500/40 text-blue-400 rounded-xl text-[12px] font-semibold transition-all duration-300 shadow-sm flex items-center gap-2 group"
+                        >
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500/60 group-hover:bg-blue-400"></div>
+                          {skill}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-[13px] text-gray-500 italic ml-3">
+                      <AlertCircle size={14} />
+                      No specific skills required.
+                    </div>
+                  )}
+                </div>
+
+                {/* Roles Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-4 w-1 bg-purple-500 rounded-full"></div>
+                    <h3 className="text-[12px] text-gray-400 font-bold uppercase tracking-widest">Team Role Composition</h3>
+                  </div>
+
+                  {project.requiredRoles && project.requiredRoles.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ml-3">
+                      {project.requiredRoles.map((role) => (
+                        <div 
+                          key={role.id} 
+                          className="relative p-5 bg-[#1a1a1b] border border-gray-800 rounded-2xl flex flex-col gap-4 group hover:border-[#3b82f6]/30 hover:bg-[#1e1e1f] transition-all duration-300 shadow-sm overflow-hidden"
+                        >
+                          {/* Decorative background element */}
+                          <div className="absolute top-0 right-0 p-2 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
+                            <Users2 size={64} className="translate-x-4 -translate-y-4" />
+                          </div>
+
+                          <div className="flex items-start justify-between">
+                            <div className="p-2.5 bg-gray-800 rounded-xl text-gray-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 transition-all duration-300">
+                              <Users2 size={20} />
+                            </div>
+                            <div className="px-3 py-1 bg-[#202021] border border-gray-800 rounded-full">
+                              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-tighter">{role.workingType}</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-[15px] font-bold text-white mb-1 group-hover:text-blue-400 transition-colors uppercase tracking-tight">{role.roleName}</p>
+                            <div className="flex items-center gap-2 mt-3">
+                              <div className="flex -space-x-2">
+                                {[...Array(Math.min(role.requiredCount, 3))].map((_, i) => (
+                                  <div key={i} className="w-6 h-6 rounded-full border-2 border-[#1a1a1b] bg-gray-800 flex items-center justify-center">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-gray-600"></div>
+                                  </div>
+                                ))}
+                                {role.requiredCount > 3 && (
+                                  <div className="w-6 h-6 rounded-full border-2 border-[#1a1a1b] bg-gray-700 flex items-center justify-center text-[8px] font-bold text-gray-400">
+                                    +{role.requiredCount - 3}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-[12px] text-gray-500 font-medium">
+                                <span className="text-gray-200 font-black">{role.requiredCount}</span> positions needed
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-[13px] text-gray-500 italic ml-3">
+                      <AlertCircle size={14} />
+                      No role requirements specified.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
           </div>
         </main>
       </div>
@@ -328,6 +454,130 @@ export default function ProjectDetailsPage() {
                     <option value={2}>Running</option>
                     <option value={3}>Completed</option>
                   </select>
+                </div>
+
+                {/* Project Level Skills Checklist */}
+                <div className="pt-2 border-t border-gray-800">
+                  <label className="block text-[12px] text-gray-400 mb-2">Project-Level Required Skills</label>
+                  <div className="bg-[#0f0f0f] border border-gray-800 rounded-xl p-4 max-h-40 overflow-y-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                       {formOptions.skills.map((skill) => (
+                        <label 
+                          key={skill.id} 
+                          className="flex items-center gap-2 cursor-pointer group"
+                        >
+                          <div className="relative flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={editForm.requiredSkillIds.includes(skill.id)}
+                              onChange={(e) => {
+                                setEditForm(prev => ({
+                                  ...prev,
+                                  requiredSkillIds: e.target.checked 
+                                    ? [...prev.requiredSkillIds, skill.id] 
+                                    : prev.requiredSkillIds.filter(id => id !== skill.id)
+                                }));
+                              }}
+                              className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-gray-700 checked:bg-blue-600 checked:border-blue-600 transition-all"
+                            />
+                            <Check className="absolute h-3 w-3 text-white opacity-0 peer-checked:opacity-100 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none stroke-[3]" />
+                          </div>
+                          <span className="text-[12px] text-gray-400 group-hover:text-blue-400 transition-colors">
+                            {skill.name}
+                          </span>
+                        </label>
+                       ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Required Team Roles */}
+                <div className="pt-2 border-t border-gray-800 mt-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="text-[12px] text-gray-400 font-medium">Required Team Roles</label>
+                    <button
+                      type="button"
+                      onClick={() => setEditForm({
+                        ...editForm,
+                        requiredRoles: [...editForm.requiredRoles, {
+                          id: Math.random().toString(36).substring(2, 9),
+                          role: 'Software Engineer',
+                          count: 1,
+                          workingType: 'Dedicated'
+                        }]
+                      })}
+                      className="flex items-center gap-1 px-2 py-1 bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 rounded-md text-[11px] font-bold transition-all"
+                    >
+                      <Plus size={14} /> Add Role
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {editForm.requiredRoles.map((roleItem, index) => (
+                      <div key={roleItem.id} className="p-3 bg-[#0f0f0f] border border-gray-800 rounded-xl space-y-3 relative group">
+                        <button
+                          type="button"
+                          onClick={() => setEditForm({ ...editForm, requiredRoles: editForm.requiredRoles.filter(r => r.id !== roleItem.id) })}
+                          className="absolute right-3 top-3 p-1 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        
+                        <div className="grid grid-cols-2 gap-3 pr-6">
+                          <div>
+                            <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Role</label>
+                            <select
+                              className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
+                              value={roleItem.role}
+                              onChange={(e) => {
+                                const newRoles = [...editForm.requiredRoles];
+                                newRoles[index].role = e.target.value;
+                                setEditForm({ ...editForm, requiredRoles: newRoles });
+                              }}
+                            >
+                              <option value="Project Manager">Project Manager</option>
+                              <option value="Senior BA">Senior BA</option>
+                              <option value="Software Engineer">Software Engineer</option>
+                              <option value="QA Tester">QA Tester</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Count</label>
+                            <input
+                              type="number"
+                              className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none text-center"
+                              value={roleItem.count}
+                              onChange={(e) => {
+                                const newRoles = [...editForm.requiredRoles];
+                                newRoles[index].count = parseInt(e.target.value) || 1;
+                                setEditForm({ ...editForm, requiredRoles: newRoles });
+                              }}
+                              min={1}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pr-6">
+                          <div>
+                            <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Working Type</label>
+                            <select
+                              className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
+                              value={roleItem.workingType}
+                              onChange={(e) => {
+                                const newRoles = [...editForm.requiredRoles];
+                                newRoles[index].workingType = e.target.value;
+                                setEditForm({ ...editForm, requiredRoles: newRoles });
+                              }}
+                            >
+                              <option value="Dedicated">Dedicated</option>
+                              <option value="Part-time">Part-time</option>
+                              <option value="Ad-hoc">Ad-hoc</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

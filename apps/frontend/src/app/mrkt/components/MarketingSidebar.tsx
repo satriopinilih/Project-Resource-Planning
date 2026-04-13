@@ -16,7 +16,7 @@ export default function MarketingSidebar() {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Projects", href: "/project", icon: FolderKanban },
-    { label: "Add Project", href: "/mrkt/add-project", icon: PlusCircle },
+    { label: "Add Project", href: "/add-project", icon: PlusCircle },
     { label: "Settings", href: "/mrkt/settings", icon: Settings },
   ];
 
@@ -47,11 +47,11 @@ export default function MarketingSidebar() {
               key={item.href}
               href={item.href}
               className={`
-                flex items-center gap-4 px-4 py-3 rounded-xl text-[15px] font-medium
+                group flex items-center gap-4 px-4 py-3 rounded-xl text-[15px] font-medium
                 transition-all duration-200
                 ${isActive
-                  ? "bg-blue-100/50 dark:bg-[#1e3a5f]/60 text-blue-600 dark:text-[#60a5fa]"
-                  : "text-gray-600 dark:text-[var(--dash-text-primary)] hover:text-gray-900 dark:hover:text-[var(--dash-text-heading)] hover:bg-gray-100 dark:hover:bg-[var(--dash-sidebar-hover)]"
+                  ? "bg-blue-100/50 dark:bg-[#1e3a5f]/60 text-blue-600 dark:text-[#60a5fa] border-transparent"
+                  : "text-gray-600 dark:text-[var(--dash-text-primary)] hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#1e293b]/50"
                 }
               `}
             >
@@ -73,9 +73,9 @@ export default function MarketingSidebar() {
             localStorage.removeItem("auth_user");
             window.location.href = "/login";
           }}
-          className="flex items-center gap-4 px-4 py-3 rounded-xl text-[15px] font-medium text-gray-600 dark:text-[var(--dash-text-primary)] hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full group"
+          className="flex items-center gap-4 px-4 py-3 rounded-xl text-[15px] font-medium text-gray-600 dark:text-[var(--dash-text-primary)] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full group"
         >
-          <LogOut size={20} className="text-gray-500 dark:text-[var(--dash-text-muted)] group-hover:text-red-600 dark:group-hover:text-red-400" />
+          <LogOut size={20} className="text-gray-500 dark:text-[var(--dash-text-muted)] group-hover:text-red-700 dark:group-hover:text-red-400" />
           Logout
         </button>
       </div>

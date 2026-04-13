@@ -8,9 +8,16 @@ import {
   Plus,
   Calendar as CalendarIcon,
   AlertCircle,
-  Trash2
+  Trash2,
+  Check
 } from "lucide-react";
-import { getHolidays, BackendHoliday, createProject } from "@/lib/api";
+import { 
+  getHolidays, 
+  BackendHoliday, 
+  createProject,
+  getEmployeeFormOptions,
+  EmployeeFormOptions 
+} from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function AddProjectPage() {
@@ -33,11 +40,13 @@ export default function AddProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [formOptions, setFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
+  const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([]);
 
   const router = useRouter();
 
   const [teamRoles, setTeamRoles] = useState([
-    { id: '1', role: 'Project Manager', count: 1, workingType: 'Dedicated', requiredSkill: '' }
+    { id: '1', role: 'Project Manager', count: 1, workingType: 'Dedicated' }
   ]);
 
   const handleAddRole = () => {
@@ -45,8 +54,7 @@ export default function AddProjectPage() {
       id: Math.random().toString(36).substring(2, 9),
       role: 'Senior BA',
       count: 1,
-      workingType: 'Dedicated',
-      requiredSkill: ''
+      workingType: 'Dedicated'
     }]);
   };
 
@@ -65,6 +73,9 @@ export default function AddProjectPage() {
 
     // Fetch holidays
     getHolidays().then(setHolidays).catch(console.error);
+
+    // Fetch form options (skills)
+    getEmployeeFormOptions().then(setFormOptions).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -178,9 +189,9 @@ export default function AddProjectPage() {
       requiredRoles: teamRoles.map(r => ({
         roleName: r.role,
         count: r.count,
-        workingType: workingTypeMap[r.workingType] ?? 1,
-        requiredSkill: r.requiredSkill
-      }))
+        workingType: workingTypeMap[r.workingType] ?? 1
+      })),
+      requiredSkillIds: selectedSkillIds
     };
 
     try {
@@ -359,6 +370,47 @@ export default function AddProjectPage() {
             )}
           </div>
 
+          {/* Project-Level Required Skills Checklist */}
+          <div className="mt-8">
+            <label className={labelClasses}>
+              Project-Level Required Skills <span className="text-gray-400 font-normal ml-1">(Optional)</span>
+            </label>
+            <div className="mt-3 bg-gray-50 dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-6">
+                {formOptions.skills.map((skill) => (
+                  <label 
+                    key={skill.id} 
+                    className="flex items-center gap-3 cursor-pointer group py-0.5"
+                  >
+                    <div className="relative flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedSkillIds.includes(skill.id)}
+                        onChange={(e) => {
+                          setSelectedSkillIds(prev => 
+                            e.target.checked 
+                              ? [...prev, skill.id] 
+                              : prev.filter(id => id !== skill.id)
+                          );
+                        }}
+                        className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 dark:border-gray-600 checked:bg-blue-600 checked:border-blue-600 transition-all"
+                      />
+                      <Check className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none stroke-[3]" />
+                    </div>
+                    <span className="text-[14px] text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {skill.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {formOptions.skills.length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-[13px]">
+                  Loading skill options...
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Required Team Roles */}
           <div>
             <div className="flex justify-between items-center mb-4 mt-2">
@@ -405,7 +457,7 @@ export default function AddProjectPage() {
                       className={`${inputClasses} text-center`}
                     />
                   </div>
-                  <div className="flex-[2]">
+                    <div className="flex-[2]">
                     {index === 0 && <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Working Type</div>}
                     <select
                       className={inputClasses}
@@ -416,16 +468,6 @@ export default function AddProjectPage() {
                       <option value="Part-time">Part-time</option>
                       <option value="Ad-hoc">Ad-hoc</option>
                     </select>
-                  </div>
-                  <div className="flex-[3]">
-                    {index === 0 && <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Required Skill</div>}
-                    <input
-                      type="text"
-                      className={inputClasses}
-                      placeholder="e.g. React, C#"
-                      value={roleItem.requiredSkill || ''}
-                      onChange={(e) => updateRole(roleItem.id, 'requiredSkill', e.target.value)}
-                    />
                   </div>
 
                   {index !== 0 ? (
@@ -537,13 +579,28 @@ export default function AddProjectPage() {
                         <span className="font-medium">{r.role} <span className="text-gray-400 mx-1">x</span> {r.count}</span>
                         <span className="text-[12px] text-gray-500 dark:text-gray-400">{r.workingType}</span>
                       </div>
-                      {r.requiredSkill && (
-                        <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
-                          <span className="font-medium text-gray-600 dark:text-gray-300">Skills:</span> {r.requiredSkill}
-                        </div>
-                      )}
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 pb-4">
+                <span className="text-gray-500 dark:text-gray-400 mt-1">Required Skills</span>
+                <div className="col-span-1 sm:col-span-2">
+                   <div className="flex flex-wrap gap-2">
+                    {selectedSkillIds.length > 0 ? (
+                      selectedSkillIds.map(id => {
+                        const skillName = formOptions.skills.find(s => s.id === id)?.name;
+                        return (
+                          <span key={id} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-medium">
+                            {skillName}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-gray-400 italic">None selected</span>
+                    )}
+                   </div>
                 </div>
               </div>
             </div>
