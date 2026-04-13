@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPrimaryRole, getSessionUser, SessionUser } from '@/lib/auth';
 import GMProjectDetailPage from '../../dashboard/gm/projects/[id]/page';
-import PMProjectDetailsPage from '../../pm/projects/[id]/page';
-import MarketingProjectDetailsPage from '../../mrkt/projects/[id]/page';
+import PMProjectDetailsPage from '../../dashboard/pm/projects/[id]/page';
+import MarketingProjectDetailsPage from '../../dashboard/mrkt/projects/[id]/page';
 import GmSidebar from '../../dashboard/gm/components/Sidebar';
 import AppSidebar from '@/components/AppSidebar';
+import AppHeader from '@/components/AppHeader';
 
 export default function ProjectDetailAliasPage() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function ProjectDetailAliasPage() {
     <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
       {role === 'GM' ? <GmSidebar /> : <AppSidebar role={role} />}
       <main className="flex-1 ml-64 flex flex-col min-h-screen">
+        {role !== 'GM' && <AppHeader title="Project Details" role={role} />}
         {role === 'GM' && <GMProjectDetailPage />}
         {role === 'PM' && <PMProjectDetailsPage />}
         {role === 'Marketing' && <MarketingProjectDetailsPage />}

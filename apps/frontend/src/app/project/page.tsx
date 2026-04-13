@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPrimaryRole, getSessionUser, SessionUser } from '@/lib/auth';
 import GMProjectsPage from '../dashboard/gm/projects/page';
-import PMProjectsPage from '../pm/projects/page';
-import MarketingProjectsPage from '../mrkt/projects/page';
+import PMProjectsPage from '../dashboard/pm/projects/page';
+import MarketingProjectsPage from '../dashboard/mrkt/projects/page';
 import AppSidebar from '@/components/AppSidebar';
 
 export default function ProjectPage() {

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import AppHeader from "@/components/AppHeader";
 import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
 import { getProjects } from "@/lib/api";
 
@@ -134,9 +133,6 @@ export default function ProjectsPage() {
   });
 
   return (
-    <>
-      <AppHeader title="Projects" role="GM" />
-
       <div className="p-6">
         <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl transition-colors duration-300">
           {/* Top Actions: Search and Filter */}
@@ -268,7 +264,7 @@ export default function ProjectsPage() {
                         <div className="flex items-center gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                           <div>
-                            <p className="text-[13px] font-bold text-white group-hover:text-blue-400 transition-colors">
+                            <p className="text-[13px] font-bold text-[var(--dash-text-heading)] group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
                               {project.name}
                             </p>
                             <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5 font-medium">
@@ -322,6 +318,5 @@ export default function ProjectsPage() {
           </div>
         </div>
       </div>
-    </>
   );
 }

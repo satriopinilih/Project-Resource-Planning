@@ -114,8 +114,9 @@ function PMProjectsContent() {
   });
 
   return (
-    <div className="p-8 w-full h-full overflow-y-auto">
-      <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl transition-colors duration-300">
+    <>
+      <div className="p-8 w-full h-full overflow-y-auto">
+        <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl transition-colors duration-300">
         <div className="flex items-center justify-between p-5 pb-0">
           <div className="relative w-[300px]">
             <Search
@@ -247,7 +248,7 @@ function PMProjectsContent() {
                       <div className="flex items-center gap-3">
                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div>
-                          <p className="text-[13px] font-bold text-white group-hover:text-blue-400 transition-colors">
+                          <p className="text-[13px] font-bold text-[var(--dash-text-heading)] group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
                             {project.name}
                           </p>
                           <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5 font-medium">
@@ -301,6 +302,7 @@ function PMProjectsContent() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

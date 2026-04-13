@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import AppHeader from "@/components/AppHeader";
 import {
   Trash2,
   Calendar,
@@ -319,11 +318,8 @@ export default function ProjectDetailsPage() {
 
   if (loading || !project) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#18181b]">
-        <AppHeader title="Project Details" role="Marketing" />
-        <div className="flex-1 flex items-center justify-center">
-          {loading ? <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" /> : <p className="text-gray-400">Project not found.</p>}
-        </div>
+      <div className="flex-1 flex items-center justify-center">
+        {loading ? <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" /> : <p className="text-gray-400">Project not found.</p>}
       </div>
     );
   }
@@ -335,39 +331,24 @@ export default function ProjectDetailsPage() {
 
   return (
     <>
-      <div className="flex-1 overflow-auto min-h-screen bg-[#202020] transition-colors duration-300">
-        <AppHeader title="Project Details" role="Marketing" />
-
+      <div className="flex-1 overflow-auto min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
         <main className="flex-1 p-8 overflow-y-auto">
           <div className="w-full space-y-8 pb-12">
 
             {/* Status Context Header */}
             {project.projectStatus === 0 && (
-              <div className="bg-[#1e3a8a]/20 border border-[#1e3a8a]/40 rounded-xl p-4 flex items-center justify-between">
+              <div className="bg-blue-100 border border-blue-300 dark:bg-[#1e3a8a]/20 dark:border-[#1e3a8a]/40 rounded-xl p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#1e3a8a]/40 text-[#60a5fa] rounded-lg">
                     <LayoutGrid size={20} />
                   </div>
                   <div>
-                    <p className="text-[14px] font-bold text-white">Project Setup Phase</p>
-                    <p className="text-[12px] text-[#60a5fa]">Marketing has initiated this project. Finalize timeline and staff assignment below.</p>
+                    <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">Project Setup Phase</p>
+                    <p className="text-[12px] text-blue-700 dark:text-[#60a5fa]">Marketing has initiated this project. Finalize timeline and staff assignment below.</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setHireRequestOpen(true)}
-                    disabled={hireSubmitting || hireAlreadyRequested}
-                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold disabled:opacity-50"
-                  >
-                    {hireAlreadyRequested
-                      ? "Already Requested"
-                      : hireRequestStatus === "Declined"
-                        ? "Declined - Request Again"
-                        : hireRequestStatus === "Fulfilled"
-                          ? "Fulfilled - Request Again"
-                          : "Request New Hire"}
-                  </button>
-                  <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400">
+                  <div className="flex items-center gap-2 text-[12px] font-bold text-[var(--dash-text-muted)]">
                     Step 1 of 2: Assign Timeline & Team
                     <ChevronRight size={14} />
                   </div>
@@ -376,7 +357,7 @@ export default function ProjectDetailsPage() {
             )}
 
             {/* ── 1. Project Summary Banner ── */}
-            <section className="bg-[#292B2F] border border-gray-700/50 rounded-xl overflow-hidden shadow-sm">
+            <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden shadow-sm">
               {/* Header */}
               <div className="p-8 pb-6">
                 <div className="flex items-start justify-between">
@@ -385,12 +366,12 @@ export default function ProjectDetailsPage() {
                       <div className="p-2 bg-[#2B7FFC]/10 rounded-lg">
                         <Briefcase size={18} className="text-[#2B7FFC]" />
                       </div>
-                      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                      <span className="text-[11px] font-bold text-[var(--dash-text-muted)] uppercase tracking-widest">
                         {project.clientOrganization}
                       </span>
                     </div>
-                    <h1 className="text-[26px] font-bold text-white tracking-tight">{project.projectName}</h1>
-                    <p className="text-[14px] text-gray-400 leading-relaxed">
+                    <h1 className="text-[26px] font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
+                    <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed">
                       {project.projectDescription}
                     </p>
                   </div>
@@ -410,19 +391,19 @@ export default function ProjectDetailsPage() {
               </div>
 
               {/* Stats Bar */}
-              <div className="grid grid-cols-2 md:grid-cols-4 border-t border-gray-700/50">
-                <div className="p-5 flex items-center gap-3 border-r border-gray-700/50">
+              <div className="grid grid-cols-2 md:grid-cols-4 border-t border-[var(--dash-border)]">
+                <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
                   <div className="p-2 bg-blue-500/10 rounded-lg"><Calendar size={16} className="text-blue-400" /></div>
                   <div>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Est. Start Date</p>
-                    <p className="text-[13px] font-semibold text-gray-200 mt-0.5">{formatDate(project.estimatedStartDate)}</p>
+                    <p className="text-[10px] text-[var(--dash-text-muted)] font-bold uppercase tracking-wider">Est. Start Date</p>
+                    <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{formatDate(project.estimatedStartDate)}</p>
                   </div>
                 </div>
-                <div className="p-5 flex items-center gap-3 border-r border-gray-700/50">
+                <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
                   <div className="p-2 bg-purple-500/10 rounded-lg"><Clock size={16} className="text-purple-400" /></div>
                   <div>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Est. End Date</p>
-                    <p className="text-[13px] font-semibold text-gray-200 mt-0.5">{formatDate(project.estimatedEndDate)}</p>
+                    <p className="text-[10px] text-[var(--dash-text-muted)] font-bold uppercase tracking-wider">Est. End Date</p>
+                    <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{formatDate(project.estimatedEndDate)}</p>
                   </div>
                 </div>
                 <div className="p-5 flex items-center gap-3 border-r border-gray-700/50">
@@ -573,18 +554,18 @@ export default function ProjectDetailsPage() {
               )}
 
               {/* Priority badge */}
-              <div className="border-t border-gray-700/50 px-6 py-3 flex items-center gap-2">
+              <div className="border-t border-[var(--dash-border)] px-6 py-3 flex items-center gap-2">
                 <FileText size={13} className="text-gray-600" />
-                <span className="text-[12px] text-gray-500">Priority:</span>
+                <span className="text-[12px] text-[var(--dash-text-muted)]">Priority:</span>
                 <span className={`text-[12px] font-bold ${project.priorityLevel === 2 ? "text-red-400" :
                     project.priorityLevel === 1 ? "text-amber-400" : "text-green-400"
                   }`}>
                   {mapPriority(project.priorityLevel)}
                 </span>
-                <span className="mx-2 text-gray-700">·</span>
+                <span className="mx-2 text-[var(--dash-text-faint)]">·</span>
                 <Building2 size={13} className="text-gray-600" />
-                <span className="text-[12px] text-gray-500">Client:</span>
-                <span className="text-[12px] text-gray-300 font-medium">{project.clientOrganization}</span>
+                <span className="text-[12px] text-[var(--dash-text-muted)]">Client:</span>
+                <span className="text-[12px] text-[var(--dash-text-primary)] font-medium">{project.clientOrganization}</span>
               </div>
             </section>
 
@@ -593,9 +574,9 @@ export default function ProjectDetailsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-2 space-y-8">
                   {/* Assigned Team Members Component */}
-                  <section className="bg-[#292B2F] border border-gray-700/50 rounded-xl p-8 shadow-sm">
+                  <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
                     <div className="flex items-center justify-between mb-8">
-                      <h2 className="text-[18px] font-bold text-white tracking-tight">Assign Team Members</h2>
+                      <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] tracking-tight">Assign Team Members</h2>
                     </div>
 
                     <div className="space-y-6">
@@ -607,14 +588,14 @@ export default function ProjectDetailsPage() {
                         const isDedicated = role.workingType === 'Dedicated';
 
                         return (
-                          <div key={role.id} className="border border-[var(--dash-border)] rounded-[1.25rem] bg-[#1a1f2e]/60 p-6 shadow-sm overflow-hidden relative">
+                          <div key={role.id} className="border border-[var(--dash-border)] rounded-[1.25rem] bg-[var(--dash-bg-input)] p-6 shadow-sm overflow-hidden relative">
                             {/* Accent line for top of card */}
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
 
                             <div className="flex justify-between items-start mb-5">
                               <div className="space-y-1.5">
                                 <div className="flex items-center gap-3">
-                                  <h3 className="text-white font-black text-[16px] tracking-tight">{role.roleName}</h3>
+                                  <h3 className="text-[var(--dash-text-heading)] font-black text-[16px] tracking-tight">{role.roleName}</h3>
                                   <span className={`text-[10px] px-2.5 py-0.5 rounded border font-bold uppercase tracking-wider ${isDedicated
                                       ? 'bg-[#8b5cf6]/10 text-[#a78bfa] border-[#8b5cf6]/20'
                                       : 'bg-[#10b981]/10 text-[#34d399] border-[#10b981]/20'
@@ -622,7 +603,7 @@ export default function ProjectDetailsPage() {
                                     {role.workingType}
                                   </span>
                                 </div>
-                                <p className="text-[13px] text-gray-400 font-medium">Need {role.requiredCount} <span className="mx-1">•</span> Selected {membersInRole.length}</p>
+                                <p className="text-[13px] text-[var(--dash-text-secondary)] font-medium">Need {role.requiredCount} <span className="mx-1">•</span> Selected {membersInRole.length}</p>
 
                                 {isDedicated ? (
                                   <p className="text-[11px] text-amber-500/90 font-medium flex items-center gap-1.5 mt-2">
@@ -647,20 +628,20 @@ export default function ProjectDetailsPage() {
 
                             <div className="space-y-3 mt-4">
                               {membersInRole.map(member => (
-                                <div key={member.userId} className="bg-[#111318]/60 border border-gray-700/50 rounded-xl p-4 flex items-center justify-between group hover:border-gray-600 transition-colors">
+                                <div key={member.userId} className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-4 flex items-center justify-between group hover:border-gray-600 transition-colors">
                                   <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600/30 to-purple-600/30 border border-blue-500/20 flex items-center justify-center text-blue-400 font-black text-[14px] flex-shrink-0">
                                       {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                                     </div>
                                     <div>
-                                      <h3 className="text-[14px] font-bold text-gray-100">{member.userName}</h3>
-                                      <p className="text-[11px] text-gray-400">{member.role}</p>
+                                      <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
+                                      <p className="text-[11px] text-[var(--dash-text-secondary)]">{member.role}</p>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-4">
                                     <div className="text-right">
                                       <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Timeline</span>
-                                      <span className="text-[11px] text-gray-300 font-medium bg-[#2a2f3e] px-2 py-1 rounded">
+                                      <span className="text-[11px] text-[var(--dash-text-primary)] font-medium bg-[var(--dash-bg-input)] border border-[var(--dash-border)] px-2 py-1 rounded">
                                         {member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)} — {member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}
                                       </span>
                                     </div>
@@ -704,16 +685,16 @@ export default function ProjectDetailsPage() {
 
                 <div className="space-y-8">
                   {/* Assignment Sidebar */}
-                  <section className="bg-[#292B2F] border border-gray-700/50 rounded-xl p-8 shadow-sm">
+                  <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-[18px] font-bold text-white">Assignment Detail</h2>
+                      <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assignment Detail</h2>
                       <Clock size={18} className="text-gray-500" />
                     </div>
 
                     <div className="space-y-6">
                       <div className="space-y-2">
                         <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">Start Date</p>
-                        <div className="flex items-center gap-3 p-3 bg-[#202532] border border-gray-700/30 rounded-lg text-[14px] font-medium text-gray-200">
+                        <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[14px] font-medium text-[var(--dash-text-primary)]">
                           <Calendar size={16} className="text-[#3b82f6]" />
                           {project.estimatedStartDate ? formatDate(project.estimatedStartDate) : 'Click to Set Date'}
                         </div>
@@ -721,7 +702,7 @@ export default function ProjectDetailsPage() {
 
                       <div className="space-y-2">
                         <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">End Date</p>
-                        <div className="flex items-center gap-3 p-3 bg-[#202532] border border-gray-700/30 rounded-lg text-[14px] font-medium text-gray-200">
+                        <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[14px] font-medium text-[var(--dash-text-primary)]">
                           <Calendar size={16} className="text-[#3b82f6]" />
                           {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Click to Set Date'}
                         </div>
@@ -730,11 +711,11 @@ export default function ProjectDetailsPage() {
                       <div className="pt-4 border-t border-gray-700/50">
                         <div className="flex justify-between items-center mb-2">
                           <p className="text-[13px] text-gray-400">Project Duration</p>
-                          <p className="text-[14px] font-bold text-white">{project.estimatedDuration || 8} Weeks</p>
+                          <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">{project.estimatedDuration || 8} Weeks</p>
                         </div>
                         <div className="flex justify-between items-center mb-4">
                           <p className="text-[13px] text-gray-400">Team Members</p>
-                          <p className="text-[14px] font-bold text-white">{project.members?.length ?? 0}</p>
+                          <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">{project.members?.length ?? 0}</p>
                         </div>
                         <button
                           onClick={() => openAssignModal()}
@@ -751,9 +732,9 @@ export default function ProjectDetailsPage() {
               /* ── STANDARD UI (For Active/Completed Projects) ── */
               <div className="space-y-6">
                 {/* Assigned Team */}
-                <section className="bg-[#292B2F] border border-gray-700/50 rounded-xl p-8 shadow-sm">
+                <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-[18px] font-bold text-white">Assigned Team</h2>
+                    <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assigned Team</h2>
                     <button
                       onClick={() => openAssignModal()}
                       className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all cursor-pointer"
@@ -769,19 +750,19 @@ export default function ProjectDetailsPage() {
                   ) : (
                     <div className="space-y-4">
                       {project.members.map((member) => (
-                        <div key={member.userId} className="bg-[#202532] border border-gray-700/30 rounded-xl p-5 hover:border-gray-600/50 transition-colors group">
+                        <div key={member.userId} className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 hover:border-gray-600/50 transition-colors group">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-full bg-[#1e3a8a]/40 flex items-center justify-center text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
+                              <div className="w-10 h-10 rounded-full border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-[#1e3a8a]/40 flex items-center justify-center text-blue-700 dark:text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
                                 {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                               </div>
                               <div>
-                                <h3 className="text-[14px] font-bold text-gray-100">{member.userName}</h3>
-                                <p className="text-[12px] text-gray-400">{member.role} · {member.staffRole || 'Member'}</p>
+                                <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
+                                <p className="text-[12px] text-[var(--dash-text-secondary)]">{member.role} · {member.staffRole || 'Member'}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-[#064e3b]/30 text-[#34d399] border border-[#064e3b]/50">
+                              <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-[#064e3b]/30 dark:text-[#34d399] dark:border-[#064e3b]/50">
                                 {member.status || "Assigned"}
                               </span>
                               <button
@@ -797,7 +778,7 @@ export default function ProjectDetailsPage() {
 
                           {/* Timeline bar */}
                           <div className="mt-4">
-                            <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
+                            <div className="flex items-center justify-between text-[11px] text-[var(--dash-text-muted)] mb-1">
                               <span>{member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)}</span>
                               <span>{member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}</span>
                             </div>
@@ -815,26 +796,26 @@ export default function ProjectDetailsPage() {
                 </section>
 
                 {/* Timeline Info */}
-                <section className="bg-[#292B2F] border border-gray-700/50 rounded-xl p-8 shadow-sm">
-                  <h2 className="text-[18px] font-bold text-white mb-6">Project Timeline</h2>
+                <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
+                  <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] mb-6">Project Timeline</h2>
                   <div className="grid grid-cols-3 gap-8">
                     <div className="space-y-1.5">
-                      <p className="text-[12px] text-gray-500 font-medium">Start Date</p>
-                      <div className="flex items-center gap-2 text-[14px] font-medium text-gray-200">
-                        <Calendar size={16} className="text-gray-400" />
+                      <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">Start Date</p>
+                      <div className="flex items-center gap-2 text-[14px] font-medium text-[var(--dash-text-primary)]">
+                        <Calendar size={16} className="text-[var(--dash-text-faint)]" />
                         {formatDate(project.estimatedStartDate)}
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-[12px] text-gray-500 font-medium">End Date</p>
-                      <div className="flex items-center gap-2 text-[14px] font-medium text-gray-200">
-                        <Calendar size={16} className="text-gray-400" />
+                      <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">End Date</p>
+                      <div className="flex items-center gap-2 text-[14px] font-medium text-[var(--dash-text-primary)]">
+                        <Calendar size={16} className="text-[var(--dash-text-faint)]" />
                         {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Ongoing'}
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-[12px] text-gray-500 font-medium">Duration</p>
-                      <div className="text-[14px] font-medium text-gray-200">
+                      <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">Duration</p>
+                      <div className="text-[14px] font-medium text-[var(--dash-text-primary)]">
                         {project.estimatedDuration || 8} weeks
                       </div>
                     </div>
@@ -1043,66 +1024,8 @@ export default function ProjectDetailsPage() {
         </div>
       )}
 
-      {hireRequestOpen && project && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setHireRequestOpen(false)}>
-          <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-white" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
-              <h3 className="text-[17px] font-bold">Request New Hire</h3>
-              <button onClick={() => setHireRequestOpen(false)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800"><X size={18} /></button>
-            </div>
-
-            <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-[12px] text-gray-400 mb-1">Project</label>
-                <div className="w-full px-3 py-2 rounded-lg bg-[#0f0f0f] border border-gray-800 text-[13px]">{project.projectName}</div>
-              </div>
-
-              <div>
-                <label className="block text-[12px] text-gray-400 mb-1">Staff Role Needed</label>
-                <select
-                  value={hireForm.roleNeeded}
-                  onChange={(e) => setHireForm((p) => ({ ...p, roleNeeded: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg bg-[#0f0f0f] border border-gray-800 text-[13px]"
-                >
-                  <option>Senior Dev</option>
-                  <option>Junior Dev</option>
-                  <option>Senior BA</option>
-                  <option>Junior BA</option>
-                  <option>Architect</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[12px] text-gray-400 mb-1">Quantity</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={hireForm.quantity}
-                  onChange={(e) => setHireForm((p) => ({ ...p, quantity: Number(e.target.value) || 1 }))}
-                  className="w-full px-3 py-2 rounded-lg bg-[#0f0f0f] border border-gray-800 text-[13px]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[12px] text-gray-400 mb-1">Notes</label>
-                <textarea
-                  rows={3}
-                  value={hireForm.notes}
-                  onChange={(e) => setHireForm((p) => ({ ...p, notes: e.target.value }))}
-                  placeholder="Reason and context for HR"
-                  className="w-full px-3 py-2 rounded-lg bg-[#0f0f0f] border border-gray-800 text-[13px]"
-                />
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-800 flex justify-end gap-2">
-              <button onClick={() => setHireRequestOpen(false)} className="px-4 py-2 bg-[#1f1f1f] border border-gray-800 rounded-lg text-[13px] font-semibold">Cancel</button>
-              <button onClick={handleRequestHireFromProject} disabled={hireSubmitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-[13px] font-semibold text-white disabled:opacity-50">
-                {hireSubmitting ? "Sending..." : "Hire"}
-              </button>
-            </div>
-          </div>
-        </div>
+      {hireRequestOpen && false && project && (
+        <></>
       )}
     </>
   );

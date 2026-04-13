@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import PMStatCard from "@/app/pm/components/PMStatCard";
-import PMTimelineView from "@/app/pm/components/PMGanttChart";
-import DashboardHeader from "@/app/pm/components/PMDashboardHeader";
+import PMStatCard from "@/app/dashboard/pm/components/PMStatCard";
+import PMTimelineView from "@/app/dashboard/pm/components/PMGanttChart";
+import DashboardHeader from "@/app/dashboard/pm/components/PMDashboardHeader";
 import {
   FolderKanban,
   CalendarClock,
@@ -11,7 +11,6 @@ import {
   AlertCircle,
   RefreshCcw,
 } from "lucide-react";
-
 import { useRouter } from "next/navigation";
 import { getTimelineStats, TimelineStats } from "@/lib/api";
 
@@ -24,7 +23,6 @@ export default function PMDashboard() {
     running: 0,
     completed: 0,
   });
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +30,6 @@ export default function PMDashboard() {
     try {
       setLoading(true);
       setError(null);
-
       const statsData = await getTimelineStats();
       setStats(statsData);
     } catch (err: any) {
@@ -49,9 +46,7 @@ export default function PMDashboard() {
 
   return (
     <div className="p-8 max-w-full mx-auto w-full h-full overflow-y-auto">
-      {/* WELCOME SECTION */}
       <DashboardHeader />
-      {/* ALERT ERROR SECTION */}
       {error && (
         <div className="mb-8 flex items-center justify-between p-4 bg-red-50 border-l-4 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400 rounded-r-lg shadow-sm">
           <div className="flex items-center">
@@ -68,48 +63,18 @@ export default function PMDashboard() {
         </div>
       )}
 
-      {/* STATS SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,2fr)_repeat(3,1fr)] gap-8">
-        <PMStatCard
-          title="Total Projects"
-          value={stats.total}
-          icon={<FolderKanban />}
-          variant="premium"
-          onClick={() => router.push("/project?filter=All")}
-        />
-        <PMStatCard
-          title="Scheduled"
-          value={stats.scheduled}
-          icon={<CalendarClock />}
-          variant="sky"
-          onClick={() => router.push("/project?filter=Upcoming")}
-        />
-        <PMStatCard
-          title="Running"
-          value={stats.running}
-          icon={<Users />}
-          variant="blue"
-          onClick={() => router.push("/project?filter=Active")}
-        />
-        <PMStatCard
-          title="Completed"
-          value={stats.completed}
-          icon={<CheckCircle2 />}
-          variant="green"
-          onClick={() => router.push("/project?filter=Completed")}
-        />
+        <PMStatCard title="Total Projects" value={stats.total} icon={<FolderKanban />} variant="premium" onClick={() => router.push("/project?filter=All")} />
+        <PMStatCard title="Scheduled" value={stats.scheduled} icon={<CalendarClock />} variant="sky" onClick={() => router.push("/project?filter=Upcoming")} />
+        <PMStatCard title="Running" value={stats.running} icon={<Users />} variant="blue" onClick={() => router.push("/project?filter=Active")} />
+        <PMStatCard title="Completed" value={stats.completed} icon={<CheckCircle2 />} variant="green" onClick={() => router.push("/project?filter=Completed")} />
       </div>
 
-      {/* TIMELINE SECTION */}
       <div className="mt-12">
-        <h2 className="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200">
-          Project Timeline
-        </h2>
+        <h2 className="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Project Timeline</h2>
         {loading ? (
           <div className="flex flex-col items-center justify-center h-80 bg-white/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 animate-pulse">
-            <p className="text-gray-500 dark:text-gray-400 italic">
-              Connecting to database...
-            </p>
+            <p className="text-gray-500 dark:text-gray-400 italic">Connecting to database...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-80 bg-white/30 dark:bg-black/10 rounded-2xl border border-gray-200 dark:border-gray-800">

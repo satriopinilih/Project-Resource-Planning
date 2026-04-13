@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AppHeader from "@/components/AppHeader";
 import { useSearchParams } from "next/navigation";
 import {
     CheckCircle2,
@@ -81,10 +80,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="flex flex-col min-h-screen">
-            <AppHeader title="Settings" role="GM" />
-
-            <div className="p-8 w-full space-y-8 pb-16">
+        <div className="p-8 w-full space-y-8 pb-16">
                 {/* Profile Information */}
                 <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm dark:border-gray-700 px-10 py-8 mb-6">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Profile Information</h2>
@@ -221,7 +217,6 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 </div>
-            </div >
         </div>
     );
 }

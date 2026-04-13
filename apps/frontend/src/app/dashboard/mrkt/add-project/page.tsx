@@ -2,9 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Sun,
-  Moon,
-  User,
   Plus,
   Calendar as CalendarIcon,
   AlertCircle,
@@ -14,7 +11,6 @@ import { getHolidays, BackendHoliday, createProject } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function AddProjectPage() {
-  const [theme, setTheme] = useState("dark");
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
   const [durationWeeks, setDurationWeeks] = useState<number>(5);
   const [startDate, setStartDate] = useState<string>("2026-04-10");
@@ -58,11 +54,6 @@ export default function AddProjectPage() {
   };
 
   useEffect(() => {
-    if (document.documentElement.classList.contains('light')) {
-      setTheme('light');
-    }
-
-    // Fetch holidays
     getHolidays().then(setHolidays).catch(console.error);
   }, []);
 
@@ -111,18 +102,6 @@ export default function AddProjectPage() {
     });
 
   }, [startDate, durationWeeks, holidays]);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    if (newTheme === 'light') {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    }
-  };
 
   const handleCancel = () => {
     window.history.back();
@@ -202,27 +181,8 @@ export default function AddProjectPage() {
   const labelClasses = "block text-[13px] font-medium text-gray-700 dark:text-gray-100 mb-2 mt-1 ml-0.5";
 
   return (
-    <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
-      {/* Header Section */}
-      <header className="mb-8 flex justify-between items-center">
-        <h1 className="text-[22px] font-semibold text-gray-900 dark:text-white">Add New Project</h1>
-
-        <div className="flex items-center gap-4">
-          <button onClick={toggleTheme} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-            {theme === 'dark' ? <Sun className="w-5 h-5 cursor-pointer" /> : <Moon className="w-5 h-5 cursor-pointer" />}
-          </button>
-          <div className="flex flex-col items-end">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">Marketing Lead</span>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">Marketing</span>
-          </div>
-          <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center shadow-lg cursor-pointer">
-            <User className="text-white w-5 h-5" />
-          </div>
-          <div className="px-3 py-1 bg-blue-100 dark:bg-[#252c41] text-blue-700 dark:text-[#93a5e8] text-[12px] font-medium rounded-full cursor-pointer">
-            Marketing
-          </div>
-        </div>
-      </header>
+      <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
+      <div className="mt-2" />
 
       {/* Form Card */}
       <div className="bg-white dark:bg-[#242427] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300 max-w-4xl">
@@ -576,6 +536,6 @@ export default function AddProjectPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
   );
 }
