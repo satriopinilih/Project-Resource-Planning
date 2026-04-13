@@ -22,7 +22,9 @@ import { getProjectById, BackendProject } from "@/lib/api";
 
 const mapStatus = (backendStatus: number, startDateStr?: string) => {
   switch (backendStatus) {
+
     case 0: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+
     case 1: return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
     case 2: {
       if (startDateStr) {
@@ -179,12 +181,7 @@ export default function PMProjectDetailsPage() {
                       {project.clientOrganization}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <h1 className="text-[26px] font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
-                    <span className={`px-4 py-1 rounded-full text-[12px] font-semibold ${statusInfo.class}`}>
-                      {statusInfo.label}
-                    </span>
-                  </div>
+                  <h1 className="text-[26px] font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
                   <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed">
                     {project.projectDescription}
                   </p>
@@ -338,98 +335,85 @@ export default function PMProjectDetailsPage() {
             </div>
           </section>
 
-          {/* ── 2. Assigned Team + Timeline (Grid Layout) ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Assigned Team (2/3 width) */}
-            <div className="lg:col-span-2 space-y-6">
-              <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assigned Team</h2>
-                  <span className="text-[12px] text-[var(--dash-text-muted)]">{project.members?.length || 0} Members</span>
+          {/* ── 2. Assigned Team + Timeline (GM Layout) ── */}
+          <div className="space-y-6">
+            {/* Assigned Team */}
+            <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assigned Team</h2>
+              </div>
+              {(!project.members || project.members.length === 0) ? (
+                <div className="py-8 text-center border border-dashed border-[var(--dash-border)] rounded-xl">
+                  <p className="text-[var(--dash-text-muted)] text-[14px]">No team members assigned.</p>
                 </div>
-                {(!project.members || project.members.length === 0) ? (
-                  <div className="py-12 text-center border border-dashed border-[var(--dash-border)] rounded-xl">
-                    <Users2 size={40} className="mx-auto text-[var(--dash-text-faint)] mb-3 opacity-20" />
-                    <p className="text-[var(--dash-text-muted)] text-[14px]">No team members assigned yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {project.members.map((member) => (
-                      <div key={member.userId} className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 hover:border-gray-600/50 transition-colors group">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-[#1e3a8a]/40 flex items-center justify-center text-blue-700 dark:text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
-                              {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                            </div>
-                            <div>
-                              <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
-                              <p className="text-[12px] text-[var(--dash-text-secondary)]">{member.role} · {member.staffRole || 'Member'}</p>
-                            </div>
+              ) : (
+                <div className="space-y-4">
+                  {project.members.map((member) => (
+                    <div key={member.userId} className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 hover:border-gray-600/50 transition-colors group">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-[#1e3a8a]/40 flex items-center justify-center text-blue-700 dark:text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
+                            {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                           </div>
-                          <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-[#064e3b]/30 dark:text-[#34d399] dark:border-[#064e3b]/50">
-                            {member.status || "Assigned"}
-                          </span>
-                        </div>
-
-                        {/* Timeline bar */}
-                        <div className="mt-4">
-                          <div className="flex items-center justify-between text-[11px] text-[var(--dash-text-muted)] mb-1">
-                            <span>{member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)}</span>
-                            <span>{member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}</span>
+                          <div>
+                            <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
+                            <p className="text-[12px] text-[var(--dash-text-secondary)]">{member.role} · {member.staffRole || 'Member'}</p>
                           </div>
-                          <TimelineBar
-                            startDate={member.startDate}
-                            endDate={member.endDate}
-                            projectStart={project.estimatedStartDate}
-                            projectEnd={project.estimatedEndDate}
-                          />
                         </div>
+                        <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-[#064e3b]/30 dark:text-[#34d399] dark:border-[#064e3b]/50">
+                          {member.status || "Assigned"}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
 
-            {/* Timeline Info (1/3 width) */}
-            <div className="lg:col-span-1">
-              <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm h-full">
-                <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] mb-6">Project Timeline</h2>
-                <div className="space-y-8">
-                  <div className="space-y-3">
-                    <p className="text-[12px] text-[var(--dash-text-muted)] font-medium uppercase tracking-wider">Start Date</p>
-                    <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border)]">
-                      <Calendar size={18} className="text-[#3b82f6]" />
-                      <span className="text-[14px] font-semibold text-[var(--dash-text-primary)]">{formatDate(project.estimatedStartDate)}</span>
+                      {/* Timeline bar */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between text-[11px] text-[var(--dash-text-muted)] mb-1">
+                          <span>{member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)}</span>
+                          <span>{member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}</span>
+                        </div>
+                        <TimelineBar
+                          startDate={member.startDate}
+                          endDate={member.endDate}
+                          projectStart={project.estimatedStartDate}
+                          projectEnd={project.estimatedEndDate}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-3">
-                    <p className="text-[12px] text-[var(--dash-text-muted)] font-medium uppercase tracking-wider">End Date</p>
-                    <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border)]">
-                      <Calendar size={18} className="text-purple-400" />
-                      <span className="text-[14px] font-semibold text-[var(--dash-text-primary)]">{project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Ongoing'}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <p className="text-[12px] text-[var(--dash-text-muted)] font-medium uppercase tracking-wider">Duration</p>
-                    <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border)]">
-                      <Clock size={18} className="text-amber-400" />
-                      <span className="text-[14px] font-semibold text-[var(--dash-text-primary)]">{project.estimatedDuration || 8} weeks</span>
-                    </div>
-                  </div>
+                  ))}
+                </div>
+              )}
+            </section>
 
-                  <div className="pt-4 border-t border-[var(--dash-border)]">
-                    <div className="flex items-center gap-2 text-[12px] text-[var(--dash-text-muted)]">
-                      <TrendingUp size={14} />
-                      <span>Project is currently in <b>{statusInfo.label}</b> stage.</span>
-                    </div>
+            {/* Project Timeline Card */}
+            <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
+              <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] mb-6">Project Timeline</h2>
+              <div className="grid grid-cols-3 gap-8">
+                <div className="space-y-1.5">
+                  <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">Start Date</p>
+                  <div className="flex items-center gap-2 text-[14px] font-medium text-[var(--dash-text-primary)]">
+                    <Calendar size={16} className="text-[var(--dash-text-faint)]" />
+                    {formatDate(project.estimatedStartDate)}
                   </div>
                 </div>
-              </section>
-            </div>
+                <div className="space-y-1.5">
+                  <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">End Date</p>
+                  <div className="flex items-center gap-2 text-[14px] font-medium text-[var(--dash-text-primary)]">
+                    <Calendar size={16} className="text-[var(--dash-text-faint)]" />
+                    {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Ongoing'}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">Duration</p>
+                  <div className="text-[14px] font-medium text-[var(--dash-text-primary)]">
+                    {project.estimatedDuration || 8} weeks
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
     </>
   );
 }
+

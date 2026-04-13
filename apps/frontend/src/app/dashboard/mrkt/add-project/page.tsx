@@ -194,7 +194,11 @@ export default function AddProjectPage() {
   const labelClasses = "block text-[13px] font-medium text-gray-700 dark:text-gray-100 mb-2 mt-1 ml-0.5";
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
+=======
+      <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
+>>>>>>> bd9eeeb2f3e294717fd4a64710aa0e4ff7a34fdd
       <div className="mt-2" />
 
       {/* Form Card */}
@@ -612,6 +616,6 @@ export default function AddProjectPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
   );
 }
