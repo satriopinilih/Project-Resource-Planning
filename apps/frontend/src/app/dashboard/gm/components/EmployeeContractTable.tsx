@@ -25,7 +25,7 @@ interface EmployeeContract {
   daysRemaining: number;
   status: "Active" | "Expiring Soon" | "Expired";
   department: string;
-  experienceLevel: string;
+  experienceYears: number;
   skills: string[];
   projects: { name: string; start: string; end: string; status: number }[];
 }
@@ -66,7 +66,7 @@ function mapToContract(u: BackendEmployee): EmployeeContract {
     daysRemaining: u.daysRemaining,
     status: type === "Permanent" ? "Active" : mapContractStatus(u.contractStatus),
     department: u.departmentName,
-    experienceLevel: u.experienceLevel,
+    experienceYears: u.experienceYears,
     skills: u.skills,
     projects: u.projects.map(p => ({
       name: p.projectName,
@@ -472,8 +472,8 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                 </div>
               </div>
               <div>
-                <Label>Experience Level</Label>
-                <Value>{detailModal.experienceLevel} years</Value>
+                <Label>Experience Years</Label>
+                <Value>{detailModal.experienceYears}yr Experience</Value>
               </div>
             </div>
 

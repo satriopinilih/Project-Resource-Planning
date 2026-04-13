@@ -240,9 +240,8 @@ public class RecommendationsController : ControllerBase
             availabilityNote = $"Available from {latestOverlapEnd.Value:MMM dd, yyyy}";
         }
 
-        // 6. Parse experience level
-        int experienceYears = 0;
-        int.TryParse(user.ExperienceLevel, out experienceYears);
+        // 6. Get experience years
+        int experienceYears = user.ExperienceYears;
 
         return new CandidateDto
         {

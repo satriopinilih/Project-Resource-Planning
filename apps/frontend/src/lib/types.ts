@@ -20,9 +20,7 @@ export interface Employee {
   contractEnd: string;
   contractStatus: 'Active' | 'Expiring Soon';
   daysRemaining?: number;
-  experience?: string;
-  experienceYears?: number;
-  level?: number;
+  experienceYears: number;
   skills?: string[];
   projects?: Project[];
 }

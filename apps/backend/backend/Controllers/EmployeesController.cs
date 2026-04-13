@@ -193,7 +193,7 @@ public class EmployeesController : ControllerBase
             Password = temporaryPassword,
             DepartmentId = request.DepartmentId,
             EmployeeType = request.EmployeeType,
-            ExperienceLevel = request.ExperienceLevel,
+            ExperienceYears = request.ExperienceYears,
             ContractStart = DateTime.SpecifyKind(request.ContractStart, DateTimeKind.Utc),
             ContractEnd = DateTime.SpecifyKind(request.ContractEnd, DateTimeKind.Utc),
             ContractStatus = request.ContractEnd.Date < DateTime.UtcNow.Date
@@ -321,7 +321,7 @@ public class EmployeesController : ControllerBase
             DepartmentName = u.Department?.DepartmentName ?? string.Empty,
             EmployeeType = u.EmployeeType,
             Role = u.UserStaffRoles.Select(x => x.StaffRole.RoleName).FirstOrDefault() ?? u.UserRoles.Select(x => x.Role.RoleName.ToString()).FirstOrDefault() ?? "Staff",
-            ExperienceLevel = u.ExperienceLevel,
+            ExperienceYears = u.ExperienceYears,
             ContractStart = u.ContractStart,
             ContractEnd = u.ContractEnd,
             ContractStatus = u.ContractStatus,

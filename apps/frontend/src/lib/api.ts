@@ -34,7 +34,7 @@ type BackendUser = {
   departmentId: number;
   departmentName: string;
   employeeType: 'Contract' | 'Permanent' | string | number;
-  experienceLevel: string;
+  experienceYears: number;
   contractStart: string;
   contractEnd: string;
   contractStatus: 'Active' | 'Expired' | 'ExpiringSoon';
@@ -117,7 +117,7 @@ export type BackendEmployee = {
   departmentId: number;
   departmentName: string;
   employeeType: number; // 0=Contract,1=Permanent
-  experienceLevel: string;
+  experienceYears: number;
   contractStart: string;
   contractEnd: string;
   contractStatus: number; // 0=Active,1=Expired,2=ExpiringSoon
@@ -198,7 +198,7 @@ const mapEmployee = (user: BackendUser): Employee => {
     contractEnd: formatDate(user.contractEnd),
     contractStatus,
     daysRemaining: user.daysRemaining,
-    experience: user.experienceLevel,
+    experienceYears: user.experienceYears,
     skills: user.skills,
     projects: user.projects.map(mapProject)
   };
@@ -399,7 +399,7 @@ export type CreateEmployeeRequest = {
   password: string;
   departmentId: number;
   employeeType: number;
-  experienceLevel: string;
+  experienceYears: number;
   contractStart: string;
   contractEnd: string;
   skillIds: number[];
@@ -467,6 +467,27 @@ export async function createHireRequest(payload: CreateHireRequestPayload): Prom
   return fetchJson<HireRequest>('/api/hirerequests', {
     method: 'POST',
     body: JSON.stringify(payload)
+  });
+}
+
+export async function createTimelineEditRequest(payload: {
+  projectId: number;
+  projectName: string;
+  notes: string;
+  currentStartDate: string;
+  currentEndDate: string;
+}): Promise<HireRequest> {
+  return fetchJson<HireRequest>('/api/hirerequests', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: payload.projectId,
+      projectName: payload.projectName,
+      roleNeeded: 'Timeline Edit Request',
+      quantity: 1,
+      startDate: payload.currentStartDate,
+      endDate: payload.currentEndDate,
+      notes: `[TIMELINE EDIT REQUEST] ${payload.notes}`,
+    } satisfies CreateHireRequestPayload)
   });
 }
 

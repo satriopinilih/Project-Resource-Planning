@@ -84,7 +84,7 @@ public class PMProjectController : ControllerBase
 
         var result = userData.Select(u => new {
             label = u.UserName,
-            subLabel = u.UserStaffRoles.Select(usr => usr.StaffRole.RoleName).FirstOrDefault() ?? u.ExperienceLevel,
+            subLabel = u.UserStaffRoles.Select(usr => usr.StaffRole.RoleName).FirstOrDefault() ?? u.ExperienceYears.ToString() + "yr",
             
             bars = u.UserProjects
                 .Where(up => !IsPM || pmProjectIds.Contains(up.ProjectId))

@@ -148,7 +148,7 @@ export default function TeamMembersPage() {
                         {member.role}
                       </p>
                       <p className="text-[12px] text-gray-500 mt-0.5">
-                        Exp: {member.experienceLevel || "N/A"}
+                        Exp: {member.experienceYears}yr
                       </p>
 
                       <div className="mt-3 flex flex-col items-start gap-1">
@@ -223,9 +223,9 @@ function MemberDetail({ member }: { member: BackendEmployee }) {
             <span className="inline-block px-3 py-1 text-[12px] font-semibold rounded-md bg-[#1e3a8a]/30 text-[#93c5fd]">
               {typeLabel}
             </span>
-            {member.experienceLevel && (
+            {member.experienceYears !== undefined && (
               <span className="inline-block px-3 py-1 text-[12px] font-semibold rounded-md bg-gray-800 text-gray-300">
-                {member.experienceLevel}
+                {member.experienceYears}yr Experience
               </span>
             )}
           </div>

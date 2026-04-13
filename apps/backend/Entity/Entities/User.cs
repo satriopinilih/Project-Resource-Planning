@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Commons.Enums;
 using Entities.Entities;
@@ -24,8 +24,7 @@ public class User
 
     public EmployeeType EmployeeType { get; set; }
 
-    [StringLength(50)]
-    public string ExperienceLevel { get; set; } = string.Empty;   // "1Tahun", "2Tahun", etc.
+    public int ExperienceYears { get; set; }
 
     public DateTime ContractStart { get; set; }
     public DateTime ContractEnd { get; set; }

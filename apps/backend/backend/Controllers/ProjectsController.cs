@@ -158,6 +158,8 @@ public class ProjectsController : ControllerBase
             EstimatedEndDate = p.EstimatedEndDate,
             ProjectStatus = p.ProjectStatus,
             IsUnread = currentUserId != null && p.UserProjects.Any(up => up.UserId == currentUserId && !up.IsNotificationRead),
+            RequiredRoles = requiredRoles,
+            RequiredSkills = requiredSkills,
             Members = p.UserProjects
                 // Sembunyikan Project Manager dari daftar member — fokus ke staff saja
                 .Where(up => !up.RoleInProject.Equals("Project Manager", StringComparison.OrdinalIgnoreCase))
