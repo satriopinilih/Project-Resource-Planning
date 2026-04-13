@@ -224,7 +224,8 @@ public class ProjectsController : ControllerBase
                             ProjectID = project.ProjectID,
                             StaffRoleId = staffRole.StaffRoleId,
                             RequiredCount = roleDto.Count,
-                            WorkingType = roleDto.WorkingType
+                            WorkingType = roleDto.WorkingType,
+                            RequiredSkill = roleDto.RequiredSkill
                         };
                         _db.ProjectRequiredRoles.Add(requiredRole);
                     }

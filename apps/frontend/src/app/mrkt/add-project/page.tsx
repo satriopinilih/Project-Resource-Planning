@@ -37,7 +37,7 @@ export default function AddProjectPage() {
   const router = useRouter();
 
   const [teamRoles, setTeamRoles] = useState([
-    { id: '1', role: 'Project Manager', count: 1, workingType: 'Dedicated' }
+    { id: '1', role: 'Project Manager', count: 1, workingType: 'Dedicated', requiredSkill: '' }
   ]);
 
   const handleAddRole = () => {
@@ -45,7 +45,8 @@ export default function AddProjectPage() {
       id: Math.random().toString(36).substring(2, 9),
       role: 'Senior BA',
       count: 1,
-      workingType: 'Dedicated'
+      workingType: 'Dedicated',
+      requiredSkill: ''
     }]);
   };
 
@@ -177,7 +178,8 @@ export default function AddProjectPage() {
       requiredRoles: teamRoles.map(r => ({
         roleName: r.role,
         count: r.count,
-        workingType: workingTypeMap[r.workingType] ?? 1
+        workingType: workingTypeMap[r.workingType] ?? 1,
+        requiredSkill: r.requiredSkill
       }))
     };
 
@@ -415,6 +417,16 @@ export default function AddProjectPage() {
                       <option value="Ad-hoc">Ad-hoc</option>
                     </select>
                   </div>
+                  <div className="flex-[3]">
+                    {index === 0 && <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Required Skill</div>}
+                    <input
+                      type="text"
+                      className={inputClasses}
+                      placeholder="e.g. React, C#"
+                      value={roleItem.requiredSkill || ''}
+                      onChange={(e) => updateRole(roleItem.id, 'requiredSkill', e.target.value)}
+                    />
+                  </div>
 
                   {index !== 0 ? (
                     <button
@@ -520,9 +532,16 @@ export default function AddProjectPage() {
                 <span className="text-gray-500 dark:text-gray-400 mt-1">Team Roles</span>
                 <div className="col-span-1 sm:col-span-2 space-y-2">
                   {teamRoles.map((r, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 p-2 px-3 rounded-lg border border-gray-100 dark:border-white/5">
-                      <span className="font-medium">{r.role} <span className="text-gray-400 mx-1">x</span> {r.count}</span>
-                      <span className="text-[12px] text-gray-500 dark:text-gray-400">{r.workingType}</span>
+                    <div key={idx} className="flex flex-col justify-center text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 p-2 px-3 rounded-lg border border-gray-100 dark:border-white/5">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{r.role} <span className="text-gray-400 mx-1">x</span> {r.count}</span>
+                        <span className="text-[12px] text-gray-500 dark:text-gray-400">{r.workingType}</span>
+                      </div>
+                      {r.requiredSkill && (
+                        <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
+                          <span className="font-medium text-gray-600 dark:text-gray-300">Skills:</span> {r.requiredSkill}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

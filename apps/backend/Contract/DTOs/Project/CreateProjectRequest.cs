@@ -34,4 +34,6 @@ public class CreateProjectRoleDto
     public int Count { get; set; }
 
     public WorkingType WorkingType { get; set; }
+
+    public string RequiredSkill { get; set; } = string.Empty;
 }

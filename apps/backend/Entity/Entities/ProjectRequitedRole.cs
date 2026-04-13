@@ -19,6 +19,8 @@ public class ProjectRequiredRole
 
     public WorkingType WorkingType { get; set; }
 
+    public string RequiredSkill { get; set; } = string.Empty;
+
     [ForeignKey(nameof(ProjectID))]
     public virtual Project Project { get; set; } = default!;
 
