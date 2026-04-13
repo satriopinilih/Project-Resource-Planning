@@ -12,6 +12,7 @@ interface Project {
   client: string;
   status: "Active" | "Upcoming" | "Completed" | "On Hold";
   timeline: string;
+  startDateRaw: string;
   pm: string;
   team: number;
   budget: string;
@@ -43,6 +44,9 @@ function PMProjectsContent() {
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [clientFilter, setClientFilter] = useState("All Clients");
+  const [sortBy, setSortBy] = useState("name-asc");
 
   useEffect(() => {
     const filterParam = searchParams.get("filter");
@@ -70,6 +74,7 @@ function PMProjectsContent() {
             client: p.clientOrganization || "Internal",
             status: mapStatus(p.projectStatus),
             timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
+            startDateRaw: p.estimatedStartDate,
             pm: pmMember ? pmMember.userId : currentPmId,
             team: p.members?.length || 0,
             budget: "N/A",
@@ -86,13 +91,26 @@ function PMProjectsContent() {
     fetchProjects();
   }, []);
 
+  const clients = ["All Clients", ...Array.from(new Set(projectsData.map((p) => p.client)))];
+
   const filteredProjects = projectsData.filter((project) => {
     const matchesTab = activeTab === "All" || project.status === activeTab;
     const matchesSearch =
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesClient = clientFilter === "All Clients" || project.client === clientFilter;
 
-    return matchesTab && matchesSearch;
+    return matchesTab && matchesSearch && matchesClient;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "name-asc": return a.name.localeCompare(b.name);
+      case "name-desc": return b.name.localeCompare(a.name);
+      case "newest": return new Date(b.startDateRaw).getTime() - new Date(a.startDateRaw).getTime();
+      case "oldest": return new Date(a.startDateRaw).getTime() - new Date(b.startDateRaw).getTime();
+      case "most-member": return b.team - a.team;
+      case "least-member": return a.team - b.team;
+      default: return 0;
+    }
   });
 
   return (
@@ -113,7 +131,14 @@ function PMProjectsContent() {
               className="w-full h-10 pl-10 pr-4 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
             />
           </div>
-          <button className="p-2 text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-colors cursor-pointer">
+          <button
+            onClick={() => setShowFilters((prev) => !prev)}
+            className={`p-2 transition-colors cursor-pointer rounded-lg ${
+              showFilters
+                ? 'text-[#3b82f6] bg-blue-500/10'
+                : 'text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]'
+            }`}
+          >
             <Filter size={18} strokeWidth={1.8} />
           </button>
         </div>
@@ -124,8 +149,8 @@ function PMProjectsContent() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`pb-3 text-[13px] font-semibold transition-all relative ${activeTab === tab
-                  ? "text-[var(--dash-text-heading)]"
-                  : "text-[var(--dash-text-faint)] hover:text-[var(--dash-text-muted)]"
+                ? "text-[var(--dash-text-heading)]"
+                : "text-[var(--dash-text-faint)] hover:text-[var(--dash-text-muted)]"
                 } cursor-pointer`}
             >
               {tab}
@@ -135,6 +160,52 @@ function PMProjectsContent() {
             </button>
           ))}
         </div>
+
+        {showFilters && (
+          <div className="mx-5 mt-4 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg-elevated)] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-[13px] font-semibold text-[var(--dash-text-heading)]">Filters &amp; Sorting</h4>
+              <button
+                onClick={() => {
+                  setClientFilter("All Clients");
+                  setSortBy("name-asc");
+                }}
+                className="text-[12px] font-semibold text-[#3b82f6] hover:text-[#60a5fa]"
+              >
+                Reset All
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Filter by Client</label>
+                <select
+                  value={clientFilter}
+                  onChange={(e) => setClientFilter(e.target.value)}
+                  className="w-full h-10 px-3 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg"
+                >
+                  {clients.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full h-10 px-3 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="newest">Timeline (Newest First)</option>
+                  <option value="oldest">Timeline (Oldest First)</option>
+                  <option value="most-member">Team (Most Members)</option>
+                  <option value="least-member">Team (Least Members)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -191,14 +262,14 @@ function PMProjectsContent() {
                     <td className="py-4 px-4">
                       <span
                         className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${project.status === "Upcoming"
-                            ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                            : project.status === "Active"
-                              ? "bg-green-500/10 text-green-400 border-green-500/20"
-                              : project.status === "Completed"
-                                ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
-                                : project.status === "On Hold"
-                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                                  : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                          ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                          : project.status === "Active"
+                            ? "bg-green-500/10 text-green-400 border-green-500/20"
+                            : project.status === "Completed"
+                              ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                              : project.status === "On Hold"
+                                ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                           }`}
                       >
                         {project.status}
