@@ -75,28 +75,28 @@ export default function PMDashboard() {
           value={stats.total}
           icon={<FolderKanban />}
           variant="premium"
-          onClick={() => router.push("/pm/projects?filter=All")}
+          onClick={() => router.push("/project?filter=All")}
         />
         <PMStatCard
           title="Scheduled"
           value={stats.scheduled}
           icon={<CalendarClock />}
           variant="sky"
-          onClick={() => router.push("/pm/projects?filter=Upcoming")}
+          onClick={() => router.push("/project?filter=Upcoming")}
         />
         <PMStatCard
           title="Running"
           value={stats.running}
           icon={<Users />}
           variant="blue"
-          onClick={() => router.push("/pm/projects?filter=Active")}
+          onClick={() => router.push("/project?filter=Active")}
         />
         <PMStatCard
           title="Completed"
           value={stats.completed}
           icon={<CheckCircle2 />}
           variant="green"
-          onClick={() => router.push("/pm/projects?filter=Completed")}
+          onClick={() => router.push("/project?filter=Completed")}
         />
       </div>
 

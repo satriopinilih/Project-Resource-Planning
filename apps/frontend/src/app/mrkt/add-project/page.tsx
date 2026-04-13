@@ -188,7 +188,7 @@ export default function AddProjectPage() {
       setIsConfirmModalOpen(false);
       setShowSuccess(true);
       setTimeout(() => {
-        router.push("/mrkt/dashboard");
+        router.push("/dashboard");
       }, 2000);
     } catch (err: any) {
       console.error(err);

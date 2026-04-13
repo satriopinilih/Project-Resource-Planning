@@ -14,8 +14,8 @@ export default function MarketingSidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { label: "Dashboard", href: "/mrkt/dashboard", icon: LayoutDashboard },
-    { label: "Projects", href: "/mrkt/projects", icon: FolderKanban },
+    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Projects", href: "/project", icon: FolderKanban },
     { label: "Add Project", href: "/mrkt/add-project", icon: PlusCircle },
     { label: "Settings", href: "/mrkt/settings", icon: Settings },
   ];
@@ -40,7 +40,7 @@ export default function MarketingSidebar() {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/mrkt/dashboard" && pathname.startsWith(item.href));
+            (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
           return (
             <Link

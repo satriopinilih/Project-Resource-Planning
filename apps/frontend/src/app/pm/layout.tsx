@@ -33,7 +33,7 @@ export default function PMLayout({
   // Map pathname to header title
   const getHeaderTitle = () => {
     if (pathname.includes("/dashboard")) return "PM Dashboard";
-    if (pathname.includes("/team-members")) return "Team Members";
+    if (pathname.includes("/team-members") || pathname.includes("/teammember")) return "Team Members";
     if (pathname.includes("/projects")) return "Projects";
     if (pathname.includes("/settings")) return "Settings";
     return "Project Management";
@@ -55,7 +55,7 @@ export default function PMLayout({
       <AppSidebar role="PM" />
       <div className="flex-1 ml-64 flex flex-col h-screen overflow-hidden">
         <AppHeader title={getHeaderTitle()} role="PM" />
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

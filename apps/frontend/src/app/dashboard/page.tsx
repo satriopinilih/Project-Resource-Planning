@@ -10,7 +10,9 @@ import AlertBanner from './gm/components/AlertBanner';
 import ProjectTimeline from './gm/components/ProjectTimeline';
 import ResourcePipeline from './gm/components/ResourcePipeline';
 import EmployeeContractTable from './gm/components/EmployeeContractTable';
-import HRDashboard from '@/components/dashboards/HRDashboard';
+import HRDashboard from './hr/components/HRDashboard';
+import PMDashboard from '../pm/dashboard/page';
+import MarketingDashboard from '../mrkt/dashboard/page';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -22,23 +24,13 @@ export default function DashboardPage() {
     const sessionUser = getSessionUser();
     const sessionRole = getPrimaryRole(sessionUser?.roles ?? []);
 
-    setUser(sessionUser);
-    setRole(sessionRole);
-    setReady(true);
-
     if (!sessionUser || !sessionRole) {
       router.push('/login');
       return;
     }
-    if (role === "Marketing") {
-    router.push('/mrkt/dashboard');
-    return;
-  }
-
-    if (sessionRole === 'PM') {
-      router.push('/pm/dashboard');
-      return;
-    }
+    setUser(sessionUser);
+    setRole(sessionRole);
+    setReady(true);
   }, [router]);
 
   if (!ready || !user || !role) {
@@ -72,6 +64,29 @@ export default function DashboardPage() {
 
   if (role === 'HR') {
     return <HRDashboard />;
+  }
+
+  if (role === 'PM') {
+    return (
+      <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
+        <AppSidebar role="PM" />
+        <main className="flex-1 ml-64 flex flex-col min-h-screen">
+          <AppHeader title="PM Dashboard" role="PM" />
+          <PMDashboard />
+        </main>
+      </div>
+    );
+  }
+
+  if (role === 'Marketing') {
+    return (
+      <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
+        <AppSidebar role="Marketing" />
+        <main className="flex-1 ml-64 flex flex-col min-h-screen">
+          <MarketingDashboard />
+        </main>
+      </div>
+    );
   }
 
   return (

@@ -9,12 +9,14 @@ import Modal from '@/components/Modal';
 import EmployeeContractTable from '@/app/dashboard/gm/components/EmployeeContractTable';
 import {
   approveContractExtension,
+  HireRequest,
   createEmployee,
   declineHireRequest,
   declineContractExtension,
   fulfillHireRequest,
   getContractExtensionRequests,
   getEmployeeFormOptions,
+  getHireRequests,
   getRawEmployees,
   getRequestHistory,
   startHireRequest,
@@ -26,6 +28,7 @@ import { ContractExtensionRequest, RequestHistoryItem } from '@/lib/types';
 export default function HRDashboard() {
   const [employees, setEmployees] = useState<BackendEmployee[]>([]);
   const [contractExtensionRequests, setContractExtensionRequests] = useState<ContractExtensionRequest[]>([]);
+  const [hireRequests, setHireRequests] = useState<HireRequest[]>([]);
   const [requestHistory, setRequestHistory] = useState<RequestHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +37,7 @@ export default function HRDashboard() {
   const [selectedRequest, setSelectedRequest] = useState<ContractExtensionRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [hireEmployeeModalOpen, setHireEmployeeModalOpen] = useState(false);
-  const [selectedHireRequestId, setSelectedHireRequestId] = useState<string | null>(null);
+  const [selectedHireRequestId, setSelectedHireRequestId] = useState<number | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [hireFormError, setHireFormError] = useState<string | null>(null);
   const [showTempPassword, setShowTempPassword] = useState<string | null>(null);
@@ -59,15 +62,17 @@ export default function HRDashboard() {
         setIsLoading(true);
         setError(null);
 
-      const [allEmployees, requests, history, formOptions] = await Promise.all([
+      const [allEmployees, requests, hires, history, formOptions] = await Promise.all([
         getRawEmployees(),
         getContractExtensionRequests('Pending'),
+        getHireRequests(),
         getRequestHistory('HR'),
         getEmployeeFormOptions()
       ]);
 
       setEmployees(allEmployees);
       setContractExtensionRequests(requests);
+      setHireRequests(hires);
       setRequestHistory(history);
       setEmployeeFormOptions(formOptions);
 
@@ -94,26 +99,13 @@ export default function HRDashboard() {
     loadData();
   }, []);
 
-  const deriveHireState = (item: RequestHistoryItem): 'Open' | 'In Progress' | 'Fulfilled' => {
-    if (item.status === 'Completed' || item.status === 'Approved' || item.status === 'Fulfilled') {
-      return 'Fulfilled';
-    }
-
-    if (item.status === 'InProgress' || item.status === 'In Progress') {
-      return 'In Progress';
-    }
-
-    return 'Open';
-  };
-
   const expiringEmployees = useMemo(
     () => employees.filter((e) => e.daysRemaining !== undefined && e.daysRemaining <= 60),
     [employees]
   );
 
   const stats = useMemo(() => {
-    const hireRequests = requestHistory.filter((r) => r.requestType === 'Hire New Person');
-    const openHire = hireRequests.filter((r) => deriveHireState(r) !== 'Fulfilled').length;
+    const openHire = hireRequests.filter((r) => r.status === 'Open' || r.status === 'InProgress').length;
     const pending = contractExtensionRequests.filter((r) => r.status === 'Pending').length;
     const now = new Date();
     const approvedThisMonth = requestHistory.filter((r) => {
@@ -130,15 +122,10 @@ export default function HRDashboard() {
       openHireRequests: openHire,
       approvedThisMonth
     };
-  }, [employees, expiringEmployees, contractExtensionRequests, requestHistory]);
-
-  const hireRequests = useMemo(
-    () => requestHistory.filter((r) => r.requestType === 'Hire New Person'),
-    [requestHistory]
-  );
+  }, [employees, expiringEmployees, contractExtensionRequests, hireRequests, requestHistory]);
 
   const activeHireRequests = useMemo(
-    () => hireRequests.filter((r) => deriveHireState(r) !== 'Fulfilled'),
+    () => hireRequests.filter((r) => r.status !== 'Fulfilled'),
     [hireRequests]
   );
 
@@ -168,33 +155,30 @@ export default function HRDashboard() {
   };
 
   const selectedHireRequest = useMemo(
-    () => hireRequests.find((r) => r.referenceId === selectedHireRequestId) ?? null,
+    () => hireRequests.find((r) => r.hireRequestId === selectedHireRequestId) ?? null,
     [hireRequests, selectedHireRequestId]
   );
 
-  const parseHireRequestId = (referenceId: string): number | null => {
-    if (!referenceId.startsWith('HIRE-')) return null;
-    const id = Number(referenceId.replace('HIRE-', ''));
-    return Number.isNaN(id) ? null : id;
-  };
-
-  const handleStartHireRequest = async (referenceId: string) => {
-    const id = parseHireRequestId(referenceId);
-    if (!id) return;
+  const handleStartHireRequest = async (id: number) => {
     await startHireRequest(id);
     await loadData();
   };
 
-  const handleFulfillHireRequest = async (referenceId: string, hiredEmployeeName?: string) => {
-    const id = parseHireRequestId(referenceId);
-    if (!id) return;
+  const handleFulfillHireRequest = async (id: number, hiredEmployeeName?: string) => {
     await fulfillHireRequest(id, hiredEmployeeName);
     await loadData();
   };
 
-  const openAddEmployeeModal = (requestId: string) => {
+  const openAddEmployeeModal = (requestId: number) => {
     setSelectedHireRequestId(requestId);
     setHireEmployeeModalOpen(true);
+
+    const selectedRequest = hireRequests.find((request) => request.hireRequestId === requestId);
+    if (!selectedRequest) return;
+    const matchingStaffRole = employeeFormOptions.staffRoles.find((role) => role.name === selectedRequest.roleNeeded);
+    if (matchingStaffRole) {
+      setHireForm((prev) => ({ ...prev, staffRoleId: matchingStaffRole.id, role: matchingStaffRole.name }));
+    }
   };
 
   const handleAddEmployee = async () => {
@@ -243,7 +227,7 @@ export default function HRDashboard() {
       setShowTempPassword(created.temporaryPassword);
 
       if (selectedHireRequest) {
-        await handleFulfillHireRequest(selectedHireRequest.referenceId, hireForm.name);
+        await handleFulfillHireRequest(selectedHireRequest.hireRequestId, hireForm.name);
       }
       setHireEmployeeModalOpen(false);
       setSelectedHireRequestId(null);
@@ -322,39 +306,45 @@ export default function HRDashboard() {
                   </thead>
                   <tbody>
                     {activeHireRequests.map((item) => {
-                      const state = deriveHireState(item);
+                      const state = item.status;
                       const statusClass =
                         state === 'Open'
                           ? 'bg-red-500/15 text-red-600 dark:text-red-400'
-                          : state === 'In Progress'
+                          : state === 'InProgress'
                             ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
-                            : 'bg-green-500/15 text-green-600 dark:text-green-400';
+                            : state === 'Declined'
+                              ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300'
+                              : 'bg-green-500/15 text-green-600 dark:text-green-400';
 
                       return (
-                        <tr key={item.referenceId} className="border-b border-gray-100 dark:border-gray-700">
+                        <tr key={item.hireRequestId} className="border-b border-gray-100 dark:border-gray-700">
                           <td className="py-4 px-4">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.staffRole}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Required for {item.employeeName} - Dedicated resource</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.roleNeeded}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.notes || 'No additional notes'}</p>
                           </td>
-                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">1</td>
-                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.employeeName}</td>
-                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.requestedDate}</td>
-                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.reviewedDate ?? '-'}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.projectName}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{formatDateLabel(item.startDate)}</td>
+                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{formatDateLabel(item.endDate)}</td>
                           <td className="py-4 px-4">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>{state}</span>
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>{state === 'InProgress' ? 'In Progress' : state}</span>
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-2">
                               {state === 'Open' && (
-                                <button onClick={() => handleStartHireRequest(item.referenceId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">Start</button>
-                              )}
-                              {state === 'In Progress' && (
                                 <>
-                                  <button onClick={() => openAddEmployeeModal(item.referenceId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-purple-600 text-white hover:bg-purple-700">Add Employee</button>
+                                  <button onClick={() => handleStartHireRequest(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">Start</button>
                                   <button onClick={async () => {
-                                    const id = Number(item.referenceId.replace('HIRE-', ''));
-                                    if (Number.isNaN(id)) return;
-                                    await declineHireRequest(id, 'Declined by HR');
+                                    await declineHireRequest(item.hireRequestId, 'Declined by HR');
+                                    await loadData();
+                                  }} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
+                                </>
+                              )}
+                              {state === 'InProgress' && (
+                                <>
+                                  <button onClick={() => openAddEmployeeModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-purple-600 text-white hover:bg-purple-700">Add Employee</button>
+                                  <button onClick={async () => {
+                                    await declineHireRequest(item.hireRequestId, 'Declined by HR');
                                     await loadData();
                                   }} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
                                 </>
@@ -375,7 +365,7 @@ export default function HRDashboard() {
             {contractExtensionRequests.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending extension requests</div>
             ) : contractExtensionRequests.map((request) => (
-              <div key={request.id} className="border-2 border-yellow-300 dark:border-yellow-600 rounded-lg p-6 bg-yellow-50/30 dark:bg-yellow-900/10 mb-4">
+              <div key={request.id} className="border-2 border-amber-300 dark:border-yellow-600 rounded-lg p-6 bg-amber-50/70 dark:bg-yellow-900/10 mb-4">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{request.employeeName}</h3>
@@ -410,9 +400,9 @@ export default function HRDashboard() {
                   </div>
                 </div>
 
-                <div className="mb-4 rounded-md bg-slate-700/40 border border-slate-600/40 px-3 py-2">
-                  <p className="text-xs text-gray-300 mb-1">Reason:</p>
-                  <p className="text-sm text-gray-100">{request.reason}</p>
+                <div className="mb-4 rounded-md bg-gray-100 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600/40 px-3 py-2">
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">Reason:</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-100">{request.reason}</p>
                 </div>
 
                 <div className="flex gap-3">
@@ -554,20 +544,20 @@ export default function HRDashboard() {
                 <>
                   <div>
                     <p className="text-sm text-gray-400">Role Needed</p>
-                    <p className="text-2xl font-semibold">{selectedHireRequest.staffRole}</p>
+                    <p className="text-2xl font-semibold">{selectedHireRequest.roleNeeded}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Project</p>
-                    <p className="text-2xl font-semibold">{selectedHireRequest.employeeName}</p>
+                    <p className="text-2xl font-semibold">{selectedHireRequest.projectName}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-sm text-gray-400">Start Date</p>
-                      <p className="text-xl">{selectedHireRequest.requestedDate}</p>
+                      <p className="text-xl">{formatDateLabel(selectedHireRequest.startDate)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">End Date</p>
-                      <p className="text-xl">{selectedHireRequest.reviewedDate ?? '-'}</p>
+                      <p className="text-xl">{formatDateLabel(selectedHireRequest.endDate)}</p>
                     </div>
                   </div>
                 </>

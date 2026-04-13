@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPrimaryRole, getSessionUser, SessionUser } from '@/lib/auth';
 import GMProjectsPage from '../dashboard/gm/projects/page';
+import PMProjectsPage from '../pm/projects/page';
+import MarketingProjectsPage from '../mrkt/projects/page';
 import AppSidebar from '@/components/AppSidebar';
 
 export default function ProjectPage() {
@@ -23,18 +25,20 @@ export default function ProjectPage() {
       router.push('/login');
       return;
     }
-    if (sessionRole !== 'GM') {
+    if (sessionRole !== 'GM' && sessionRole !== 'PM' && sessionRole !== 'Marketing') {
       router.push('/dashboard');
     }
   }, [router]);
 
-  if (!ready || !user || role !== 'GM') return null;
+  if (!ready || !user || !role) return null;
 
   return (
     <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
-      <AppSidebar role="GM" />
+      <AppSidebar role={role} />
       <main className="flex-1 ml-64 flex flex-col min-h-screen">
-        <GMProjectsPage />
+        {role === 'GM' && <GMProjectsPage />}
+        {role === 'PM' && <PMProjectsPage />}
+        {role === 'Marketing' && <MarketingProjectsPage />}
       </main>
     </div>
   );
