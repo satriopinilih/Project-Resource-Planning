@@ -10,7 +10,7 @@ import AlertBanner from './gm/components/AlertBanner';
 import ProjectTimeline from './gm/components/ProjectTimeline';
 import ResourcePipeline from './gm/components/ResourcePipeline';
 import EmployeeContractTable from './gm/components/EmployeeContractTable';
-import HRDashboard from '@/components/dashboards/HRDashboard';
+import HRDashboard from './hr/components/HRDashboard';
 
 export default function DashboardPage() {
   const router = useRouter();
