@@ -1,0 +1,435 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  Calendar,
+  Loader2,
+  Briefcase,
+  LayoutGrid,
+  Target,
+  TrendingUp,
+  CheckCircle2,
+  Users2,
+  Building2,
+  FileText,
+  ShieldAlert,
+  Clock,
+  ChevronRight,
+  UserPlus,
+} from "lucide-react";
+import { getProjectById, BackendProject } from "@/lib/api";
+
+const mapStatus = (backendStatus: number, startDateStr?: string) => {
+  switch (backendStatus) {
+    case 0: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+    case 1: return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
+    case 2: {
+      if (startDateStr) {
+        const startDate = new Date(startDateStr);
+        const today = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        if (startDate > today) return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
+      }
+      return { label: "Active", class: "bg-green-500/10 text-green-400 border-green-500/20" };
+    }
+    case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
+    default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+  }
+};
+
+const mapPriority = (p: number) => {
+  switch (p) {
+    case 0: return "Low";
+    case 1: return "Medium";
+    case 2: return "High";
+    default: return "Normal";
+  }
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return "TBD";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "TBD";
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+};
+
+/* ── Timeline bar helper ── */
+function TimelineBar({
+  startDate,
+  endDate,
+  projectStart,
+  projectEnd,
+}: {
+  startDate: string | null;
+  endDate: string | null;
+  projectStart: string;
+  projectEnd: string;
+}) {
+  const pStart = new Date(projectStart).getTime();
+  const pEnd = new Date(projectEnd).getTime();
+  const mStart = startDate ? new Date(startDate).getTime() : pStart;
+  const mEnd = endDate ? new Date(endDate).getTime() : pEnd;
+  const total = pEnd - pStart || 1;
+  const left = Math.max(0, Math.min(100, ((mStart - pStart) / total) * 100));
+  const width = Math.max(2, Math.min(100 - left, ((mEnd - mStart) / total) * 100));
+
+  return (
+    <div className="relative w-full h-2 bg-gray-800 rounded-full overflow-hidden mt-2">
+      <div
+        className="absolute top-0 h-full bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] rounded-full transition-all duration-500"
+        style={{ left: `${left}%`, width: `${width}%` }}
+      />
+    </div>
+  );
+}
+
+export default function PMProjectDetailsPage() {
+  const params = useParams();
+  const idStr = Array.isArray(params.id) ? params.id[0] : params.id;
+  const router = useRouter();
+  const [project, setProject] = useState<BackendProject | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProject = async () => {
+      try {
+        if (!idStr) return;
+
+        let numericIdStr = idStr;
+        if (idStr.startsWith("proj")) {
+          const stripped = idStr.replace("proj", "");
+          numericIdStr = parseInt(stripped, 10).toString();
+        }
+
+        const data = await getProjectById(numericIdStr);
+        setProject(data);
+      } catch (err) {
+        console.error("Error fetching project details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProject();
+  }, [idStr]);
+
+  if (loading || !project) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        {loading ? <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" /> : <p className="text-[var(--dash-text-muted)]">Project not found.</p>}
+      </div>
+    );
+  }
+
+  const statusInfo = mapStatus(project.projectStatus, project.estimatedStartDate);
+  const totalNeeded = project.requiredRoles?.reduce((s, r) => s + r.requiredCount, 0) || 0;
+  const totalFilled = project.requiredRoles?.reduce((s, r) => s + r.filledCount, 0) || 0;
+  const staffingPct = totalNeeded > 0 ? Math.round((totalFilled / totalNeeded) * 100) : 0;
+
+  return (
+    <>
+      <div className="px-8 pt-6">
+        <button
+          onClick={() => router.push('/project')}
+          className="text-[#3b82f6] flex items-center gap-2 hover:underline text-[14px] font-medium transition-all"
+        >
+          &larr; Back to Project List
+        </button>
+      </div>
+
+      <div className="p-8 w-full bg-[var(--dash-bg-page)] text-[var(--dash-text-primary)]">
+        <div className="w-full space-y-8 pb-12">
+
+          {/* Status Context Header */}
+          {project.projectStatus === 0 && (
+            <div className="bg-[#1e3a8a]/20 border border-[#1e3a8a]/40 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#1e3a8a]/40 text-[#60a5fa] rounded-lg">
+                  <LayoutGrid size={20} />
+                </div>
+                <div>
+                  <p className="text-[14px] font-bold text-white">Project Setup Phase</p>
+                  <p className="text-[12px] text-[#60a5fa]">Marketing has initiated this project. Finalize timeline and staff assignment below.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="px-3 py-2 bg-gray-700/50 text-gray-400 border border-gray-600/30 rounded-lg text-[12px] font-semibold">
+                  Read Only (PM View)
+                </div>
+                <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400">
+                  Step 1 of 2: Assign Timeline &amp; Team
+                  <ChevronRight size={14} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── 1. Project Summary Banner ── */}
+          <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden shadow-sm">
+            {/* Header */}
+            <div className="p-8 pb-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-3 max-w-3xl flex-1 mr-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-[#2B7FFC]/10 rounded-lg">
+                      <Briefcase size={18} className="text-[#2B7FFC]" />
+                    </div>
+                    <span className="text-[11px] font-bold text-[var(--dash-text-muted)] uppercase tracking-widest">
+                      {project.clientOrganization}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <h1 className="text-[26px] font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
+                    <span className={`px-4 py-1 rounded-full text-[12px] font-semibold ${statusInfo.class}`}>
+                      {statusInfo.label}
+                    </span>
+                  </div>
+                  <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed">
+                    {project.projectDescription}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 border-t border-[var(--dash-border)]">
+              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+                <div className="p-2 bg-blue-500/10 rounded-lg"><Calendar size={16} className="text-blue-400" /></div>
+                <div>
+                  <p className="text-[10px] text-[var(--dash-text-muted)] font-bold uppercase tracking-wider">Est. Start Date</p>
+                  <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{formatDate(project.estimatedStartDate)}</p>
+                </div>
+              </div>
+              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+                <div className="p-2 bg-purple-500/10 rounded-lg"><Clock size={16} className="text-purple-400" /></div>
+                <div>
+                  <p className="text-[10px] text-[var(--dash-text-muted)] font-bold uppercase tracking-wider">Est. End Date</p>
+                  <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{formatDate(project.estimatedEndDate)}</p>
+                </div>
+              </div>
+              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+                <div className="p-2 bg-amber-500/10 rounded-lg"><TrendingUp size={16} className="text-amber-400" /></div>
+                <div>
+                  <p className="text-[10px] text-[var(--dash-text-muted)] font-bold uppercase tracking-wider">Est. Duration</p>
+                  <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{project.estimatedDuration} weeks</p>
+                </div>
+              </div>
+              <div className="p-5 flex items-center gap-3">
+                <div className="p-2 bg-green-500/10 rounded-lg"><Users2 size={16} className="text-green-400" /></div>
+                <div>
+                  <p className="text-[10px] text-[var(--dash-text-muted)] font-bold uppercase tracking-wider">Assigned</p>
+                  <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">
+                    {project.members?.length ?? 0}
+                    {(project.requiredRoles?.length ?? 0) > 0 && (
+                      <span className="text-[var(--dash-text-muted)] font-normal">
+                        {" "}/ {project.requiredRoles.reduce((sum, r) => sum + r.requiredCount, 0)} needed
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Required Roles Section */}
+            {(project.requiredRoles?.length ?? 0) > 0 && (
+              <div className="border-t border-[var(--dash-border)] p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Target size={16} className="text-[#2B7FFC]" />
+                  <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)] uppercase tracking-wider">Required Team Roles</h3>
+                  <span className="ml-auto text-[11px] text-[var(--dash-text-muted)]">Requested by Marketing</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {project.requiredRoles.map((role) => {
+                    const isFilled = role.filledCount >= role.requiredCount;
+                    const isPartial = role.filledCount > 0 && role.filledCount < role.requiredCount;
+                    return (
+                      <div
+                        key={role.id}
+                        className={`relative p-4 rounded-xl border transition-all ${isFilled
+                          ? "bg-green-500/5 border-green-500/25"
+                          : isPartial
+                            ? "bg-amber-500/5 border-amber-500/25"
+                            : "bg-[var(--dash-bg-input)] border-[var(--dash-border)]"
+                          }`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${role.workingType === "Dedicated"
+                            ? "bg-blue-500/15 text-blue-400"
+                            : "bg-purple-500/15 text-purple-400"
+                            }`}>
+                            {role.workingType}
+                          </span>
+                          {isFilled ? (
+                            <CheckCircle2 size={16} className="text-green-400 shrink-0" />
+                          ) : isPartial ? (
+                            <ShieldAlert size={16} className="text-amber-400 shrink-0" />
+                          ) : (
+                            <UserPlus size={16} className="text-gray-600 shrink-0" />
+                          )}
+                        </div>
+
+                        <p className="text-[14px] font-bold text-[var(--dash-text-heading)] mb-1">{role.roleName}</p>
+                        <p className="text-[11px] text-[var(--dash-text-muted)] mb-2">×{role.requiredCount} needed</p>
+
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] text-[var(--dash-text-muted)]">
+                              {role.filledCount}/{role.requiredCount} filled
+                            </span>
+                            <span className={`text-[11px] font-bold ${isFilled ? "text-green-400" : isPartial ? "text-amber-400" : "text-gray-600"
+                              }`}>
+                              {isFilled ? "Complete" : isPartial ? "Partial" : "Open"}
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-[var(--dash-bg-elevated)] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${isFilled ? "bg-green-500" : isPartial ? "bg-amber-500" : "bg-gray-700"
+                                }`}
+                              style={{ width: `${Math.min(100, (role.filledCount / role.requiredCount) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Staffing progress summary */}
+                {totalNeeded > 0 && (
+                  <div className="mt-4 p-3 bg-[var(--dash-bg-input)] rounded-xl border border-[var(--dash-border)] flex items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[12px] text-[var(--dash-text-muted)] font-medium">Overall Staffing Progress</span>
+                        <span className={`text-[12px] font-bold ${staffingPct === 100 ? "text-green-400" : staffingPct > 0 ? "text-amber-400" : "text-gray-500"
+                          }`}>{staffingPct}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-[var(--dash-bg-elevated)] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${staffingPct === 100
+                            ? "bg-gradient-to-r from-green-600 to-green-400"
+                            : "bg-gradient-to-r from-amber-600 to-amber-400"
+                            }`}
+                          style={{ width: `${staffingPct}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className="text-[12px] font-semibold text-[var(--dash-text-primary)] shrink-0">
+                      {totalFilled} / {totalNeeded} roles filled
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Priority badge */}
+            <div className="border-t border-[var(--dash-border)] px-6 py-3 flex items-center gap-2">
+              <FileText size={13} className="text-gray-600" />
+              <span className="text-[12px] text-[var(--dash-text-muted)]">Priority:</span>
+              <span className={`text-[12px] font-bold ${project.priorityLevel === 2 ? "text-red-400" :
+                project.priorityLevel === 1 ? "text-amber-400" : "text-green-400"
+                }`}>
+                {mapPriority(project.priorityLevel)}
+              </span>
+              <span className="mx-2 text-[var(--dash-text-faint)]">·</span>
+              <Building2 size={13} className="text-gray-600" />
+              <span className="text-[12px] text-[var(--dash-text-muted)]">Client:</span>
+              <span className="text-[12px] text-[var(--dash-text-primary)] font-medium">{project.clientOrganization}</span>
+            </div>
+          </section>
+
+          {/* ── 2. Assigned Team + Timeline (Grid Layout) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Assigned Team (2/3 width) */}
+            <div className="lg:col-span-2 space-y-6">
+              <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm h-full">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assigned Team</h2>
+                  <span className="text-[12px] text-[var(--dash-text-muted)]">{project.members?.length || 0} Members</span>
+                </div>
+                {(!project.members || project.members.length === 0) ? (
+                  <div className="py-12 text-center border border-dashed border-[var(--dash-border)] rounded-xl">
+                    <Users2 size={40} className="mx-auto text-[var(--dash-text-faint)] mb-3 opacity-20" />
+                    <p className="text-[var(--dash-text-muted)] text-[14px]">No team members assigned yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {project.members.map((member) => (
+                      <div key={member.userId} className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 hover:border-gray-600/50 transition-colors group">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-[#1e3a8a]/40 flex items-center justify-center text-blue-700 dark:text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
+                              {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                            </div>
+                            <div>
+                              <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
+                              <p className="text-[12px] text-[var(--dash-text-secondary)]">{member.role} · {member.staffRole || 'Member'}</p>
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-[#064e3b]/30 dark:text-[#34d399] dark:border-[#064e3b]/50">
+                            {member.status || "Assigned"}
+                          </span>
+                        </div>
+
+                        {/* Timeline bar */}
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between text-[11px] text-[var(--dash-text-muted)] mb-1">
+                            <span>{member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)}</span>
+                            <span>{member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}</span>
+                          </div>
+                          <TimelineBar
+                            startDate={member.startDate}
+                            endDate={member.endDate}
+                            projectStart={project.estimatedStartDate}
+                            projectEnd={project.estimatedEndDate}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+
+            {/* Timeline Info (1/3 width) */}
+            <div className="lg:col-span-1">
+              <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm h-full">
+                <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] mb-6">Project Timeline</h2>
+                <div className="space-y-8">
+                  <div className="space-y-3">
+                    <p className="text-[12px] text-[var(--dash-text-muted)] font-medium uppercase tracking-wider">Start Date</p>
+                    <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border)]">
+                      <Calendar size={18} className="text-[#3b82f6]" />
+                      <span className="text-[14px] font-semibold text-[var(--dash-text-primary)]">{formatDate(project.estimatedStartDate)}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-[12px] text-[var(--dash-text-muted)] font-medium uppercase tracking-wider">End Date</p>
+                    <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border)]">
+                      <Calendar size={18} className="text-purple-400" />
+                      <span className="text-[14px] font-semibold text-[var(--dash-text-primary)]">{project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Ongoing'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-[12px] text-[var(--dash-text-muted)] font-medium uppercase tracking-wider">Duration</p>
+                    <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border)]">
+                      <Clock size={18} className="text-amber-400" />
+                      <span className="text-[14px] font-semibold text-[var(--dash-text-primary)]">{project.estimatedDuration || 8} weeks</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-[var(--dash-border)]">
+                    <div className="flex items-center gap-2 text-[12px] text-[var(--dash-text-muted)]">
+                      <TrendingUp size={14} />
+                      <span>Project is currently in <b>{statusInfo.label}</b> stage.</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

@@ -15,7 +15,9 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  Check
+  Check,
+  LayoutGrid,
+  ChevronRight
 } from "lucide-react";
 import {
   getProjectById,
@@ -162,10 +164,6 @@ export default function ProjectDetailsPage() {
         <main className="flex-1 p-8 overflow-y-auto">
           <div className="w-full space-y-8 pb-12">
 
-<<<<<<< HEAD:apps/frontend/src/app/mrkt/projects/[id]/page.tsx
-            {/* ── 1. Project Summary Banner ── */}
-            <section className="bg-[#292B2F] border border-gray-700/50 rounded-xl overflow-hidden shadow-sm">
-=======
             {/* Status Context Header */}
             {project.projectStatus === 0 && (
               <div className="bg-blue-100 border border-blue-300 dark:bg-[#1e3a8a]/20 dark:border-[#1e3a8a]/40 rounded-xl p-4 flex items-center justify-between">
@@ -190,7 +188,6 @@ export default function ProjectDetailsPage() {
             {/* ── 1. Project Summary Banner ── */}
             <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden shadow-sm">
               {/* Header */}
->>>>>>> bd9eeeb2f3e294717fd4a64710aa0e4ff7a34fdd:apps/frontend/src/app/dashboard/mrkt/projects/[id]/page.tsx
               <div className="p-8 pb-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-3 max-w-3xl flex-1 mr-6">
@@ -289,7 +286,6 @@ export default function ProjectDetailsPage() {
               </div>
             </section>
 
-<<<<<<< HEAD:apps/frontend/src/app/mrkt/projects/[id]/page.tsx
             {/* Simplified Project View */}
             <section className="bg-[#292B2F] border border-gray-700/50 rounded-xl p-8 shadow-sm">
               <h2 className="text-[18px] font-bold text-white mb-6">Project Timeline</h2>
@@ -332,188 +328,13 @@ export default function ProjectDetailsPage() {
                   <div className="flex items-center gap-2 mb-4">
                     <div className="h-4 w-1 bg-blue-500 rounded-full"></div>
                     <h3 className="text-[12px] text-gray-400 font-bold uppercase tracking-widest">Required Skills</h3>
-=======
-            {project.projectStatus === 0 ? (
-              /* ── PLANNING UI (For Upcoming Projects) ── */
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2 space-y-8">
-                  {/* Assigned Team Members Component */}
-                  <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] tracking-tight">Assign Team Members</h2>
-                    </div>
-
-                    <div className="space-y-6">
-                      {project.requiredRoles?.map((role) => {
-                        const membersInRole = project.members?.filter(
-                          (m) =>
-                            m.role.toLowerCase() === role.roleName.toLowerCase()
-                        ) || [];
-                        const isDedicated = role.workingType === 'Dedicated';
-
-                        return (
-                          <div key={role.id} className="border border-[var(--dash-border)] rounded-[1.25rem] bg-[var(--dash-bg-input)] p-6 shadow-sm overflow-hidden relative">
-                            {/* Accent line for top of card */}
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
-
-                            <div className="flex justify-between items-start mb-5">
-                              <div className="space-y-1.5">
-                                <div className="flex items-center gap-3">
-                                  <h3 className="text-[var(--dash-text-heading)] font-black text-[16px] tracking-tight">{role.roleName}</h3>
-                                  <span className={`text-[10px] px-2.5 py-0.5 rounded border font-bold uppercase tracking-wider ${isDedicated
-                                      ? 'bg-[#8b5cf6]/10 text-[#a78bfa] border-[#8b5cf6]/20'
-                                      : 'bg-[#10b981]/10 text-[#34d399] border-[#10b981]/20'
-                                    }`}>
-                                    {role.workingType}
-                                  </span>
-                                </div>
-                                <p className="text-[13px] text-[var(--dash-text-secondary)] font-medium">Need {role.requiredCount} <span className="mx-1">•</span> Selected {membersInRole.length}</p>
-
-                                {isDedicated ? (
-                                  <p className="text-[11px] text-amber-500/90 font-medium flex items-center gap-1.5 mt-2">
-                                    <AlertCircle size={13} /> Must not have overlapping assignments
-                                  </p>
-                                ) : (
-                                  <p className="text-[11px] text-[#34d399]/90 font-medium flex items-center gap-1.5 mt-2">
-                                    <CheckCircle2 size={13} /> Can work on multiple projects in parallel
-                                  </p>
-                                )}
-                              </div>
-
-                              {membersInRole.length < role.requiredCount && (
-                                <button
-                                  onClick={() => openAssignModal(role.roleName)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 text-[12px] font-bold rounded-lg transition-all"
-                                >
-                                  <UserPlus size={14} /> Assign
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="space-y-3 mt-4">
-                              {membersInRole.map(member => (
-                                <div key={member.userId} className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-4 flex items-center justify-between group hover:border-gray-600 transition-colors">
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600/30 to-purple-600/30 border border-blue-500/20 flex items-center justify-center text-blue-400 font-black text-[14px] flex-shrink-0">
-                                      {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                                    </div>
-                                    <div>
-                                      <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
-                                      <p className="text-[11px] text-[var(--dash-text-secondary)]">{member.role}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                    <div className="text-right">
-                                      <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Timeline</span>
-                                      <span className="text-[11px] text-[var(--dash-text-primary)] font-medium bg-[var(--dash-bg-input)] border border-[var(--dash-border)] px-2 py-1 rounded">
-                                        {member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)} — {member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}
-                                      </span>
-                                    </div>
-                                    <button
-                                      onClick={() => handleRemoveMember(member.userId)}
-                                      disabled={removingUserId === member.userId}
-                                      className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer disabled:opacity-50"
-                                      title="Remove from project"
-                                    >
-                                      {removingUserId === member.userId ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-
-                              {membersInRole.length === 0 && (
-                                <div className="py-6 border-2 border-dashed border-gray-700/50 rounded-xl flex items-center justify-center">
-                                  <p className="text-[13px] text-[var(--dash-text-faint)] font-medium italic">No members assigned to this role yet.</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {(!project.requiredRoles || project.requiredRoles.length === 0) && (
-                        <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-gray-700/50 rounded-xl bg-[#1a1c1e]/30">
-                          <Briefcase size={36} className="text-gray-600 mb-4" />
-                          <p className="text-gray-400 text-[14px] font-medium">No roles required for this project.</p>
-                          <button onClick={() => openAssignModal()} className="text-blue-400 text-[13px] mt-2 font-bold hover:underline">
-                            Assign members manually
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-
-                  {/* Recommendations */}
-                  {numericId && <SmartRecommendationPanel projectId={numericId} />}
-                </div>
-
-                <div className="space-y-8">
-                  {/* Assignment Sidebar */}
-                  <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assignment Detail</h2>
-                      <Clock size={18} className="text-gray-500" />
-                    </div>
-
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">Start Date</p>
-                        <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[14px] font-medium text-[var(--dash-text-primary)]">
-                          <Calendar size={16} className="text-[#3b82f6]" />
-                          {project.estimatedStartDate ? formatDate(project.estimatedStartDate) : 'Click to Set Date'}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">End Date</p>
-                        <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[14px] font-medium text-[var(--dash-text-primary)]">
-                          <Calendar size={16} className="text-[#3b82f6]" />
-                          {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Click to Set Date'}
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-gray-700/50">
-                        <div className="flex justify-between items-center mb-2">
-                          <p className="text-[13px] text-gray-400">Project Duration</p>
-                          <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">{project.estimatedDuration || 8} Weeks</p>
-                        </div>
-                        <div className="flex justify-between items-center mb-4">
-                          <p className="text-[13px] text-gray-400">Team Members</p>
-                          <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">{project.members?.length ?? 0}</p>
-                        </div>
-                        <button
-                          onClick={() => openAssignModal()}
-                          className="w-full py-3 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-xl text-[14px] font-bold transition-all shadow-lg shadow-[#3b82f6]/20 cursor-pointer"
-                        >
-                          Assign New Member
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-              </div>
-            ) : (
-              /* ── STANDARD UI (For Active/Completed Projects) ── */
-              <div className="space-y-6">
-                {/* Assigned Team */}
-                <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assigned Team</h2>
-                    <button
-                      onClick={() => openAssignModal()}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all cursor-pointer"
-                    >
-                      <UserPlus size={16} />
-                      Assign Member
-                    </button>
->>>>>>> bd9eeeb2f3e294717fd4a64710aa0e4ff7a34fdd:apps/frontend/src/app/dashboard/mrkt/projects/[id]/page.tsx
                   </div>
-                  
+
                   {project.requiredSkills && project.requiredSkills.length > 0 ? (
                     <div className="flex flex-wrap gap-2.5 ml-3">
                       {project.requiredSkills.map((skill, idx) => (
-                        <div 
-                          key={idx} 
+                        <div
+                          key={idx}
                           className="px-4 py-2 bg-[#1a1a1b] border border-gray-800 hover:border-blue-500/40 text-blue-400 rounded-xl text-[12px] font-semibold transition-all duration-300 shadow-sm flex items-center gap-2 group"
                         >
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-500/60 group-hover:bg-blue-400"></div>
@@ -522,7 +343,6 @@ export default function ProjectDetailsPage() {
                       ))}
                     </div>
                   ) : (
-<<<<<<< HEAD:apps/frontend/src/app/mrkt/projects/[id]/page.tsx
                     <div className="flex items-center gap-2 text-[13px] text-gray-500 italic ml-3">
                       <AlertCircle size={14} />
                       No specific skills required.
@@ -540,8 +360,8 @@ export default function ProjectDetailsPage() {
                   {project.requiredRoles && project.requiredRoles.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ml-3">
                       {project.requiredRoles.map((role) => (
-                        <div 
-                          key={role.id} 
+                        <div
+                          key={role.id}
                           className="relative p-5 bg-[#1a1a1b] border border-gray-800 rounded-2xl flex flex-col gap-4 group hover:border-[#3b82f6]/30 hover:bg-[#1e1e1f] transition-all duration-300 shadow-sm overflow-hidden"
                         >
                           {/* Decorative background element */}
@@ -576,41 +396,6 @@ export default function ProjectDetailsPage() {
                               <span className="text-[12px] text-gray-500 font-medium">
                                 <span className="text-gray-200 font-black">{role.requiredCount}</span> positions needed
                               </span>
-=======
-                    <div className="space-y-4">
-                      {project.members.map((member) => (
-                        <div key={member.userId} className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 hover:border-gray-600/50 transition-colors group">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-full border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-[#1e3a8a]/40 flex items-center justify-center text-blue-700 dark:text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
-                                {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                              </div>
-                              <div>
-                                <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
-                                <p className="text-[12px] text-[var(--dash-text-secondary)]">{member.role} · {member.staffRole || 'Member'}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-[#064e3b]/30 dark:text-[#34d399] dark:border-[#064e3b]/50">
-                                {member.status || "Assigned"}
-                              </span>
-                              <button
-                                onClick={() => handleRemoveMember(member.userId)}
-                                disabled={removingUserId === member.userId}
-                                className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer disabled:opacity-50"
-                                title="Remove from project"
-                              >
-                                {removingUserId === member.userId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Timeline bar */}
-                          <div className="mt-4">
-                            <div className="flex items-center justify-between text-[11px] text-[var(--dash-text-muted)] mb-1">
-                              <span>{member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)}</span>
-                              <span>{member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}</span>
->>>>>>> bd9eeeb2f3e294717fd4a64710aa0e4ff7a34fdd:apps/frontend/src/app/dashboard/mrkt/projects/[id]/page.tsx
                             </div>
                           </div>
                         </div>
@@ -622,38 +407,7 @@ export default function ProjectDetailsPage() {
                       No role requirements specified.
                     </div>
                   )}
-<<<<<<< HEAD:apps/frontend/src/app/mrkt/projects/[id]/page.tsx
                 </div>
-=======
-                </section>
-
-                {/* Timeline Info */}
-                <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-                  <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] mb-6">Project Timeline</h2>
-                  <div className="grid grid-cols-3 gap-8">
-                    <div className="space-y-1.5">
-                      <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">Start Date</p>
-                      <div className="flex items-center gap-2 text-[14px] font-medium text-[var(--dash-text-primary)]">
-                        <Calendar size={16} className="text-[var(--dash-text-faint)]" />
-                        {formatDate(project.estimatedStartDate)}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">End Date</p>
-                      <div className="flex items-center gap-2 text-[14px] font-medium text-[var(--dash-text-primary)]">
-                        <Calendar size={16} className="text-[var(--dash-text-faint)]" />
-                        {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Ongoing'}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-[12px] text-[var(--dash-text-muted)] font-medium">Duration</p>
-                      <div className="text-[14px] font-medium text-[var(--dash-text-primary)]">
-                        {project.estimatedDuration || 8} weeks
-                      </div>
-                    </div>
-                  </div>
-                </section>
->>>>>>> bd9eeeb2f3e294717fd4a64710aa0e4ff7a34fdd:apps/frontend/src/app/dashboard/mrkt/projects/[id]/page.tsx
               </div>
             </section>
 
@@ -725,9 +479,9 @@ export default function ProjectDetailsPage() {
                   <label className="block text-[12px] text-gray-400 mb-2">Project-Level Required Skills</label>
                   <div className="bg-[#0f0f0f] border border-gray-800 rounded-xl p-4 max-h-40 overflow-y-auto">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                       {formOptions.skills.map((skill) => (
-                        <label 
-                          key={skill.id} 
+                      {formOptions.skills.map((skill) => (
+                        <label
+                          key={skill.id}
                           className="flex items-center gap-2 cursor-pointer group"
                         >
                           <div className="relative flex items-center">
@@ -737,8 +491,8 @@ export default function ProjectDetailsPage() {
                               onChange={(e) => {
                                 setEditForm(prev => ({
                                   ...prev,
-                                  requiredSkillIds: e.target.checked 
-                                    ? [...prev.requiredSkillIds, skill.id] 
+                                  requiredSkillIds: e.target.checked
+                                    ? [...prev.requiredSkillIds, skill.id]
                                     : prev.requiredSkillIds.filter(id => id !== skill.id)
                                 }));
                               }}
@@ -750,7 +504,7 @@ export default function ProjectDetailsPage() {
                             {skill.name}
                           </span>
                         </label>
-                       ))}
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -786,7 +540,7 @@ export default function ProjectDetailsPage() {
                         >
                           <Trash2 size={14} />
                         </button>
-                        
+
                         <div className="grid grid-cols-2 gap-3 pr-6">
                           <div>
                             <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Role</label>
@@ -851,19 +605,9 @@ export default function ProjectDetailsPage() {
                   {editSubmitting ? "Saving..." : "Save Changes"}
                 </button>
               </div>
-<<<<<<< HEAD:apps/frontend/src/app/mrkt/projects/[id]/page.tsx
             </form>
           </div>
         </div>
-=======
-            </div>
-          </div>
-        </div>
-      )}
-
-      {hireRequestOpen && false && project && (
-        <></>
->>>>>>> bd9eeeb2f3e294717fd4a64710aa0e4ff7a34fdd:apps/frontend/src/app/dashboard/mrkt/projects/[id]/page.tsx
       )}
     </>
   );

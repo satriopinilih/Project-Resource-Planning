@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import AppSidebar from '@/components/AppSidebar';
-import AppHeader from '@/components/AppHeader';
 import StatCard from '@/components/StatCard';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
@@ -249,10 +247,7 @@ export default function HRDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
-      <AppSidebar role="HR" />
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
-        <AppHeader title="HR Dashboard" role="HR" />
+      <div className="flex-1 flex flex-col min-h-screen">
         <main className="flex-1 p-8">
           {isLoading && (
             <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
@@ -278,7 +273,7 @@ export default function HRDashboard() {
             <StatCard value={stats.approvedThisMonth} label="Approved This Month" variant="success" icon={<span className="text-2xl">✅</span>} />
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <div id="hire-requests-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Hire Requests</h2>
               <button
@@ -360,7 +355,7 @@ export default function HRDashboard() {
             )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <div id="pending-contract-extension-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pending Contract Extension Requests</h2>
             {contractExtensionRequests.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending extension requests</div>
@@ -488,7 +483,6 @@ export default function HRDashboard() {
             )}
           </div>
         </main>
-      </div>
 
       <Modal isOpen={isApprovalModalOpen} onClose={() => setIsApprovalModalOpen(false)} title="Approve Contract Extension">
         <div className="space-y-4">
@@ -533,30 +527,30 @@ export default function HRDashboard() {
       </Modal>
 
       {hireEmployeeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-[#080a0f] text-white shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
-              <h3 className="text-xl font-semibold">{selectedHireRequest ? 'Add Employee from Hire Request' : 'Add New Employee'}</h3>
-              <button onClick={() => setHireEmployeeModalOpen(false)} className="text-gray-400 hover:text-white">×</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] text-[var(--dash-text-primary)] shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--dash-border)]">
+              <h3 className="text-xl font-semibold text-[var(--dash-text-heading)]">{selectedHireRequest ? 'Add Employee from Hire Request' : 'Add New Employee'}</h3>
+              <button onClick={() => setHireEmployeeModalOpen(false)} className="text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]">×</button>
             </div>
             <div className="max-h-[78vh] overflow-y-auto px-6 py-4 space-y-3">
               {selectedHireRequest && (
                 <>
                   <div>
-                    <p className="text-sm text-gray-400">Role Needed</p>
+                    <p className="text-sm text-[var(--dash-text-muted)]">Role Needed</p>
                     <p className="text-2xl font-semibold">{selectedHireRequest.roleNeeded}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Project</p>
+                    <p className="text-sm text-[var(--dash-text-muted)]">Project</p>
                     <p className="text-2xl font-semibold">{selectedHireRequest.projectName}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-sm text-gray-400">Start Date</p>
+                      <p className="text-sm text-[var(--dash-text-muted)]">Start Date</p>
                       <p className="text-xl">{formatDateLabel(selectedHireRequest.startDate)}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">End Date</p>
+                      <p className="text-sm text-[var(--dash-text-muted)]">End Date</p>
                       <p className="text-xl">{formatDateLabel(selectedHireRequest.endDate)}</p>
                     </div>
                   </div>
@@ -564,15 +558,15 @@ export default function HRDashboard() {
               )}
 
               <div>
-                <label className="text-sm text-gray-300">Name</label>
-                <input value={hireForm.name} onChange={(e) => setHireForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-gray-700 bg-[#0e1118] px-3 text-sm" placeholder="Enter employee name" />
+                <label className="text-sm text-[var(--dash-text-secondary)]">Name</label>
+                <input value={hireForm.name} onChange={(e) => setHireForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" placeholder="Enter employee name" />
               </div>
               <div>
-                <label className="text-sm text-gray-300">Email</label>
-                <input value={hireForm.email} onChange={(e) => setHireForm((prev) => ({ ...prev, email: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-gray-700 bg-[#0e1118] px-3 text-sm" placeholder="Enter employee email" />
+                <label className="text-sm text-[var(--dash-text-secondary)]">Email</label>
+                <input value={hireForm.email} onChange={(e) => setHireForm((prev) => ({ ...prev, email: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" placeholder="Enter employee email" />
               </div>
               <div>
-                <label className="text-sm text-gray-300">Role</label>
+                <label className="text-sm text-[var(--dash-text-secondary)]">Role</label>
                 <select
                   value={hireForm.staffRoleId}
                   onChange={(e) => {
@@ -580,7 +574,7 @@ export default function HRDashboard() {
                     const selected = employeeFormOptions.staffRoles.find((r) => r.id === nextStaffRoleId);
                     setHireForm((prev) => ({ ...prev, staffRoleId: nextStaffRoleId, role: selected?.name ?? prev.role }));
                   }}
-                  className="mt-1 h-11 w-full rounded-lg border border-gray-700 bg-[#0e1118] px-3 text-sm"
+                  className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm"
                 >
                   {employeeFormOptions.staffRoles.map((role) => (
                     <option key={role.id} value={role.id}>{role.name}</option>
@@ -588,33 +582,33 @@ export default function HRDashboard() {
                 </select>
               </div>
               <div>
-                <label className="text-sm text-gray-300">Experience Level</label>
+                <label className="text-sm text-[var(--dash-text-secondary)]">Experience Level</label>
                 <div className="mt-1 flex items-center gap-2">
-                  <input type="number" min={0} step={1} value={hireForm.experienceLevel} onChange={(e) => setHireForm((prev) => ({ ...prev, experienceLevel: e.target.value }))} className="h-11 w-full rounded-lg border border-gray-700 bg-[#0e1118] px-3 text-sm" />
-                  <span className="text-sm text-gray-300">years</span>
+                  <input type="number" min={0} step={1} value={hireForm.experienceLevel} onChange={(e) => setHireForm((prev) => ({ ...prev, experienceLevel: e.target.value }))} className="h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" />
+                  <span className="text-sm text-[var(--dash-text-secondary)]">years</span>
                 </div>
               </div>
               <div>
-                <label className="text-sm text-gray-300">Employment Type</label>
-                <select value={hireForm.employmentType} onChange={(e) => setHireForm((prev) => ({ ...prev, employmentType: e.target.value as 'Contract' | 'Permanent' }))} className="mt-1 h-11 w-full rounded-lg border border-gray-700 bg-[#0e1118] px-3 text-sm">
+                <label className="text-sm text-[var(--dash-text-secondary)]">Employment Type</label>
+                <select value={hireForm.employmentType} onChange={(e) => setHireForm((prev) => ({ ...prev, employmentType: e.target.value as 'Contract' | 'Permanent' }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm">
                   <option value="Contract">Contract</option>
                   <option value="Permanent">Permanent</option>
                 </select>
               </div>
               <div>
-                <label className="text-sm text-gray-300">Contract Start Date</label>
-                <input type="date" value={hireForm.contractStart} onChange={(e) => setHireForm((prev) => ({ ...prev, contractStart: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-gray-700 bg-[#0e1118] px-3 text-sm" />
+                <label className="text-sm text-[var(--dash-text-secondary)]">Contract Start Date</label>
+                <input type="date" value={hireForm.contractStart} onChange={(e) => setHireForm((prev) => ({ ...prev, contractStart: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" />
               </div>
               <div>
-                <label className="text-sm text-gray-300">Contract End Date</label>
-                <input type="date" value={hireForm.contractEnd} onChange={(e) => setHireForm((prev) => ({ ...prev, contractEnd: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-gray-700 bg-[#0e1118] px-3 text-sm" />
+                <label className="text-sm text-[var(--dash-text-secondary)]">Contract End Date</label>
+                <input type="date" value={hireForm.contractEnd} onChange={(e) => setHireForm((prev) => ({ ...prev, contractEnd: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" />
               </div>
               <div>
-                <label className="text-sm text-gray-300">Skills</label>
-                <div className="mt-1 max-h-36 overflow-y-auto rounded-lg border border-gray-700 bg-[#0e1118] px-3 py-2">
+                <label className="text-sm text-[var(--dash-text-secondary)]">Skills</label>
+                <div className="mt-1 max-h-36 overflow-y-auto rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 py-2">
                   <div className="grid grid-cols-1 gap-1">
                     {employeeFormOptions.skills.map((skill) => (
-                      <label key={skill.id} className="flex items-center gap-2 text-sm text-gray-200">
+                      <label key={skill.id} className="flex items-center gap-2 text-sm text-[var(--dash-text-primary)]">
                         <input
                           type="checkbox"
                           checked={hireForm.skillIds.includes(skill.id)}
@@ -634,11 +628,11 @@ export default function HRDashboard() {
                 </div>
               </div>
               <div>
-                <label className="text-sm text-gray-300">Department</label>
+                <label className="text-sm text-[var(--dash-text-secondary)]">Department</label>
                 <select
                   value={hireForm.departmentId}
                   onChange={(e) => setHireForm((prev) => ({ ...prev, departmentId: Number(e.target.value) }))}
-                  className="mt-1 h-11 w-full rounded-lg border border-gray-700 bg-[#0e1118] px-3 text-sm"
+                  className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm"
                 >
                   {employeeFormOptions.departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>{dept.name}</option>
@@ -646,9 +640,9 @@ export default function HRDashboard() {
                 </select>
               </div>
             </div>
-            <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-800">
+            <div className="flex justify-end gap-2 px-6 py-4 border-t border-[var(--dash-border)]">
               {hireFormError && <p className="mr-auto self-center text-xs text-red-400">{hireFormError}</p>}
-              <button onClick={() => setHireEmployeeModalOpen(false)} className="h-10 rounded-lg border border-gray-700 px-4 text-sm font-semibold">Cancel</button>
+              <button onClick={() => setHireEmployeeModalOpen(false)} className="h-10 rounded-lg border border-[var(--dash-border)] px-4 text-sm font-semibold">Cancel</button>
               <button onClick={handleAddEmployee} disabled={isAddingEmployee} className="h-10 rounded-lg bg-[#00b84f] px-4 text-sm font-semibold text-black disabled:opacity-50 disabled:cursor-not-allowed">{isAddingEmployee ? 'Adding...' : 'Add Employee'}</button>
             </div>
           </div>
@@ -656,11 +650,11 @@ export default function HRDashboard() {
       )}
 
       {showTempPassword && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-xl border border-gray-700 bg-[#0d111a] p-6 text-white">
-            <h3 className="text-lg font-semibold mb-2">Temporary Password Generated</h3>
-            <p className="text-sm text-gray-300 mb-3">Share this password with the new user. They must change it on first login.</p>
-            <div className="rounded-lg bg-[#111827] border border-gray-700 px-4 py-3 text-center text-xl font-bold tracking-wide">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] p-6 text-[var(--dash-text-primary)]">
+            <h3 className="text-lg font-semibold mb-2 text-[var(--dash-text-heading)]">Temporary Password Generated</h3>
+            <p className="text-sm text-[var(--dash-text-secondary)] mb-3">Share this password with the new user. They must change it on first login.</p>
+            <div className="rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] px-4 py-3 text-center text-xl font-bold tracking-wide">
               {showTempPassword}
             </div>
             <div className="mt-4 flex justify-end">

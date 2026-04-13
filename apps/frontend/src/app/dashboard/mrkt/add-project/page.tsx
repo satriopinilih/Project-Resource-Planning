@@ -2,26 +2,22 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Sun,
-  Moon,
-  User,
   Plus,
   Calendar as CalendarIcon,
   AlertCircle,
   Trash2,
   Check
 } from "lucide-react";
-import { 
-  getHolidays, 
-  BackendHoliday, 
+import {
+  getHolidays,
+  BackendHoliday,
   createProject,
   getEmployeeFormOptions,
-  EmployeeFormOptions 
+  EmployeeFormOptions
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function AddProjectPage() {
-  const [theme, setTheme] = useState("dark");
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
   const [durationWeeks, setDurationWeeks] = useState<number>(5);
   const [startDate, setStartDate] = useState<string>("2026-04-10");
@@ -67,11 +63,6 @@ export default function AddProjectPage() {
   };
 
   useEffect(() => {
-    if (document.documentElement.classList.contains('light')) {
-      setTheme('light');
-    }
-
-    // Fetch holidays
     getHolidays().then(setHolidays).catch(console.error);
 
     // Fetch form options (skills)
@@ -124,25 +115,13 @@ export default function AddProjectPage() {
 
   }, [startDate, durationWeeks, holidays]);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    if (newTheme === 'light') {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    }
-  };
-
   const handleCancel = () => {
     window.history.back();
   };
 
   const handleFormSubmitRequest = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate completeness, data format, and consistency
     if (!projectName.trim() || !clientOrganization.trim() || !projectDescription.trim()) {
       setError("Please fill in all required text fields.");
@@ -164,7 +143,7 @@ export default function AddProjectPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    
+
     setError(null);
     setIsConfirmModalOpen(true);
   };
@@ -216,26 +195,7 @@ export default function AddProjectPage() {
 
   return (
     <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
-      {/* Header Section */}
-      <header className="mb-8 flex justify-between items-center">
-        <h1 className="text-[22px] font-semibold text-gray-900 dark:text-white">Add New Project</h1>
-
-        <div className="flex items-center gap-4">
-          <button onClick={toggleTheme} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-            {theme === 'dark' ? <Sun className="w-5 h-5 cursor-pointer" /> : <Moon className="w-5 h-5 cursor-pointer" />}
-          </button>
-          <div className="flex flex-col items-end">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">Marketing Lead</span>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">Marketing</span>
-          </div>
-          <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center shadow-lg cursor-pointer">
-            <User className="text-white w-5 h-5" />
-          </div>
-          <div className="px-3 py-1 bg-blue-100 dark:bg-[#252c41] text-blue-700 dark:text-[#93a5e8] text-[12px] font-medium rounded-full cursor-pointer">
-            Marketing
-          </div>
-        </div>
-      </header>
+      <div className="mt-2" />
 
       {/* Form Card */}
       <div className="bg-white dark:bg-[#242427] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300 max-w-4xl">
@@ -378,8 +338,8 @@ export default function AddProjectPage() {
             <div className="mt-3 bg-gray-50 dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-6">
                 {formOptions.skills.map((skill) => (
-                  <label 
-                    key={skill.id} 
+                  <label
+                    key={skill.id}
                     className="flex items-center gap-3 cursor-pointer group py-0.5"
                   >
                     <div className="relative flex items-center">
@@ -387,9 +347,9 @@ export default function AddProjectPage() {
                         type="checkbox"
                         checked={selectedSkillIds.includes(skill.id)}
                         onChange={(e) => {
-                          setSelectedSkillIds(prev => 
-                            e.target.checked 
-                              ? [...prev, skill.id] 
+                          setSelectedSkillIds(prev =>
+                            e.target.checked
+                              ? [...prev, skill.id]
                               : prev.filter(id => id !== skill.id)
                           );
                         }}
@@ -457,7 +417,7 @@ export default function AddProjectPage() {
                       className={`${inputClasses} text-center`}
                     />
                   </div>
-                    <div className="flex-[2]">
+                  <div className="flex-[2]">
                     {index === 0 && <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Working Type</div>}
                     <select
                       className={inputClasses}
@@ -556,8 +516,8 @@ export default function AddProjectPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-100 dark:border-white/10 pb-4">
                 <span className="text-gray-500 dark:text-gray-400">Timeline</span>
                 <span className="col-span-1 sm:col-span-2 font-medium text-gray-900 dark:text-white">
-                  {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
-                  {' - '} 
+                  {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' - '}
                   {endDateDetails.date?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   <div className="text-[12px] font-normal text-gray-500 mt-0.5">({durationWeeks} weeks estimation)</div>
                 </span>
@@ -587,7 +547,7 @@ export default function AddProjectPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 pb-4">
                 <span className="text-gray-500 dark:text-gray-400 mt-1">Required Skills</span>
                 <div className="col-span-1 sm:col-span-2">
-                   <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {selectedSkillIds.length > 0 ? (
                       selectedSkillIds.map(id => {
                         const skillName = formOptions.skills.find(s => s.id === id)?.name;
@@ -600,7 +560,7 @@ export default function AddProjectPage() {
                     ) : (
                       <span className="text-gray-400 italic">None selected</span>
                     )}
-                   </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -493,30 +493,30 @@ export default function TeamMembersPage() {
       )}
 
       {canResetPassword && showResetConfirmModal && selectedEmployee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[var(--dash-text-primary)]">
             <div className="p-6 space-y-4">
               <div className="flex items-start justify-between">
-                <h3 className="text-[18px] font-bold">Confirm Password Reset</h3>
+                <h3 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Confirm Password Reset</h3>
                 <button
                   onClick={() => {
                     setShowResetConfirmModal(false);
                     setResetConfirmText('');
                   }}
-                  className="text-gray-500 hover:text-white transition-colors"
+                  className="text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-[13px] text-gray-300">
-                To prevent accidental reset, type <span className="font-bold text-amber-300">Reset-Password</span> below for <span className="font-semibold">{selectedEmployee.name}</span>.
+              <p className="text-[13px] text-[var(--dash-text-secondary)]">
+                To prevent accidental reset, type <span className="font-bold text-amber-700 dark:text-amber-300">Reset-Password</span> below for <span className="font-semibold">{selectedEmployee.name}</span>.
               </p>
               <input
                 type="text"
                 value={resetConfirmText}
                 onChange={(e) => setResetConfirmText(e.target.value)}
                 placeholder="Type Reset-Password"
-                className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-[14px] outline-none focus:border-amber-500"
+                className="w-full bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg px-4 py-3 text-[14px] outline-none focus:border-amber-500"
               />
               <div className="flex justify-end gap-3 pt-2">
                 <button
@@ -524,7 +524,7 @@ export default function TeamMembersPage() {
                     setShowResetConfirmModal(false);
                     setResetConfirmText('');
                   }}
-                  className="px-4 py-2 border border-gray-700 rounded-lg text-[13px]"
+                  className="px-4 py-2 border border-[var(--dash-border)] rounded-lg text-[13px]"
                 >
                   Cancel
                 </button>
@@ -542,15 +542,15 @@ export default function TeamMembersPage() {
       )}
 
       {canResetPassword && resetTempPassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[var(--dash-text-primary)]">
             <div className="p-6 space-y-4">
-              <h3 className="text-[18px] font-bold">Password Reset Success</h3>
-              <p className="text-[13px] text-gray-300">Temporary password generated. Share this securely to the user:</p>
-              <div className="w-full rounded-lg border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[20px] font-bold tracking-wide text-amber-300">
+              <h3 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Password Reset Success</h3>
+              <p className="text-[13px] text-[var(--dash-text-secondary)]">Temporary password generated. Share this securely to the user:</p>
+              <div className="w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-4 py-3 text-center text-[20px] font-bold tracking-wide text-amber-700 dark:text-amber-300">
                 {resetTempPassword}
               </div>
-              <p className="text-[12px] text-gray-400">User must change password on first login.</p>
+              <p className="text-[12px] text-[var(--dash-text-muted)]">User must change password on first login.</p>
               <div className="flex justify-end">
                 <button
                   onClick={() => setResetTempPassword(null)}
