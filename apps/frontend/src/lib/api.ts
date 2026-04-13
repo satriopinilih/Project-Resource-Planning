@@ -473,8 +473,6 @@ export async function createHireRequest(payload: CreateHireRequestPayload): Prom
   });
 }
 
-<<<<<<< HEAD
-=======
 export async function createTimelineEditRequest(payload: {
   projectId: number;
   projectName: string;
@@ -498,7 +496,6 @@ export async function createTimelineEditRequest(payload: {
 
 
 
->>>>>>> 7cd16be (Added notification item for marketing)
 export async function startHireRequest(id: number): Promise<void> {
   await fetchJson(`/api/hirerequests/${id}/start`, { method: 'POST' });
 }

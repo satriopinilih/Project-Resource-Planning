@@ -24,10 +24,6 @@ public class CreateProjectRequest
     public DateTime EstimatedEndDate { get; set; }
 
     public List<CreateProjectRoleDto> RequiredRoles { get; set; } = new List<CreateProjectRoleDto>();
-<<<<<<< HEAD
-=======
-
->>>>>>> 7cd16be (Added notification item for marketing)
     public List<int> RequiredSkillIds { get; set; } = new List<int>();
 }
 

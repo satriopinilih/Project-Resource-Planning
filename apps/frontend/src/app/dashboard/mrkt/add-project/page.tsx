@@ -13,12 +13,6 @@ import {
   BackendHoliday,
   createProject,
   getEmployeeFormOptions,
-<<<<<<< HEAD
-  EmployeeFormOptions
-} from "@/lib/api";
-import { useRouter } from "next/navigation";
-
-=======
   EmployeeFormOptions,
   TimelineEditRequest
 } from "@/lib/api";
@@ -27,7 +21,6 @@ interface SkillOption {
   id: number;
   name: string;
 }
->>>>>>> 7cd16be (Added notification item for marketing)
 export default function AddProjectPage() {
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
   const [durationWeeks, setDurationWeeks] = useState<number>(5);
@@ -348,11 +341,7 @@ export default function AddProjectPage() {
             </label>
             <div className="mt-3 bg-gray-50 dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-6">
-<<<<<<< HEAD
-                {formOptions.skills.map((skill) => (
-=======
                 {formOptions.skills.map((skill: SkillOption) => (
->>>>>>> 7cd16be (Added notification item for marketing)
                   <label
                     key={skill.id}
                     className="flex items-center gap-3 cursor-pointer group py-0.5"
@@ -565,11 +554,7 @@ export default function AddProjectPage() {
                   <div className="flex flex-wrap gap-2">
                     {selectedSkillIds.length > 0 ? (
                       selectedSkillIds.map(id => {
-<<<<<<< HEAD
-                        const skillName = formOptions.skills.find(s => s.id === id)?.name;
-=======
                         const skillName = formOptions.skills.find((s: SkillOption) => s.id === id)?.name;
->>>>>>> 7cd16be (Added notification item for marketing)
                         return (
                           <span key={id} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-medium">
                             {skillName}
@@ -633,8 +618,4 @@ export default function AddProjectPage() {
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 7cd16be (Added notification item for marketing)
