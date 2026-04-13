@@ -36,8 +36,8 @@ import {
   unassignMemberFromProject,
   AssignMemberPayload,
   getHireRequests,
-} from "../../../../../lib/api";
-import SmartRecommendationPanel from "../../components/SmartRecommendationPanel";
+} from "@/lib/api";
+import SmartRecommendationPanel from "@/app/dashboard/gm/components/SmartRecommendationPanel";
 
 const mapStatus = (backendStatus: number, startDateStr?: string) => {
   // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
@@ -320,7 +320,7 @@ export default function ProjectDetailsPage() {
   if (loading || !project) {
     return (
       <div className="flex flex-col min-h-screen bg-[#18181b]">
-        <AppHeader title="Project Details" role="GM" />
+        <AppHeader title="Project Details" role="Marketing" />
         <div className="flex-1 flex items-center justify-center">
           {loading ? <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" /> : <p className="text-gray-400">Project not found.</p>}
         </div>
@@ -336,7 +336,7 @@ export default function ProjectDetailsPage() {
   return (
     <>
       <div className="flex-1 overflow-auto min-h-screen bg-[#202020] transition-colors duration-300">
-        <AppHeader title="Project Details" role="GM" />
+        <AppHeader title="Project Details" role="Marketing" />
 
         <main className="flex-1 p-8 overflow-y-auto">
           <div className="w-full space-y-8 pb-12">
@@ -1107,3 +1107,4 @@ export default function ProjectDetailsPage() {
     </>
   );
 }
+
