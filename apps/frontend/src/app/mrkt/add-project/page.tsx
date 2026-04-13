@@ -31,6 +31,8 @@ export default function AddProjectPage() {
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const router = useRouter();
 
@@ -126,8 +128,36 @@ export default function AddProjectPage() {
     window.history.back();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmitRequest = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate completeness, data format, and consistency
+    if (!projectName.trim() || !clientOrganization.trim() || !projectDescription.trim()) {
+      setError("Please fill in all required text fields.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (durationWeeks <= 0) {
+      setError("Estimated duration must be greater than 0.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (!endDateDetails.date) {
+      setError("End date calculation failed. Please check the start date.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (teamRoles.length === 0) {
+      setError("At least one team role is required.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    setError(null);
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmSubmit = async () => {
     if (!endDateDetails.date) return;
 
     setIsSubmitting(true);
@@ -153,11 +183,16 @@ export default function AddProjectPage() {
 
     try {
       await createProject(payload);
-      alert("Project created successfully!");
-      router.push("/mrkt/dashboard");
+      setIsConfirmModalOpen(false);
+      setShowSuccess(true);
+      setTimeout(() => {
+        router.push("/mrkt/dashboard");
+      }, 2000);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Failed to create project. Please ensure all roles are valid.");
+      setError(err.message || "Failed to create project. Please ensure all data is valid.");
+      setIsConfirmModalOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -193,7 +228,7 @@ export default function AddProjectPage() {
       <div className="bg-white dark:bg-[#242427] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300 max-w-4xl">
         <h2 className="text-[22px] font-bold text-gray-900 dark:text-white mb-8">Create New Project</h2>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleFormSubmitRequest} className="space-y-6">
           {/* Project Name */}
           <div>
             <label className={labelClasses}>
@@ -443,6 +478,104 @@ export default function AddProjectPage() {
           </div>
         </form>
       </div>
+
+      {/* Confirmation Modal */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md transition-opacity">
+          <div className="bg-white dark:bg-[#242427] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-[22px] font-bold text-gray-900 dark:text-white mb-2">Confirm Project Details</h3>
+            <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-6">Please double-check the information below before creating the project.</p>
+
+            <div className="space-y-4 text-[14px]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-100 dark:border-white/10 pb-4">
+                <span className="text-gray-500 dark:text-gray-400">Project Name</span>
+                <span className="col-span-1 sm:col-span-2 font-medium text-gray-900 dark:text-white">{projectName}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-100 dark:border-white/10 pb-4">
+                <span className="text-gray-500 dark:text-gray-400">Client Org.</span>
+                <span className="col-span-1 sm:col-span-2 font-medium text-gray-900 dark:text-white">{clientOrganization}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-100 dark:border-white/10 pb-4">
+                <span className="text-gray-500 dark:text-gray-400">Description</span>
+                <span className="col-span-1 sm:col-span-2 text-gray-900 dark:text-white whitespace-pre-wrap">{projectDescription}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-100 dark:border-white/10 pb-4">
+                <span className="text-gray-500 dark:text-gray-400">Timeline</span>
+                <span className="col-span-1 sm:col-span-2 font-medium text-gray-900 dark:text-white">
+                  {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
+                  {' - '} 
+                  {endDateDetails.date?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  <div className="text-[12px] font-normal text-gray-500 mt-0.5">({durationWeeks} weeks estimation)</div>
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-100 dark:border-white/10 pb-4">
+                <span className="text-gray-500 dark:text-gray-400">Priority</span>
+                <span className="col-span-1 sm:col-span-2 text-gray-900 dark:text-white">
+                  <span className={`px-2 py-1 rounded text-[12px] font-medium inline-block ${priorityLevel === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : priorityLevel === 'Medium' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
+                    {priorityLevel}
+                  </span>
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 pb-4">
+                <span className="text-gray-500 dark:text-gray-400 mt-1">Team Roles</span>
+                <div className="col-span-1 sm:col-span-2 space-y-2">
+                  {teamRoles.map((r, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 p-2 px-3 rounded-lg border border-gray-100 dark:border-white/5">
+                      <span className="font-medium">{r.role} <span className="text-gray-400 mx-1">x</span> {r.count}</span>
+                      <span className="text-[12px] text-gray-500 dark:text-gray-400">{r.workingType}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 mt-8 pt-4 border-t border-gray-100 dark:border-white/10">
+              <button
+                type="button"
+                onClick={handleConfirmSubmit}
+                disabled={isSubmitting}
+                className="bg-[#255df5] hover:bg-[#1a4de0] text-white px-6 py-2.5 rounded-xl font-medium text-[14px] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 flex-1 justify-center"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Saving Project...
+                  </>
+                ) : (
+                  "Confirm & Create Project"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                disabled={isSubmitting}
+                className="bg-white dark:bg-[#343845] border border-gray-200 dark:border-transparent text-gray-700 dark:text-gray-200 px-6 py-2.5 rounded-xl font-medium text-[14px] hover:bg-gray-50 dark:hover:bg-[#3f4352] transition-colors flex-1 justify-center"
+              >
+                Go Back & Edit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
+          <div className="bg-white dark:bg-[#242427] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-2xl flex flex-col items-center max-w-sm w-full">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 rounded-full flex mx-auto items-center justify-center mb-5 shadow-inner">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">Project Created Successfully!</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-center text-sm mb-6">Your new project has been saved to the system.</p>
+            <div className="flex items-center text-[13px] text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-500/10 px-4 py-2 rounded-full">
+              <div className="w-4 h-4 border-2 border-blue-600/30 dark:border-blue-400/30 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mr-2" />
+              Redirecting to Dashboard...
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
