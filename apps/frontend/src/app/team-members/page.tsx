@@ -147,8 +147,8 @@ export default function TeamMembersPage() {
                       <div className="text-[12px] text-gray-500 mt-0.5 truncate">User ID: {employee.id}</div>
                     )}
                     <div className="text-[13px] text-gray-400 mt-0.5 truncate">{employee.role}</div>
-                    {employee.experience && (
-                      <div className="text-[12px] text-gray-500 mt-1">Exp: {employee.experience}</div>
+                    {employee.experienceYears && (
+                      <div className="text-[12px] text-gray-500 mt-1">Exp: {employee.experienceYears} yrs</div>
                     )}
 
                     <div className="mt-2 flex items-center gap-2">
@@ -190,14 +190,7 @@ export default function TeamMembersPage() {
                         </div>
                       </div>
 
-                      {selectedEmployee.level && (
-                        <div className="px-3 py-1.5 bg-[#78350f]/30 border border-[#78350f]/50 text-[#fbbf24] text-[13px] font-semibold rounded-lg flex items-center gap-1.5">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                          </svg>
-                          Level {selectedEmployee.level}
-                        </div>
-                      )}
+                      {/* Level logic removed since it doesn't exist on Employee */}
                     </div>
 
                     {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
@@ -416,77 +409,89 @@ export default function TeamMembersPage() {
               </div>
               <p className="text-[14px] text-gray-400 mb-8">Extend the contract duration for the selected employee.</p>
 
-              <div className="space-y-6">
-                {/* Employee Name */}
-                <div className="space-y-1">
-                  <label className="text-[13px] text-gray-500 font-medium">Employee</label>
-                  <p className="text-[16px] font-bold">{selectedEmployee.name}</p>
+              {submitSuccess ? (
+                <div className="text-center py-10">
+                  <div className="w-14 h-14 rounded-full bg-[#10b981]/15 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-7 h-7 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-[17px] font-bold text-white">Request Submitted</p>
+                  <p className="text-[13px] text-gray-400 mt-1">The extension request has been sent to HR.</p>
                 </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Employee Name */}
+                  <div className="space-y-1">
+                    <label className="text-[13px] text-gray-500 font-medium">Employee</label>
+                    <p className="text-[16px] font-bold">{selectedEmployee.name}</p>
+                  </div>
 
-                {/* Current End Date */}
-                <div className="space-y-1">
-                  <label className="text-[13px] text-gray-500 font-medium">Current End Date</label>
-                  <p className="text-[16px] font-bold">{selectedEmployee.contractEnd || 'Jan 14, 2027'}</p>
-                </div>
+                  {/* Current End Date */}
+                  <div className="space-y-1">
+                    <label className="text-[13px] text-gray-500 font-medium">Current End Date</label>
+                    <p className="text-[16px] font-bold">{selectedEmployee.contractEnd || 'Jan 14, 2027'}</p>
+                  </div>
 
-                {/* Duration Input */}
-                <div className="space-y-2">
-                  <label className="text-[13px] text-gray-500 font-medium">Extension Duration (months)</label>
-                  <input
-                    type="number"
-                    value={extensionDuration}
-                    onChange={(e) => setExtensionDuration(e.target.value)}
-                    className="w-full bg-[#1a1a1a] border border-gray-800 rounded-lg px-4 py-3 text-[15px] outline-none focus:border-gray-700 transition-colors"
-                    placeholder="12"
-                  />
-                </div>
+                  {/* Duration Input */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] text-gray-500 font-medium">Extension Duration (months)</label>
+                    <input
+                      type="number"
+                      value={extensionDuration}
+                      onChange={(e) => setExtensionDuration(e.target.value)}
+                      className="w-full bg-[#1a1a1a] border border-gray-800 rounded-lg px-4 py-3 text-[15px] outline-none focus:border-gray-700 transition-colors"
+                      placeholder="12"
+                    />
+                  </div>
 
-                {/* Projected New End Date */}
-                <div className="space-y-1">
-                  <label className="text-[13px] text-gray-500 font-medium">New End Date</label>
-                  <p className="text-[15px] font-bold text-[#10b981]">
-                    {(() => {
-                      const currentEnd = selectedEmployee.contractEnd ? new Date(selectedEmployee.contractEnd) : new Date("2027-01-14");
-                      const duration = parseInt(extensionDuration) || 0;
-                      if (!isNaN(currentEnd.getTime())) {
-                        const newEnd = new Date(currentEnd);
-                        newEnd.setMonth(newEnd.getMonth() + duration);
-                        return newEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                      }
-                      return 'TBD';
-                    })()}
-                  </p>
-                </div>
+                  {/* Projected New End Date */}
+                  <div className="space-y-1">
+                    <label className="text-[13px] text-gray-500 font-medium">New End Date</label>
+                    <p className="text-[15px] font-bold text-[#10b981]">
+                      {(() => {
+                        const currentEnd = selectedEmployee.contractEnd ? new Date(selectedEmployee.contractEnd) : new Date("2027-01-14");
+                        const duration = parseInt(extensionDuration) || 0;
+                        if (!isNaN(currentEnd.getTime())) {
+                          const newEnd = new Date(currentEnd);
+                          newEnd.setMonth(newEnd.getMonth() + duration);
+                          return newEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        }
+                        return 'TBD';
+                      })()}
+                    </p>
+                  </div>
 
-                {/* Reason Textarea */}
-                <div className="space-y-2">
-                  <label className="text-[13px] text-gray-500 font-medium">Reason for Extension</label>
-                  <textarea
-                    value={extensionReason}
-                    onChange={(e) => setExtensionReason(e.target.value)}
-                    placeholder="Explain why this contract extension is needed..."
-                    rows={4}
-                    className="w-full bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 text-[14px] outline-none focus:border-gray-700 transition-colors resize-none placeholder:text-gray-600"
-                  />
-                </div>
+                  {/* Reason Textarea */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] text-gray-500 font-medium">Reason for Extension</label>
+                    <textarea
+                      value={extensionReason}
+                      onChange={(e) => setExtensionReason(e.target.value)}
+                      placeholder="Explain why this contract extension is needed..."
+                      rows={4}
+                      className="w-full bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 text-[14px] outline-none focus:border-gray-700 transition-colors resize-none placeholder:text-gray-600"
+                    />
+                  </div>
 
-                <div className="pt-4 flex justify-end gap-3">
-                  <button
-                    onClick={() => setExtensionModalOpen(false)}
-                    className="px-6 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] text-white font-bold text-[14px] rounded-lg transition-colors border border-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitExtension}
-                    disabled={submitting || !extensionReason}
-                    className="px-6 py-2.5 bg-white hover:bg-gray-200 disabled:bg-[#404040] disabled:text-[#737373] text-black font-bold text-[14px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                  >
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    Submit Request
-                  </button>
+                  <div className="pt-4 flex justify-end gap-3">
+                    <button
+                      onClick={() => setExtensionModalOpen(false)}
+                      className="px-6 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] text-white font-bold text-[14px] rounded-lg transition-colors border border-gray-800"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubmitExtension}
+                      disabled={submitting || !extensionReason}
+                      className="px-6 py-2.5 bg-white hover:bg-gray-200 disabled:bg-[#404040] disabled:text-[#737373] text-black font-bold text-[14px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                    >
+                      {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      Submit Request
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

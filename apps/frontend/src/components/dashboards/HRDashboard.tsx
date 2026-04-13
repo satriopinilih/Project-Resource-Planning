@@ -232,7 +232,7 @@ export default function HRDashboard() {
         password: '',
         departmentId: hireForm.departmentId,
         employeeType: hireForm.employmentType === 'Contract' ? 0 : 1,
-        experienceLevel: `${hireForm.experienceLevel} years`,
+        experienceYears: Number(hireForm.experienceLevel) || 0,
         contractStart: hireForm.contractStart,
         contractEnd: hireForm.contractEnd,
         skillIds: hireForm.skillIds,

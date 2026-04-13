@@ -123,11 +123,6 @@ export default function TeamMembersPage() {
                       </p>
                     </div>
                   </div>
-                  {selectedEmployee.level && (
-                    <div className="px-3 py-1.5 bg-[#78350f]/30 border border-[#78350f]/50 text-[#fbbf24] text-[13px] font-semibold rounded-lg flex items-center gap-1.5">
-                      Level {selectedEmployee.level}
-                    </div>
-                  )}
                 </div>
 
                 {selectedEmployee.skills &&

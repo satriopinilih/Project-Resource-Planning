@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Bell, Sun, Moon, User } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
-import { getContractExtensionRequests, getProjects, getHireRequests, HireRequest } from "@/lib/api";
+import { getContractExtensionRequests, getProjects, getHireRequests, HireRequest, getRequestHistory } from "@/lib/api";
 import { ContractExtensionRequest } from "@/lib/types";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -55,20 +55,44 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const [notifications, setNotifications] = useState<ContractExtensionRequest[]>([]);
   const [hireNotifications, setHireNotifications] = useState<HireRequest[]>([]);
   const [gmHireNotifications, setGmHireNotifications] = useState<HireRequest[]>([]);
+  const [gmContractNotifications, setGmContractNotifications] = useState<any[]>([]);
   const [pmNotifications, setPmNotifications] = useState<PMNotification[]>([]);
+
+  const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
+  
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('read_notif_ids');
+      if (stored) setReadNotifIds(JSON.parse(stored));
+    } catch {}
+  }, []);
 
   const loadNotifications = async () => {
     try {
-      const pending = await getContractExtensionRequests("Pending");
-      setNotifications(pending);
-      const hires = await getHireRequests('Open');
-      setHireNotifications(hires);
-      const reviewed = await getHireRequests();
-      setGmHireNotifications(reviewed.filter((h) => h.status === 'Fulfilled' || h.status === 'Declined'));
+      if (userRole === "HR") {
+        const pending = await getContractExtensionRequests("Pending");
+        setNotifications(pending);
+        const hires = await getHireRequests('Open');
+        setHireNotifications(hires);
+      }
+      if (userRole === "GM") {
+        const reviewed = await getHireRequests();
+        setGmHireNotifications(reviewed.filter((h) => h.status === 'Fulfilled' || h.status === 'Declined'));
+        const extensions = await getRequestHistory('HR');
+        const processed = extensions
+          .filter((r: any) => r.status === 'Approved' || r.status === 'Declined')
+          .sort((a: any, b: any) => {
+             const dateA = new Date(a.reviewedDate || a.requestedDate).getTime();
+             const dateB = new Date(b.reviewedDate || b.requestedDate).getTime();
+             return dateB - dateA;
+          });
+        setGmContractNotifications(processed);
+      }
     } catch {
       setNotifications([]);
       setHireNotifications([]);
       setGmHireNotifications([]);
+      setGmContractNotifications([]);
     }
   };
 
@@ -141,6 +165,31 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     }
   };
 
+  const currentNotifIds = [
+    ...(userRole === "HR" ? notifications.map(n => `hr-ext-${n.id}`) : []),
+    ...(userRole === "HR" ? hireNotifications.map(n => `hr-hire-${n.hireRequestId}`) : []),
+    ...(userRole === "GM" ? gmHireNotifications.map(n => `gm-hire-${n.hireRequestId}`) : []),
+    ...(userRole === "GM" ? gmContractNotifications.map(n => `gm-ext-${n.referenceId}`) : []),
+    ...(userRole === "PM" ? pmNotifications.map(n => `pm-proj-${n.projectId}`) : [])
+  ];
+
+  const hasUnread = currentNotifIds.length > 0 && currentNotifIds.some(id => !readNotifIds.includes(id));
+
+  const handleToggleNotifications = () => {
+    if (!isNotificationOpen) {
+      if (userRole === "HR") loadNotifications();
+      if (userRole === "PM") loadPMNotifications();
+      
+      // Mark as read
+      if (currentNotifIds.length > 0) {
+        const newReadIds = Array.from(new Set([...readNotifIds, ...currentNotifIds]));
+        setReadNotifIds(newReadIds);
+        localStorage.setItem('read_notif_ids', JSON.stringify(newReadIds));
+      }
+    }
+    setIsNotificationOpen((prev) => !prev);
+  };
+
   const badgeClass = roleBadgeClass[userRole] ?? roleBadgeClass["Staff"];
   const avatarClass = avatarBgClass[userRole] ?? avatarBgClass["Staff"];
 
@@ -155,18 +204,12 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       <div className="flex items-center gap-6">
         <div className="relative">
           <button
-            onClick={() => {
-              if (!isNotificationOpen) {
-                if (userRole === "HR") loadNotifications();
-                if (userRole === "PM") loadPMNotifications();
-              }
-              setIsNotificationOpen((prev) => !prev);
-            }}
+            onClick={handleToggleNotifications}
             className="relative p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
           >
             <Bell size={22} strokeWidth={1.8} />
-            {((userRole === "HR" && (notifications.length + hireNotifications.length) > 0) || (userRole === "GM" && gmHireNotifications.length > 0) || (userRole === "PM" && pmNotifications.length > 0)) && (
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
+            {hasUnread && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)] animate-pulse" />
             )}
           </button>
 
@@ -233,7 +276,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                 </div>
               )}
 
-              {userRole === "GM" && gmHireNotifications.length > 0 && (
+              {userRole === "GM" && (gmHireNotifications.length > 0 || gmContractNotifications.length > 0) && (
                 <div className="max-h-72 overflow-y-auto">
                   {gmHireNotifications.slice(0, 6).map((item) => (
                     <div key={`gm-hire-${item.hireRequestId}`} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
@@ -243,11 +286,19 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       <p className="text-[12px] text-[#93a2c0] mt-1">Role: {item.roleNeeded}</p>
                     </div>
                   ))}
+                  {gmContractNotifications.slice(0, 6).map((item) => (
+                    <div key={`gm-contract-${item.referenceId}`} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
+                      <p className="text-[13px] text-[#d9e0f2] leading-5">
+                        Contract extension for <span className="font-semibold">{item.employeeName}</span> was <span className={`font-semibold ${item.status === 'Approved' ? 'text-emerald-400' : 'text-red-400'}`}>{item.status.toLowerCase()}</span> by HR.
+                      </p>
+                      <p className="text-[12px] text-[#93a2c0] mt-1 text-right">{item.reviewedDate || item.requestedDate}</p>
+                    </div>
+                  ))}
                 </div>
               )}
 
               {((userRole === "HR" && notifications.length === 0 && hireNotifications.length === 0) || 
-                (userRole === "GM" && gmHireNotifications.length === 0) ||
+                (userRole === "GM" && gmHireNotifications.length === 0 && gmContractNotifications.length === 0) ||
                 (userRole === "PM" && pmNotifications.length === 0) || 
                 (userRole !== "HR" && userRole !== "PM" && userRole !== "GM")) && (
                 <div className="px-4 py-8 text-center text-[22px] text-[#9aa7c0]">No notifications</div>
