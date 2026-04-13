@@ -84,7 +84,7 @@ export default function PMProjectDetailsPage() {
           <Briefcase size={24} className="text-gray-500" />
         </div>
         <p className="text-[16px] text-gray-400 font-medium">Project not found.</p>
-        <button onClick={() => router.push('/pm/projects')} className="text-[#3b82f6] flex items-center gap-2 hover:underline">
+        <button onClick={() => router.push('/project')} className="text-[#3b82f6] flex items-center gap-2 hover:underline">
           Go back to Projects
         </button>
       </div>
@@ -209,7 +209,7 @@ export default function PMProjectDetailsPage() {
           </section>
 
           <button
-            onClick={() => router.push('/pm/projects')}
+            onClick={() => router.push('/project')}
             className="mt-4 text-[#3b82f6] flex items-center gap-2 hover:underline text-[14px] font-medium transition-all"
           >
             &larr; Back to Project List

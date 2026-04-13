@@ -150,7 +150,7 @@ export default function MarketingDashboard() {
           </div>
         </Link>
 
-        <Link href="/mrkt/projects" className="flex items-center gap-5 bg-[#8b3df6] hover:bg-[#7b2be0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
+        <Link href="/project" className="flex items-center gap-5 bg-[#8b3df6] hover:bg-[#7b2be0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
           <div className="bg-white/20 p-4 rounded-xl group-hover:scale-105 transition-transform flex items-center justify-center">
             <Folder size={26} className="text-white" />
           </div>

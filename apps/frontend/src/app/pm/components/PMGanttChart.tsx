@@ -33,7 +33,7 @@ export default function PMTimelineView() {
   const navigateByName = (projectName: string) => {
     const id = projectNameToId[projectName];
     if (id) {
-      router.push(`/pm/projects/${id}`);
+      router.push(`/project/${id}`);
     }
   };
 

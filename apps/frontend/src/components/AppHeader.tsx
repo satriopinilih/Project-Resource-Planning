@@ -133,11 +133,11 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       
       setPmNotifications(prev => prev.filter(n => n.projectId !== notif.projectId));
       setIsNotificationOpen(false);
-      router.push(`/pm/projects/${notif.projectId}`);
+      router.push(`/project/${notif.projectId}`);
     } catch (err) {
       console.error("Failed to mark notification as read", err);
       setIsNotificationOpen(false);
-      router.push(`/pm/projects/${notif.projectId}`);
+      router.push(`/project/${notif.projectId}`);
     }
   };
 

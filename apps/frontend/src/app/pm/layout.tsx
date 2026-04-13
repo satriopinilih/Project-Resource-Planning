@@ -33,7 +33,7 @@ export default function PMLayout({
   // Map pathname to header title
   const getHeaderTitle = () => {
     if (pathname.includes("/dashboard")) return "PM Dashboard";
-    if (pathname.includes("/team-members")) return "Team Members";
+    if (pathname.includes("/team-members") || pathname.includes("/teammember")) return "Team Members";
     if (pathname.includes("/projects")) return "Projects";
     if (pathname.includes("/settings")) return "Settings";
     return "Project Management";

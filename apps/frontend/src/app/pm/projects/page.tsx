@@ -169,7 +169,7 @@ function PMProjectsContent() {
                 filteredProjects.map((project) => (
                   <tr
                     key={project.id}
-                    onClick={() => router.push(`/pm/projects/${project.id}`)}
+                    onClick={() => router.push(`/project/${project.id}`)}
                     className="border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer group"
                   >
                     <td className="py-4 pl-6 pr-4">

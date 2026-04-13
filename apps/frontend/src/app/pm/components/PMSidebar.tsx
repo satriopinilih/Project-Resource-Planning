@@ -9,7 +9,7 @@ export default function SidebarPM() {
 
   const navItems = [
     {
-      href: "/pm/dashboard",
+      href: "/dashboard",
       label: "Dashboard",
       icon: (
         <svg
@@ -28,7 +28,7 @@ export default function SidebarPM() {
       ),
     },
     {
-      href: "/pm/team-members",
+      href: "/teammember",
       label: "Team Members",
       icon: (
         <svg
