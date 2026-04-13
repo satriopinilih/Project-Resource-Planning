@@ -10,10 +10,8 @@ export default function DashboardHeader() {
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     
-    // Ambil nama user dari session (berasal dari database saat login)
     const user = getSessionUser();
     if (user?.userName) {
-      // Ambil nama depan saja atau nama utuh, kita gunakan nama utuh
       setUserName(user.userName);
     }
     
