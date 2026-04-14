@@ -557,7 +557,9 @@ export default function ProjectDetailsPage() {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-[13px] font-bold text-[var(--dash-text-primary)] truncate">{member.userName}</p>
-                                  <p className="text-[11px] text-[var(--dash-text-faint)] truncate">{member.startDate ? formatDate(member.startDate) : "TBD"} - {member.endDate ? formatDate(member.endDate) : "TBD"}</p>
+                                  <p className="text-[11px] text-[var(--dash-text-faint)] truncate">
+                                    {formatDate(member.startDate || project.estimatedStartDate)} - {formatDate(member.endDate || project.estimatedEndDate)}
+                                  </p>
                                 </div>
                               </div>
                               {isEditingTeam && (
@@ -580,73 +582,8 @@ export default function ProjectDetailsPage() {
             )}
           </section>
 
-          {/* 4. Assigned Team (for Active/Completed projects) */}
-          {project.projectStatus !== 0 && (
-            <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assigned Team</h2>
-                <button
-                  onClick={() => openAssignModal()}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all cursor-pointer"
-                >
-                  <UserPlus size={16} />
-                  Assign Member
-                </button>
-              </div>
-              {(!project.members || project.members.length === 0) ? (
-                <div className="py-8 text-center border border-dashed border-[var(--dash-border)] rounded-xl">
-                  <p className="text-[var(--dash-text-faint)] text-[14px]">No team members assigned.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {project.members.map((member) => (
-                    <div key={member.userId} className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 hover:border-[var(--dash-border-hover,#555)] transition-colors group">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-[#1e3a8a]/40 border border-blue-500/30 flex items-center justify-center text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
-                            {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                          </div>
-                          <div>
-                            <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
-                            <p className="text-[12px] text-[var(--dash-text-secondary)]">{member.role} · {member.staffRole || 'Member'}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-green-500/10 text-green-400 border border-green-500/20">
-                            {member.status || "Assigned"}
-                          </span>
-                          {isEditingTeam && (
-                            <button
-                              onClick={() => handleRemoveMember(member.userId)}
-                              disabled={removingUserId === member.userId}
-                              className="p-1.5 rounded-lg text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer disabled:opacity-50"
-                              title="Remove from project"
-                            >
-                              {removingUserId === member.userId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Timeline bar */}
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between text-[11px] text-[var(--dash-text-faint)] mb-1">
-                          <span>{member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)}</span>
-                          <span>{member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}</span>
-                        </div>
-                        <TimelineBar
-                          startDate={member.startDate}
-                          endDate={member.endDate}
-                          projectStart={project.estimatedStartDate}
-                          projectEnd={project.estimatedEndDate}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
+          {/* Footer filler */}
+          <div className="h-10" />
 
         </main>
       </div>
