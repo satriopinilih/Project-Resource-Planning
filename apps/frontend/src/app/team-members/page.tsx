@@ -124,10 +124,10 @@ export default function TeamMembersPage() {
 
           <div className="flex gap-6 h-full min-h-0">
             {/* ── Left Panel: Team Members List ── */}
-            <div className="w-[340px] flex-shrink-0 bg-[#22252e] rounded-xl border border-gray-700/50 flex flex-col overflow-hidden">
-              <div className="flex items-center justify-between p-5 border-b border-gray-700/50">
-                <h2 className="text-[16px] font-semibold text-white">Team Members</h2>
-                <span className="text-[12px] font-semibold bg-[#1e3a8a]/40 border border-[#1e3a8a] text-[#60a5fa] px-3 py-1 rounded-md">
+            <div className="w-[340px] flex-shrink-0 bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between p-5 border-b border-[var(--dash-border)]">
+                <h2 className="text-[16px] font-semibold text-[var(--dash-text-heading)]">Team Members</h2>
+                <span className="text-[12px] font-semibold bg-blue-100 border border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/40 dark:text-blue-300 px-3 py-1 rounded-md">
                   {employees.length} Total
                 </span>
               </div>
@@ -138,26 +138,26 @@ export default function TeamMembersPage() {
                     key={employee.id}
                     onClick={() => setSelectedMember(employee.id)}
                     className={`w-full text-left p-4 rounded-xl transition-all border ${selectedMember === employee.id
-                      ? 'border-[#3b82f6] bg-[#1e293b]/50 shadow-sm'
-                      : 'border-transparent bg-[#1e2532] hover:bg-[#252d3d]'
-                      }`}
+                      ? 'border-[#3b82f6] bg-[#1e3a8a]/10 shadow-sm'
+                      : 'border-transparent bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)]'
+                       }`}
                   >
-                    <div className="font-semibold text-[15px] text-gray-100 truncate">{employee.name}</div>
+                    <div className="font-semibold text-[15px] text-[var(--dash-text-heading)] truncate">{employee.name}</div>
                     {canResetPassword && (
-                      <div className="text-[12px] text-gray-500 mt-0.5 truncate">User ID: {employee.id}</div>
+                      <div className="text-[12px] text-[var(--dash-text-faint)] mt-0.5 truncate">User ID: {employee.id}</div>
                     )}
-                    <div className="text-[13px] text-gray-400 mt-0.5 truncate">{employee.role}</div>
-                    {employee.experienceYears && (
-                      <div className="text-[12px] text-gray-500 mt-1">Exp: {employee.experienceYears} yrs</div>
+                    <div className="text-[13px] text-[var(--dash-text-secondary)] mt-0.5 truncate">{employee.role}</div>
+                    {employee.experienceYears !== undefined && (
+                      <div className="text-[12px] text-[var(--dash-text-faint)] mt-1">Exp: {employee.experienceYears} yrs</div>
                     )}
 
                     <div className="mt-2 flex items-center gap-2">
-                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded ${(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'bg-[#78350f]/50 text-[#fbbf24]' : 'bg-[#064e3b]/50 text-[#34d399]'}`}>
+                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded border ${(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/40' : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40'}`}>
                         {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'Expiring Soon' : 'Active'}
                       </span>
 
                       {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.daysRemaining !== undefined && employee.employmentType !== 'Permanent' && (
-                        <div className="flex items-center gap-1 text-[11px] font-medium text-[#fbbf24]">
+                        <div className="flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                           </svg>
@@ -175,18 +175,18 @@ export default function TeamMembersPage() {
               {selectedEmployee ? (
                 <>
                   {/* Card 1: Header & Skills */}
-                  <div className="bg-[#22252e] rounded-xl border border-gray-700/50 p-6">
+                  <div className="bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] p-6">
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-center gap-5">
                         <div className="w-16 h-16 rounded-full bg-[#2563eb] flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 shadow-lg">
                           {getInitials(selectedEmployee.name)}
                         </div>
                         <div>
-                          <h2 className="text-[22px] font-bold text-white">{selectedEmployee.name}</h2>
+                          <h2 className="text-[22px] font-bold text-[var(--dash-text-heading)]">{selectedEmployee.name}</h2>
                           {canResetPassword && (
-                            <p className="text-[12px] text-gray-500 mt-1">User ID: {selectedEmployee.id}</p>
+                            <p className="text-[12px] text-[var(--dash-text-faint)] mt-1">User ID: {selectedEmployee.id}</p>
                           )}
-                          <p className="text-[14px] text-gray-400 mt-1">{selectedEmployee.role}</p>
+                          <p className="text-[14px] text-[var(--dash-text-secondary)] mt-1">{selectedEmployee.role}</p>
                         </div>
                       </div>
 
@@ -195,12 +195,12 @@ export default function TeamMembersPage() {
 
                     {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
                       <div>
-                        <h3 className="text-[13px] font-semibold text-gray-400 mb-3">Skills</h3>
+                        <h3 className="text-[13px] font-semibold text-[var(--dash-text-muted)] mb-3">Skills</h3>
                         <div className="flex flex-wrap gap-2">
                           {selectedEmployee.skills.map((skill, index) => (
                             <span
                               key={index}
-                              className="px-3 py-1.5 bg-[#1e3a8a]/30 border border-[#1e3a8a]/50 text-[#93c5fd] text-[13px] rounded-lg"
+                              className="px-3 py-1.5 bg-blue-100 border border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/40 dark:text-blue-300 text-[13px] rounded-lg"
                             >
                               {skill}
                             </span>
@@ -211,9 +211,9 @@ export default function TeamMembersPage() {
                   </div>
 
                   {/* Card 2: Contract Information */}
-                  <div className="bg-[#22252e] rounded-xl border border-gray-700/50 p-6">
+                  <div className="bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] p-6">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-[16px] font-bold text-white">Contract Information</h3>
+                      <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)]">Contract Information</h3>
                       <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg border ${(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && selectedEmployee.employmentType !== 'Permanent' ? 'bg-[#78350f]/30 text-[#fbbf24] border-[#78350f]/50' : 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50'}`}>
                         {(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && selectedEmployee.employmentType !== 'Permanent' ? 'Expiring Soon' : 'Active'}
                       </span>
@@ -221,30 +221,30 @@ export default function TeamMembersPage() {
 
                     <div className="grid grid-cols-2 gap-8 mb-6">
                       <div>
-                        <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-2">
+                        <div className="flex items-center gap-2 text-[13px] text-[var(--dash-text-muted)] mb-2">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          Contract Start
+                          Start Date
                         </div>
-                        <div className="text-[15px] text-white font-medium">{selectedEmployee.contractStart || 'Jan 15, 2025'}</div>
+                        <div className="text-[15px] text-[var(--dash-text-heading)] font-medium">{selectedEmployee.contractStart || 'Jan 15, 2025'}</div>
                       </div>
 
                       <div>
-                        <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-2">
+                        <div className="flex items-center gap-2 text-[13px] text-[var(--dash-text-muted)] mb-2">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          Contract End
+                          End Date
                         </div>
-                        <div className="text-[15px] text-white font-medium">
+                        <div className="text-[15px] text-[var(--dash-text-heading)] font-medium">
                           {selectedEmployee.employmentType === 'Permanent' ? '-' : (selectedEmployee.contractEnd || 'Jan 14, 2027')}
                         </div>
                       </div>
                     </div>
 
                     {selectedEmployee.employmentType !== 'Permanent' && (
-                      <div className="flex items-center gap-2 text-[13px] text-gray-400 mb-6">
+                      <div className="flex items-center gap-2 text-[13px] text-[var(--dash-text-muted)] mb-6">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -254,7 +254,7 @@ export default function TeamMembersPage() {
 
                     {selectedEmployee.employmentType === 'Permanent' ? (
                       <div className="space-y-2">
-                        <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-[#34d399]">
+                        <div className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-center text-[13px] font-medium text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
                           Permanent Employee
                         </div>
                         {canResetPassword && (
@@ -264,7 +264,7 @@ export default function TeamMembersPage() {
                               setResetConfirmText('');
                             }}
                             disabled={resettingUserId === selectedEmployee.id}
-                            className="w-full rounded-xl border border-amber-600 bg-amber-600/15 px-4 py-3 text-center text-[13px] font-semibold text-amber-300 hover:bg-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full rounded-xl border border-amber-400 bg-amber-100 px-4 py-3 text-center text-[13px] font-semibold text-amber-900 hover:bg-amber-200 dark:border-amber-600 dark:bg-amber-600/15 dark:text-amber-300 dark:hover:bg-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {resettingUserId === selectedEmployee.id ? 'Resetting Password...' : 'Reset Password to Default'}
                           </button>
@@ -280,19 +280,19 @@ export default function TeamMembersPage() {
                           }}
                           disabled={hasPendingRequest}
                           className={`w-full font-bold text-[14px] py-3 rounded-xl transition-colors ${hasPendingRequest
-                            ? 'bg-[#111827] text-gray-300 cursor-not-allowed border border-gray-700'
-                            : 'bg-white hover:bg-gray-100 text-gray-900'
-                            }`}
+                            ? 'bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] cursor-not-allowed border border-[var(--dash-border)]'
+                            : 'bg-[var(--dash-text-heading)] hover:opacity-90 text-[var(--dash-bg-card)]'
+                             }`}
                         >
                           {hasPendingRequest ? 'Request Sent' : 'Request Contract Extension'}
                         </button>
                         {hasPendingRequest && (
-                          <p className="mt-2 text-[12px] text-gray-400 text-center">Request has been sent to HR</p>
+                          <p className="mt-2 text-[12px] text-[var(--dash-text-muted)] text-center">Request has been sent to HR</p>
                         )}
                       </>
                     ) : (
                       <div className="space-y-2">
-                        <div className="w-full rounded-xl border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[13px] font-medium text-gray-300">
+                        <div className="w-full rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-4 py-3 text-center text-[13px] font-medium text-[var(--dash-text-secondary)]">
                           Contact GM to request contract extension
                         </div>
                         {canResetPassword && (
@@ -302,7 +302,7 @@ export default function TeamMembersPage() {
                               setResetConfirmText('');
                             }}
                             disabled={resettingUserId === selectedEmployee.id}
-                            className="w-full rounded-xl border border-amber-600 bg-amber-600/15 px-4 py-3 text-center text-[13px] font-semibold text-amber-300 hover:bg-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full rounded-xl border border-amber-400 bg-amber-100 px-4 py-3 text-center text-[13px] font-semibold text-amber-900 hover:bg-amber-200 dark:border-amber-600 dark:bg-amber-600/15 dark:text-amber-300 dark:hover:bg-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {resettingUserId === selectedEmployee.id ? 'Resetting Password...' : 'Reset Password to Default'}
                           </button>
@@ -313,28 +313,28 @@ export default function TeamMembersPage() {
 
                   {/* Card 3: Resource Pipeline */}
                   {selectedEmployee.projects && selectedEmployee.projects.length > 0 && (
-                    <div className="bg-[#22252e] rounded-xl border border-gray-700/50 p-6">
-                      <h3 className="text-[16px] font-bold text-white mb-4">Resource Pipeline</h3>
+                  <div className="bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] p-6">
+                      <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)] mb-4">Resource Pipeline</h3>
                       <div className="space-y-4">
                         {selectedEmployee.projects.map((project) => (
                           <div
                             key={project.id}
-                            className="bg-[#1e2532] border border-gray-700/50 rounded-xl p-5"
+                            className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5"
                           >
                             <div className="flex items-start justify-between mb-3">
                               <div>
-                                <div className="font-semibold text-[15px] text-white">{project.name}</div>
-                                <div className="text-[13px] text-gray-400 mt-0.5">{project.client}</div>
+                                <div className="font-semibold text-[15px] text-[var(--dash-text-heading)]">{project.name}</div>
+                                <div className="text-[13px] text-[var(--dash-text-secondary)] mt-0.5">{project.client}</div>
                               </div>
-                              <span className={`px-3 py-1 text-[12px] font-medium rounded-lg ${project.status === 'Completed' ? 'bg-gray-800 text-gray-300' :
-                                project.status === 'Active' ? 'bg-[#064e3b]/30 text-[#34d399]' :
-                                  'bg-[#1e3a8a]/30 text-[#60a5fa]'
-                                }`}>
+                              <span className={`px-3 py-1 text-[12px] font-medium rounded-lg border ${project.status === 'Completed' ? 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600' :
+                                project.status === 'Active' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40' :
+                                  'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-400/40'
+                                 }`}>
                                 {project.status}
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-2 text-[13px] text-gray-400 mt-4">
+                            <div className="flex items-center gap-2 text-[13px] text-[var(--dash-text-muted)] mt-4">
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
@@ -342,7 +342,7 @@ export default function TeamMembersPage() {
                             </div>
 
                             {project.startWeek && project.endWeek && (
-                              <div className="text-[12px] text-gray-500 mt-1">
+                              <div className="text-[12px] text-[var(--dash-text-faint)] mt-1">
                                 {project.startWeek} — {project.endWeek}
                               </div>
                             )}
@@ -354,38 +354,38 @@ export default function TeamMembersPage() {
 
                   {/* Card 4: Availability Summary */}
                   {selectedEmployee.projects && selectedEmployee.projects.length > 0 && (
-                    <div className="bg-[#22252e] rounded-xl border border-gray-700/50 p-6">
-                      <h3 className="text-[16px] font-bold text-white mb-4">Availability Summary</h3>
+                    <div className="bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] p-6">
+                      <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)] mb-4">Availability Summary</h3>
                       <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-[#1e2532] border border-gray-700/30 rounded-xl p-5 text-center">
-                          <div className="text-2xl font-bold text-white">{selectedEmployee.projects.length}</div>
-                          <div className="text-[12px] text-gray-400 mt-1">Total Projects</div>
+                        <div className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 text-center">
+                          <div className="text-2xl font-bold text-[var(--dash-text-heading)]">{selectedEmployee.projects.length}</div>
+                          <div className="text-[12px] text-[var(--dash-text-muted)] mt-1">Total Projects</div>
                         </div>
 
-                        <div className="bg-[#064e3b]/20 border border-[#064e3b]/30 rounded-xl p-5 text-center">
-                          <div className="text-2xl font-bold text-[#34d399]">
+                        <div className="bg-emerald-100 border border-emerald-300 rounded-xl p-5 text-center dark:bg-emerald-500/20 dark:border-emerald-400/40">
+                          <div className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">
                             {selectedEmployee.projects.filter(p => p.status === 'Active').length}
                           </div>
-                          <div className="text-[12px] text-[#34d399]/70 mt-1">Active</div>
+                          <div className="text-[12px] text-emerald-700 dark:text-emerald-300/80 mt-1">Active</div>
                         </div>
 
-                        <div className="bg-[#1e3a8a]/20 border border-[#1e3a8a]/30 rounded-xl p-5 text-center">
-                          <div className="text-2xl font-bold text-[#60a5fa]">
+                        <div className="bg-blue-100 border border-blue-300 rounded-xl p-5 text-center dark:bg-blue-500/20 dark:border-blue-400/40">
+                          <div className="text-2xl font-bold text-blue-800 dark:text-blue-300">
                             {selectedEmployee.projects.filter(p => p.status === 'Upcoming' || p.status === 'Scheduled').length}
                           </div>
-                          <div className="text-[12px] text-[#60a5fa]/70 mt-1">Upcoming</div>
+                          <div className="text-[12px] text-blue-700 dark:text-blue-300/80 mt-1">Upcoming</div>
                         </div>
                       </div>
                     </div>
                   )}
                 </>
               ) : (
-                <div className="bg-[#22252e] rounded-xl border border-gray-700/50 p-12 flex flex-col items-center justify-center text-center h-full">
-                  <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] p-12 flex flex-col items-center justify-center text-center h-full">
+                  <svg className="w-16 h-16 text-[var(--dash-text-faint)] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <h3 className="text-lg font-medium text-white mb-2">No Team Member Selected</h3>
-                  <p className="text-[14px] text-gray-400">Select a team member to view their details</p>
+                  <h3 className="text-lg font-medium text-[var(--dash-text-heading)] mb-2">No Team Member Selected</h3>
+                  <p className="text-[14px] text-[var(--dash-text-secondary)]">Select a team member to view their details</p>
                 </div>
               )}
             </div>
@@ -498,30 +498,30 @@ export default function TeamMembersPage() {
       )}
 
       {canResetPassword && showResetConfirmModal && selectedEmployee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[var(--dash-text-primary)]">
             <div className="p-6 space-y-4">
               <div className="flex items-start justify-between">
-                <h3 className="text-[18px] font-bold">Confirm Password Reset</h3>
+                <h3 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Confirm Password Reset</h3>
                 <button
                   onClick={() => {
                     setShowResetConfirmModal(false);
                     setResetConfirmText('');
                   }}
-                  className="text-gray-500 hover:text-white transition-colors"
+                  className="text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-[13px] text-gray-300">
-                To prevent accidental reset, type <span className="font-bold text-amber-300">Reset-Password</span> below for <span className="font-semibold">{selectedEmployee.name}</span>.
+              <p className="text-[13px] text-[var(--dash-text-secondary)]">
+                To prevent accidental reset, type <span className="font-bold text-amber-700 dark:text-amber-300">Reset-Password</span> below for <span className="font-semibold">{selectedEmployee.name}</span>.
               </p>
               <input
                 type="text"
                 value={resetConfirmText}
                 onChange={(e) => setResetConfirmText(e.target.value)}
                 placeholder="Type Reset-Password"
-                className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-[14px] outline-none focus:border-amber-500"
+                className="w-full bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg px-4 py-3 text-[14px] outline-none focus:border-amber-500"
               />
               <div className="flex justify-end gap-3 pt-2">
                 <button
@@ -529,7 +529,7 @@ export default function TeamMembersPage() {
                     setShowResetConfirmModal(false);
                     setResetConfirmText('');
                   }}
-                  className="px-4 py-2 border border-gray-700 rounded-lg text-[13px]"
+                  className="px-4 py-2 border border-[var(--dash-border)] rounded-lg text-[13px]"
                 >
                   Cancel
                 </button>
@@ -547,15 +547,15 @@ export default function TeamMembersPage() {
       )}
 
       {canResetPassword && resetTempPassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0f0f0f] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[var(--dash-text-primary)]">
             <div className="p-6 space-y-4">
-              <h3 className="text-[18px] font-bold">Password Reset Success</h3>
-              <p className="text-[13px] text-gray-300">Temporary password generated. Share this securely to the user:</p>
-              <div className="w-full rounded-lg border border-gray-700 bg-[#1a1a1a] px-4 py-3 text-center text-[20px] font-bold tracking-wide text-amber-300">
+              <h3 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Password Reset Success</h3>
+              <p className="text-[13px] text-[var(--dash-text-secondary)]">Temporary password generated. Share this securely to the user:</p>
+              <div className="w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-4 py-3 text-center text-[20px] font-bold tracking-wide text-amber-700 dark:text-amber-300">
                 {resetTempPassword}
               </div>
-              <p className="text-[12px] text-gray-400">User must change password on first login.</p>
+              <p className="text-[12px] text-[var(--dash-text-muted)]">User must change password on first login.</p>
               <div className="flex justify-end">
                 <button
                   onClick={() => setResetTempPassword(null)}

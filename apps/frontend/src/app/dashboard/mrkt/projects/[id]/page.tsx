@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from 'next/link'
 import {
   Calendar,
   Loader2,
@@ -136,7 +135,7 @@ export default function ProjectDetailsPage() {
             roleName: r.role,
             requiredCount: r.count,
             workingType: workingTypeMap[r.workingType] ?? 1
-          } as any; // Cast as any to ensure it passes if there are any other hidden strict checks
+          };
         }),
         requiredSkillIds: editForm.requiredSkillIds
       });

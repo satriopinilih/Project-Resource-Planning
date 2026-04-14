@@ -83,8 +83,8 @@ export type BackendRequiredRole = {
   staffRoleId: number;
   roleName: string;
   requiredCount: number;
-  workingType: string;
-  filledCount: number;
+  workingType: string | number;
+  filledCount?: number;
 };
 
 export type BackendProject = {
@@ -100,6 +100,7 @@ export type BackendProject = {
   members: BackendProjectMember[];
   requiredRoles: BackendRequiredRole[];
   requiredSkills: string[]; // Project-level skill requirements
+  requiredSkillIds: number[];
   isUnread: boolean;
 };
 
@@ -322,7 +323,9 @@ export async function declineContractExtension(contractExtensionRequestID: numbe
 }
 
 export async function getProjects(): Promise<BackendProject[]> {
-  return fetchJson<BackendProject[]>('/api/projects');
+  const res = await fetch('/api/projects');
+  if (!res.ok) throw new Error('Failed to fetch projects');
+  return res.json();
 }
 
 export async function getPendingProjects(): Promise<BackendProject[]> {
@@ -340,7 +343,7 @@ export async function getProjectById(id: string): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`);
 }
 
-export async function updateProject(id: number, projectData: Partial<BackendProject>): Promise<BackendProject> {
+export async function updateProject(id: number, projectData: any): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`, {
     method: 'PUT',
     body: JSON.stringify(projectData)
@@ -455,7 +458,7 @@ export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryIte
   }));
 }
 
-export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled', projectId?: number): Promise<HireRequest[]> {
+export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined', projectId?: number): Promise<HireRequest[]> {
   const params = new URLSearchParams();
   if (status) params.set('status', status);
   if (projectId !== undefined) params.set('projectId', String(projectId));
@@ -490,6 +493,8 @@ export async function createTimelineEditRequest(payload: {
     } satisfies CreateHireRequestPayload)
   });
 }
+
+
 
 export async function startHireRequest(id: number): Promise<void> {
   await fetchJson(`/api/hirerequests/${id}/start`, { method: 'POST' });
@@ -536,6 +541,15 @@ export interface TimelineItem {
     projectId?: number;
   }[];
 }
+export interface TimelineEditRequest {
+  id: number;
+  projectId: number;
+  projectName: string;
+  notes: string;
+  currentStartDate: string;
+  currentEndDate: string;
+  status?: 'pending' | 'approved' | 'rejected';
+}
 
 export async function getTimelineStats(): Promise<TimelineStats> {
   return fetchRaw<TimelineStats>('/api/timeline/stats');
@@ -551,6 +565,34 @@ export async function getResourceTimeline(): Promise<TimelineItem[]> {
 
 export async function getHolidays(): Promise<BackendHoliday[]> {
   return fetchJson<BackendHoliday[]>('/api/holidays');
+}
+
+export async function getTimelineEditRequests(): Promise<TimelineEditRequest[]> {
+  const allHireRequests = await getHireRequests();
+
+  const timelineEditRequests = allHireRequests.filter(
+    (req) =>
+      req.roleNeeded === 'Timeline Edit Request' &&
+      (req.status === 'Open' || req.status === 'InProgress')
+  );
+
+  return timelineEditRequests.map((req) => {
+    let notes = req.notes;
+    const prefix = '[TIMELINE EDIT REQUEST] ';
+    if (notes.startsWith(prefix)) {
+      notes = notes.substring(prefix.length);
+    }
+
+    return {
+      id: req.hireRequestId,
+      projectId: req.projectId ?? 0,
+      projectName: req.projectName,
+      notes: notes,
+      currentStartDate: req.startDate,
+      currentEndDate: req.endDate,
+      status: 'pending', // ✅ always 'pending' for these filtered requests
+    };
+  });
 }
 
 // ── Smart Recommendation Panel Types ──

@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPrimaryRole, getSessionUser, SessionUser } from '@/lib/auth';
 import GMProjectDetailPage from '../../dashboard/gm/projects/[id]/page';
+import PMProjectDetailsPage from '../../dashboard/pm/projects/[id]/page';
+import MarketingProjectDetailsPage from '../../dashboard/mrkt/projects/[id]/page';
 import GmSidebar from '../../dashboard/gm/components/Sidebar';
+import AppSidebar from '@/components/AppSidebar';
+import AppHeader from '@/components/AppHeader';
 
 export default function ProjectDetailAliasPage() {
   const router = useRouter();
@@ -23,18 +27,21 @@ export default function ProjectDetailAliasPage() {
       router.push('/login');
       return;
     }
-    if (sessionRole !== 'GM') {
+    if (sessionRole !== 'GM' && sessionRole !== 'PM' && sessionRole !== 'Marketing') {
       router.push('/dashboard');
     }
   }, [router]);
 
-  if (!ready || !user || role !== 'GM') return null;
+  if (!ready || !user || !role) return null;
 
   return (
     <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
-      <GmSidebar />
+      {role === 'GM' ? <GmSidebar /> : <AppSidebar role={role} />}
       <main className="flex-1 ml-64 flex flex-col min-h-screen">
-        <GMProjectDetailPage />
+        {role !== 'GM' && <AppHeader title="Project Details" role={role} />}
+        {role === 'GM' && <GMProjectDetailPage />}
+        {role === 'PM' && <PMProjectDetailsPage />}
+        {role === 'Marketing' && <MarketingProjectDetailsPage />}
       </main>
     </div>
   );

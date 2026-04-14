@@ -139,11 +139,16 @@ public class ProjectsController : ControllerBase
             )
         }).ToList();
 
-        // Project-level required skills (separate from roles)
-        var requiredSkills = p.ProjectRequiredSkills
+        // Project-level required skills (names + ids)
+        var requiredSkillNames = p.ProjectRequiredSkills
             .Select(ps => ps.Skill.SkillName)
             .Distinct()
             .OrderBy(s => s)
+            .ToList();
+
+        var requiredSkillIds = p.ProjectRequiredSkills
+            .Select(ps => ps.SkillId)
+            .Distinct()
             .ToList();
 
         return new ProjectDto
@@ -159,9 +164,9 @@ public class ProjectsController : ControllerBase
             ProjectStatus = p.ProjectStatus,
             IsUnread = currentUserId != null && p.UserProjects.Any(up => up.UserId == currentUserId && !up.IsNotificationRead),
             RequiredRoles = requiredRoles,
-            RequiredSkills = requiredSkills,
+            RequiredSkills = requiredSkillNames,
+            RequiredSkillIds = requiredSkillIds,
             Members = p.UserProjects
-                // Sembunyikan Project Manager dari daftar member — fokus ke staff saja
                 .Where(up => !up.RoleInProject.Equals("Project Manager", StringComparison.OrdinalIgnoreCase))
                 .Select(up => new ProjectMemberDto
                 {
@@ -174,6 +179,7 @@ public class ProjectsController : ControllerBase
                 }).ToList()
         };
     }
+
     [HttpPost]
     public async Task<IActionResult> CreateProject([FromBody] CreateProjectRequest request)
     {
@@ -182,7 +188,21 @@ public class ProjectsController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Map DTO to Entity
+        // Pre‑validate Role Names (optional but keeps transaction clean)
+        var roleMappings = new List<(CreateProjectRoleDto Dto, int StaffRoleId)>();
+        if (request.RequiredRoles != null && request.RequiredRoles.Any())
+        {
+            foreach (var roleDto in request.RequiredRoles)
+            {
+                var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == roleDto.RoleName);
+                if (staffRole == null)
+                {
+                    return BadRequest(ApiResponse<string>.ErrorResponse($"Staff Role '{roleDto.RoleName}' not found. Please ensure all requested roles exist in the HR system."));
+                }
+                roleMappings.Add((roleDto, staffRole.StaffRoleId));
+            }
+        }
+
         var project = new Entities.Entities.Project
         {
             ProjectName = request.ProjectName,
@@ -192,64 +212,69 @@ public class ProjectsController : ControllerBase
             PriorityLevel = request.PriorityLevel,
             EstimatedStartDate = request.EstimatedStartDate,
             EstimatedEndDate = request.EstimatedEndDate,
-            
-            // Set default status for new projects
-            ProjectStatus = ProjectStatus.Pending, 
-
-            // Handle Audit Fields
+            ProjectStatus = ProjectStatus.Pending,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            CreatedBy = "SystemUser", // Replace with User.Identity.Name if using Auth
+            CreatedBy = "SystemUser",
             UpdatedBy = "SystemUser"
         };
 
-        try 
+        using (var transaction = await _db.Database.BeginTransactionAsync())
         {
-            using var transaction = await _db.Database.BeginTransactionAsync();
             try
             {
                 _db.Projects.Add(project);
                 await _db.SaveChangesAsync();
 
-                if (request.RequiredRoles != null && request.RequiredRoles.Any())
+                // Add roles
+                foreach (var mapping in roleMappings)
                 {
-                    foreach (var roleDto in request.RequiredRoles)
+                    _db.ProjectRequiredRoles.Add(new Entities.Entities.ProjectRequiredRole
                     {
-                        var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == roleDto.RoleName);
-                        if (staffRole == null)
-                        {
-                            return BadRequest(ApiResponse<string>.ErrorResponse($"Staff Role '{roleDto.RoleName}' not found."));
-                        }
-
-                        var requiredRole = new Entities.Entities.ProjectRequiredRole
-                        {
-                            ProjectID = project.ProjectID,
-                            StaffRoleId = staffRole.StaffRoleId,
-                            RequiredCount = roleDto.Count,
-                            WorkingType = roleDto.WorkingType
-                        };
-                        _db.ProjectRequiredRoles.Add(requiredRole);
-                    }
-                    await _db.SaveChangesAsync();
+                        ProjectID = project.ProjectID,
+                        StaffRoleId = mapping.StaffRoleId,
+                        RequiredCount = mapping.Dto.Count,
+                        WorkingType = mapping.Dto.WorkingType
+                    });
                 }
 
+                // Add skills
+                if (request.RequiredSkillIds != null && request.RequiredSkillIds.Any())
+                {
+                    foreach (var skillId in request.RequiredSkillIds)
+                    {
+                        _db.ProjectRequiredSkills.Add(new Entities.Entities.ProjectRequiredSkill
+                        {
+                            ProjectId = project.ProjectID,
+                            SkillId = skillId
+                        });
+                    }
+                }
+
+                await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return CreatedAtAction(nameof(GetById), new { id = project.ProjectID }, ApiResponse<ProjectDto>.SuccessResponse(MapToDto(project)));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                throw;
+                var detailedError = ex.Message;
+                if (ex.InnerException != null)
+                    detailedError += " | Details: " + ex.InnerException.Message;
+                return StatusCode(500, ApiResponse<string>.ErrorResponse("Database Error: " + detailedError));
             }
         }
-        catch (Exception ex)
-        {
-            // Log exception here
-            return StatusCode(500, ApiResponse<string>.ErrorResponse("An error occurred while creating the project. " + ex.Message));
-        }
+
+        // Re‑fetch with all includes for correct mapping
+        var createdProject = await _db.Projects
+            .Include(p => p.ProjectRequiredRoles).ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills).ThenInclude(ps => ps.Skill)
+            .Include(p => p.UserProjects).ThenInclude(up => up.User)
+            .FirstAsync(p => p.ProjectID == project.ProjectID);
+
+        return CreatedAtAction(nameof(GetById), new { id = project.ProjectID },
+            ApiResponse<ProjectDto>.SuccessResponse(MapToDto(createdProject)));
     }
 
-    // ── Assign a member to a project with timeline ──
     [HttpPost("{id}/assign")]
     public async Task<IActionResult> AssignMember(int id, [FromBody] AssignMemberRequest request)
     {
@@ -264,13 +289,11 @@ public class ProjectsController : ControllerBase
         if (user is null)
             return NotFound(ApiResponse<string>.ErrorResponse("User not found"));
 
-        // Check if already assigned
         var existing = await _db.UserProjects
             .FirstOrDefaultAsync(up => up.ProjectId == id && up.UserId == request.UserId);
 
         if (existing is not null)
         {
-            // Update the existing assignment
             existing.RoleInProject = request.RoleInProject;
             existing.StartDate = request.StartDate ?? project.EstimatedStartDate;
             existing.EndDate = request.EndDate ?? project.EstimatedEndDate;
@@ -278,7 +301,6 @@ public class ProjectsController : ControllerBase
         }
         else
         {
-            // Create new assignment
             var userProject = new UserProject
             {
                 UserId = request.UserId,
@@ -293,7 +315,6 @@ public class ProjectsController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        // Re-fetch with includes to return full DTO
         var updated = await _db.Projects
             .Include(p => p.UserProjects)
                 .ThenInclude(up => up.User)
@@ -312,7 +333,6 @@ public class ProjectsController : ControllerBase
         return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(updated), "Member assigned successfully"));
     }
 
-    // ── Remove a member from a project ──
     [HttpDelete("{id}/assign/{userId}")]
     public async Task<IActionResult> UnassignMember(int id, string userId)
     {
@@ -332,21 +352,33 @@ public class ProjectsController : ControllerBase
     public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectRequest request)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
+        // 1. Pre-fetch and Pre-validate Role Names (Outside Transaction)
         var project = await _db.Projects
             .Include(p => p.ProjectRequiredRoles)
             .Include(p => p.ProjectRequiredSkills)
-            .Include(p => p.UserProjects)
-                .ThenInclude(up => up.User)
+            .Include(p => p.UserProjects).ThenInclude(up => up.User)
             .FirstOrDefaultAsync(p => p.ProjectID == id);
         if (project == null)
-        {
             return NotFound(ApiResponse<ProjectDto>.ErrorResponse("Project not found"));
+
+        // Pre‑validate roles
+        var roleMappings = new List<(CreateProjectRoleDto Dto, int StaffRoleId)>();
+        if (request.RequiredRoles != null)
+        {
+            foreach (var roleDto in request.RequiredRoles)
+            {
+                var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == roleDto.RoleName);
+                if (staffRole == null)
+                {
+                    return BadRequest(ApiResponse<string>.ErrorResponse($"Staff Role '{roleDto.RoleName}' not found. Please ensure it exists in the HR system."));
+                }
+                roleMappings.Add((roleDto, staffRole.StaffRoleId));
+            }
         }
 
+        // Update basic fields
         project.ProjectName = request.ProjectName;
         project.ClientOrganization = request.ClientOrganization;
         project.ProjectDescription = request.ProjectDescription;
@@ -355,20 +387,74 @@ public class ProjectsController : ControllerBase
         project.EstimatedStartDate = request.EstimatedStartDate;
         project.EstimatedEndDate = request.EstimatedEndDate;
         project.ProjectStatus = request.ProjectStatus;
-
         project.UpdatedAt = DateTime.UtcNow;
-        project.UpdatedBy = "SystemUser"; // Replace with User.Identity.Name if using Auth
+        project.UpdatedBy = "SystemUser";
 
-        try
+        using (var transaction = await _db.Database.BeginTransactionAsync())
         {
-            await _db.SaveChangesAsync();
-            return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(project)));
+            try
+            {
+                await _db.SaveChangesAsync(); // save basic changes
+
+                // Update skills
+                if (request.RequiredSkillIds != null)
+                {
+                    var existingSkills = await _db.ProjectRequiredSkills
+                        .Where(ps => ps.ProjectId == id)
+                        .ToListAsync();
+                    _db.ProjectRequiredSkills.RemoveRange(existingSkills);
+
+                    foreach (var skillId in request.RequiredSkillIds)
+                    {
+                        _db.ProjectRequiredSkills.Add(new Entities.Entities.ProjectRequiredSkill
+                        {
+                            ProjectId = id,
+                            SkillId = skillId
+                        });
+                    }
+                }
+
+                // Update roles
+                if (request.RequiredRoles != null)
+                {
+                    var existingRoles = await _db.ProjectRequiredRoles
+                        .Where(pr => pr.ProjectID == id)
+                        .ToListAsync();
+                    _db.ProjectRequiredRoles.RemoveRange(existingRoles);
+
+                    foreach (var mapping in roleMappings)
+                    {
+                        _db.ProjectRequiredRoles.Add(new Entities.Entities.ProjectRequiredRole
+                        {
+                            ProjectID = id,
+                            StaffRoleId = mapping.StaffRoleId,
+                            RequiredCount = mapping.Dto.Count,
+                            WorkingType = mapping.Dto.WorkingType
+                        });
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                var detailedError = ex.Message;
+                if (ex.InnerException != null)
+                    detailedError += " | Details: " + ex.InnerException.Message;
+                return StatusCode(500, ApiResponse<string>.ErrorResponse("Database Error: " + detailedError));
+            }
         }
-        catch (Exception ex)
-        {
-            // Log exception here
-            return StatusCode(500, "An error occurred while updating the project.");
-        }
+
+        // Re‑fetch with all includes for correct mapping
+        var updatedProject = await _db.Projects
+            .Include(p => p.ProjectRequiredRoles).ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills).ThenInclude(ps => ps.Skill)
+            .Include(p => p.UserProjects).ThenInclude(up => up.User)
+            .FirstAsync(p => p.ProjectID == id);
+
+        return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(updatedProject)));
     }
 
     [HttpDelete("{id}")]
@@ -386,9 +472,8 @@ public class ProjectsController : ControllerBase
             await _db.SaveChangesAsync();
             return Ok(ApiResponse<string>.SuccessResponse("Project deleted successfully"));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            // Log exception here
             return StatusCode(500, "An error occurred while deleting the project.");
         }
     }

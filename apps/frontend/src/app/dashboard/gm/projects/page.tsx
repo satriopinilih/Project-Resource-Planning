@@ -262,14 +262,14 @@ export default function ProjectsPage() {
                   filteredProjects.map((project) => (
                     <tr
                       key={project.id}
-                      onClick={() => router.push(`/dashboard/gm/projects/${project.id}`)}
+                      onClick={() => router.push(`/project/${project.id}`)}
                       className="border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer group"
                     >
                       <td className="py-4 pl-6 pr-4">
                         <div className="flex items-center gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                           <div>
-                            <p className="text-[13px] font-bold text-white group-hover:text-blue-400 transition-colors">
+                            <p className="text-[13px] font-bold text-[var(--dash-text-heading)] group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                               {project.name}
                             </p>
                             <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5 font-medium">

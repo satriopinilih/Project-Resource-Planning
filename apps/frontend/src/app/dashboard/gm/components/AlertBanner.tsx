@@ -26,9 +26,15 @@ export default function AlertBanner() {
 
   const displayProjects = pendingProjects.length > 0 ? pendingProjects : [
     {
-
+      projectId: 9999,
+      projectName: "Demo Strategy Sync",
+      clientOrganization: "Internal",
+      projectStatus: 0,
+      requiredRoles: [],
+      projectRequiredSkills: [],
+      isUnread: false
     }
-  ] as BackendProject[];
+  ] as unknown as BackendProject[];
 
   return (
     <div className="rounded-xl border border-[#f59e0b]/25 bg-[var(--dash-bg-banner)] p-9 transition-colors duration-300">

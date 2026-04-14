@@ -24,6 +24,7 @@ public class CreateProjectRequest
     public DateTime EstimatedEndDate { get; set; }
 
     public List<CreateProjectRoleDto> RequiredRoles { get; set; } = new List<CreateProjectRoleDto>();
+    public List<int> RequiredSkillIds { get; set; } = new List<int>();
 }
 
 public class CreateProjectRoleDto

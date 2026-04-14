@@ -149,7 +149,7 @@ export default function MarketingDashboard() {
 
       {/* Main Action Cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        <Link href="/mrkt/add-project" className="flex items-center gap-5 bg-[#255df5] hover:bg-[#1a4de0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
+        <Link href="/dashboard/mrkt/add-project" className="flex items-center gap-5 bg-[#255df5] hover:bg-[#1a4de0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
           <div className="bg-white/20 p-4 rounded-xl group-hover:scale-105 transition-transform flex items-center justify-center">
             <Plus size={26} className="text-white" />
           </div>
@@ -159,7 +159,7 @@ export default function MarketingDashboard() {
           </div>
         </Link>
 
-        <Link href="/mrkt/projects" className="flex items-center gap-5 bg-[#8b3df6] hover:bg-[#7b2be0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
+        <Link href="/project" className="flex items-center gap-5 bg-[#8b3df6] hover:bg-[#7b2be0] transition-colors p-7 rounded-2xl text-left group shadow-sm">
           <div className="bg-white/20 p-4 rounded-xl group-hover:scale-105 transition-transform flex items-center justify-center">
             <Folder size={26} className="text-white" />
           </div>
@@ -278,25 +278,21 @@ function SubmissionItem({ title, client, date, status, statusColor }: any) {
 // New component for displaying a single notification (timeline edit request)
 function NotificationItem({ projectName, notes, currentStartDate, currentEndDate }: any) {
   return (
-    <Link href={`/mrkt/projects/${projectId}?edit=true`} className="block">
-      <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl border ... cursor-pointer hover:...">
-        <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl border border-gray-100 dark:border-white/[0.02] transition-colors duration-300">
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-start">
-              <h4 className="font-medium text-[15px] text-gray-900 dark:text-white">{projectName}</h4>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                Pending Review
-              </span>
-            </div>
-            {notes && (
-              <p className="text-[13px] text-gray-600 dark:text-gray-300 italic">“{notes}”</p>
-            )}
-            <div className="text-[12px] text-gray-500 dark:text-[#717b96] mt-1">
-              Current timeline: {new Date(currentStartDate).toLocaleDateString()} → {new Date(currentEndDate).toLocaleDateString()}
-            </div>
-          </div>
+    <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl border border-gray-100 dark:border-white/[0.02] transition-colors duration-300">
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between items-start">
+          <h4 className="font-medium text-[15px] text-gray-900 dark:text-white">{projectName}</h4>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            Pending Review
+          </span>
+        </div>
+        {notes && (
+          <p className="text-[13px] text-gray-600 dark:text-gray-300 italic">“{notes}”</p>
+        )}
+        <div className="text-[12px] text-gray-500 dark:text-[#717b96] mt-1">
+          Current timeline: {new Date(currentStartDate).toLocaleDateString()} → {new Date(currentEndDate).toLocaleDateString()}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

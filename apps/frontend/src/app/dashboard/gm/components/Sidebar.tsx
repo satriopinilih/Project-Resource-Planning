@@ -67,7 +67,7 @@ export default function Sidebar() {
                 flex items-center gap-3 px-4 py-3 rounded-xl text-[16px] font-medium
                 transition-all duration-200
                 ${isActive
-                  ? "bg-[#1e3a5f]/60 text-[#60a5fa] "
+                  ? "bg-blue-100 text-blue-700 dark:bg-[#1e3a5f]/60 dark:text-[#60a5fa] "
                   : "text-[var(--dash-text-primary)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-sidebar-hover)] "
                 }
               `}

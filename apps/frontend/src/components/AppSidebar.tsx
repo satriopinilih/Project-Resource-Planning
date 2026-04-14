@@ -10,6 +10,7 @@ import {
   LogOut,
   UserCheck,
   FileText,
+  PlusCircle,
 } from "lucide-react";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
@@ -24,23 +25,24 @@ const navByRole: Record<string, NavItem[]> = {
   GM: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
-    { label: "Team Member", href: "/team-members", icon: Users },
+    { label: "Team Member", href: "/teammember", icon: Users },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   HR: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Team Member", href: "/team-members", icon: Users },
+    { label: "Team Member", href: "/teammember", icon: Users },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   PM: [
-    { label: "Dashboard", href: "/pm/dashboard", icon: LayoutDashboard },
-    { label: "Project", href: "/pm/projects", icon: FolderKanban },
-    { label: "Team Member", href: "/pm/team-members", icon: Users },
-    { label: "Settings", href: "/pm/settings", icon: Settings },
+    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Project", href: "/project", icon: FolderKanban },
+    { label: "Team Member", href: "/teammember", icon: Users },
+    { label: "Settings", href: "/settings", icon: Settings },
   ],
   Marketing: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
+    { label: "Add Project", href: "/dashboard/mrkt/add-project", icon: PlusCircle },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   Staff: [
@@ -87,7 +89,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                 flex items-center gap-3 px-4 py-3 rounded-xl text-[16px] font-medium
                 transition-all duration-200
                 ${isActive
-                  ? "bg-[#1e3a5f]/60 text-[#60a5fa]"
+                  ? "bg-[var(--dash-sidebar-active-bg)] text-[var(--dash-sidebar-active-text)] border border-[var(--dash-sidebar-active-border)]"
                   : "text-[var(--dash-text-primary)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-sidebar-hover)]"
                 }
               `}
@@ -110,7 +112,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
             localStorage.removeItem("auth_user");
             window.location.href = "/login";
           }}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-[var(--dash-text-primary)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-sidebar-hover)] transition-colors w-full"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg border border-transparent text-[var(--dash-text-primary)] hover:text-[var(--dash-sidebar-active-text)] hover:bg-[var(--dash-sidebar-active-bg)] hover:border-[var(--dash-sidebar-active-border)] transition-colors w-full"
         >
           <LogOut size={22} strokeWidth={1.8} />
           Logout

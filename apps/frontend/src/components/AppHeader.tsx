@@ -135,7 +135,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
     if (userRole === "HR" || userRole === "GM") {
       loadNotifications();
-      timer = setInterval(loadNotifications, 15000);
+      timer = setInterval(loadNotifications, 10000);
     } else if (userRole === "PM") {
       loadPMNotifications();
       timer = setInterval(loadPMNotifications, 15000);
@@ -157,11 +157,11 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       
       setPmNotifications(prev => prev.filter(n => n.projectId !== notif.projectId));
       setIsNotificationOpen(false);
-      router.push(`/pm/projects/${notif.projectId}`);
+      router.push(`/project/${notif.projectId}`);
     } catch (err) {
       console.error("Failed to mark notification as read", err);
       setIsNotificationOpen(false);
-      router.push(`/pm/projects/${notif.projectId}`);
+      router.push(`/project/${notif.projectId}`);
     }
   };
 
@@ -190,6 +190,25 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     setIsNotificationOpen((prev) => !prev);
   };
 
+  const handleHRHireNotificationClick = () => {
+    setIsNotificationOpen(false);
+    router.push('/dashboard#hire-requests-section');
+  };
+
+  const handleHRExtensionNotificationClick = () => {
+    setIsNotificationOpen(false);
+    router.push('/dashboard#pending-contract-extension-section');
+  };
+
+  const handleGMHireOutcomeClick = (item: HireRequest) => {
+    setIsNotificationOpen(false);
+    if (item.projectId) {
+      router.push(`/project/${item.projectId}`);
+      return;
+    }
+    router.push('/project');
+  };
+
   const badgeClass = roleBadgeClass[userRole] ?? roleBadgeClass["Staff"];
   const avatarClass = avatarBgClass[userRole] ?? avatarBgClass["Staff"];
 
@@ -214,32 +233,40 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
           </button>
 
           {isNotificationOpen && (
-            <div className="absolute right-0 mt-3 w-[340px] rounded-xl border border-[#30374a] bg-[#1b1f2a] shadow-[0_20px_40px_rgba(0,0,0,0.35)] overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-[#30374a]">
-                <h3 className="text-[23px] font-semibold text-white">Notifications</h3>
+            <div className="absolute right-0 mt-3 w-[360px] rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] shadow-[0_20px_40px_rgba(0,0,0,0.2)] overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-[var(--dash-border)]">
+                <h3 className="text-[22px] font-semibold text-[var(--dash-text-heading)]">Notifications</h3>
               </div>
 
               {userRole === "HR" && (notifications.length > 0 || hireNotifications.length > 0) && (
                 <div className="max-h-72 overflow-y-auto">
                   {hireNotifications.slice(0, 4).map((item) => (
-                    <div key={`hire-${item.hireRequestId}`} className="px-4 py-3 border-b border-[#2a3041]">
-                      <p className="text-[13px] text-[#d9e0f2] leading-5">
-                        New hire request for <span className="font-semibold">{item.projectName}</span>
+                    <button
+                      key={`hire-${item.hireRequestId}`}
+                      onClick={handleHRHireNotificationClick}
+                      className="w-full text-left px-4 py-3 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
+                    >
+                      <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                        New hire request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span>
                       </p>
-                      <p className="text-[12px] text-[#93a2c0] mt-1">
-                        Role needed: {item.roleNeeded}
+                      <p className="text-[12px] text-[var(--dash-text-secondary)] mt-1">
+                        Requested by {item.requestedBy || 'GM'} • Role needed: {item.roleNeeded}
                       </p>
-                    </div>
+                    </button>
                   ))}
                   {notifications.slice(0, 6).map((item) => (
-                    <div key={item.id} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
-                      <p className="text-[13px] text-[#d9e0f2] leading-5">
-                        Contract extension request for <span className="font-semibold">{item.employeeName}</span>
+                    <button
+                      key={item.id}
+                      onClick={handleHRExtensionNotificationClick}
+                      className="w-full text-left px-4 py-3 border-b border-[var(--dash-border-subtle)] last:border-b-0 hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
+                    >
+                      <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                        Contract extension request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.employeeName}</span>
                       </p>
-                      <p className="text-[12px] text-[#93a2c0] mt-1">
+                      <p className="text-[12px] text-[var(--dash-text-secondary)] mt-1">
                         Requested by {item.requestedByName || item.requestedBy || "GM"}
                       </p>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -251,10 +278,10 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                     <div
                       key={n.projectId}
                       onClick={() => handlePMNotificationClick(n)}
-                      className="px-4 py-3 border-b border-[#2a3041] hover:bg-[#2a3041] transition-colors cursor-pointer"
+                      className="px-4 py-3 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
                     >
-                      <p className="text-[13px] text-[#d9e0f2] leading-5">
-                        You have been assigned as PM to project: <span className="font-semibold">{n.projectName}</span>
+                      <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                        You have been assigned as PM to project: <span className="font-semibold text-[var(--dash-text-heading)]">{n.projectName}</span>
                       </p>
                       <p className="text-[12px] text-[#2B7FFC] mt-1 font-semibold">
                         Click to view details
@@ -266,9 +293,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                     <div
                       onClick={() => {
                         setIsNotificationOpen(false);
-                        router.push('/pm/notifications');
+                        router.push('/dashboard/pm/notifications');
                       }}
-                      className="px-4 py-3 text-center text-[13px] font-semibold text-[#2B7FFC] cursor-pointer hover:bg-[#2a3041] transition-colors border-t border-[#30374a]"
+                      className="px-4 py-3 text-center text-[13px] font-semibold text-[#2B7FFC] cursor-pointer hover:bg-[var(--dash-bg-hover)] transition-colors border-t border-[var(--dash-border)]"
                     >
                       View All Notifications ({pmNotifications.length})
                     </div>
@@ -279,12 +306,16 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
               {userRole === "GM" && (gmHireNotifications.length > 0 || gmContractNotifications.length > 0) && (
                 <div className="max-h-72 overflow-y-auto">
                   {gmHireNotifications.slice(0, 6).map((item) => (
-                    <div key={`gm-hire-${item.hireRequestId}`} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
-                      <p className="text-[13px] text-[#d9e0f2] leading-5">
-                        Hire request for <span className="font-semibold">{item.projectName}</span> is <span className="font-semibold">{item.status === 'Fulfilled' ? 'Fulfilled' : 'Declined'}</span>
+                    <button
+                      key={`gm-hire-${item.hireRequestId}`}
+                      onClick={() => handleGMHireOutcomeClick(item)}
+                      className="w-full text-left px-4 py-3 border-b border-[var(--dash-border-subtle)] last:border-b-0 hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
+                    >
+                      <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                        Hire request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> is <span className="font-semibold">{item.status === 'Fulfilled' ? 'Fulfilled' : 'Declined'}</span>
                       </p>
-                      <p className="text-[12px] text-[#93a2c0] mt-1">Role: {item.roleNeeded}</p>
-                    </div>
+                      <p className="text-[12px] text-[var(--dash-text-secondary)] mt-1">Role: {item.roleNeeded}</p>
+                    </button>
                   ))}
                   {gmContractNotifications.slice(0, 6).map((item) => (
                     <div key={`gm-contract-${item.referenceId}`} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
@@ -301,7 +332,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                 (userRole === "GM" && gmHireNotifications.length === 0 && gmContractNotifications.length === 0) ||
                 (userRole === "PM" && pmNotifications.length === 0) || 
                 (userRole !== "HR" && userRole !== "PM" && userRole !== "GM")) && (
-                <div className="px-4 py-8 text-center text-[22px] text-[#9aa7c0]">No notifications</div>
+                <div className="px-4 py-8 text-center text-[18px] text-[var(--dash-text-muted)]">No notifications</div>
               )}
             </div>
           )}
