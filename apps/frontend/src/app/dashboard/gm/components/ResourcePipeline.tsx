@@ -225,7 +225,7 @@ export default function ResourcePipeline() {
                   {/* Jika Karyawan Kosong (Available) */}
                   {(!employee.tracks || employee.tracks.length === 0) && (
                     <div className="relative h-[28px] w-full flex items-center">
-                      <span className="absolute left-[45%] text-[11px] text-[var(--dash-text-faint)] italic">
+                      <span className="absolute left-[44%] text-[11px] text-[var(--dash-text-faint)] italic">
                         Available
                       </span>
                     </div>
