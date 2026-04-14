@@ -211,6 +211,7 @@ public class EmployeesController : ControllerBase
             var skills = await _db.Skills.Where(s => request.SkillIds.Contains(s.SkillID)).Select(s => s.SkillID).ToListAsync();
             foreach (var sid in skills)
             {
+                // Kalau looping, lebih baik simpan di var dan pakai AddRange
                 _db.UserSkills.Add(new UserSkill { UserId = user.UserId, SkillId = sid });
             }
         }
@@ -265,7 +266,7 @@ public class EmployeesController : ControllerBase
         return Ok(ApiResponse<CreateUserResultDto>.SuccessResponse(result, "Employee created"));
     }
 
-    [Authorize]
+    [Authorize] // pindah ke atas aja kalau seharusnya global
     [HttpPost("{id}/reset-password")]
     public async Task<ActionResult<ApiResponse<object>>> ResetPassword(string id)
     {

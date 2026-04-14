@@ -11,6 +11,7 @@ namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+// Nggak ada [Authorize] kah? dilimit untuk logged-in users aja secara global?
 public class ContractExtensionsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
@@ -39,7 +40,7 @@ public class ContractExtensionsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize] // ini pindah ke atas aja
     public async Task<ActionResult<ApiResponse<ContractExtensionDto>>> Create([FromBody] CreateContractExtensionDto request)
     {
         var isGm = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "GM");
