@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Calendar as CalendarIcon,
@@ -14,7 +14,6 @@ import {
   createProject,
   getEmployeeFormOptions,
   EmployeeFormOptions,
-  TimelineEditRequest
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 interface SkillOption {
@@ -22,6 +21,9 @@ interface SkillOption {
   name: string;
 }
 export default function AddProjectPage() {
+  const ALLOWED_STAFF_ROLES = ["PM", "Senior Dev", "Junior Dev", "Senior BA", "Junior BA", "Architect"];
+  const ALLOWED_WORKING_TYPES = ["Dedicated", "Non-Dedicated"];
+
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
   const [durationWeeks, setDurationWeeks] = useState<number>(5);
   const [startDate, setStartDate] = useState<string>("2026-04-10");
@@ -46,7 +48,7 @@ export default function AddProjectPage() {
   const router = useRouter();
 
   const [teamRoles, setTeamRoles] = useState([
-    { id: '1', role: 'Project Manager', count: 1, workingType: 'Dedicated' }
+    { id: '1', role: 'PM', count: 1, workingType: 'Dedicated' }
   ]);
 
   const handleAddRole = () => {
@@ -72,6 +74,11 @@ export default function AddProjectPage() {
     // Fetch form options (skills)
     getEmployeeFormOptions().then(setFormOptions).catch(console.error);
   }, []);
+
+  const allowedStaffRoles = useMemo(
+    () => formOptions.staffRoles.filter((r) => ALLOWED_STAFF_ROLES.includes(r.name)),
+    [formOptions.staffRoles]
+  );
 
   useEffect(() => {
     if (!startDate || durationWeeks <= 0) {
@@ -159,7 +166,7 @@ export default function AddProjectPage() {
     setError(null);
 
     const priorityMap: Record<string, number> = { "Low": 0, "Medium": 1, "High": 2 };
-    const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Part-time": 1, "Ad-hoc": 1 };
+    const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
 
     const payload = {
       projectName,
@@ -399,15 +406,19 @@ export default function AddProjectPage() {
                       className={inputClasses}
                       value={roleItem.role}
                       onChange={(e) => updateRole(roleItem.id, 'role', e.target.value)}
-                      disabled={index === 0} // First role always Project Manager
+                      disabled={index === 0}
                     >
-                      <option value="Project Manager">Project Manager</option>
-                      {index !== 0 && (
-                        <>
-                          <option value="Senior BA">Senior BA</option>
-                          <option value="Software Engineer">Software Engineer</option>
-                          <option value="QA Tester">QA Tester</option>
-                        </>
+                      {index === 0 ? (
+                        <option value="PM">PM</option>
+                      ) : (
+                        (allowedStaffRoles.length > 0
+                          ? allowedStaffRoles.map((r) => r.name)
+                          : ALLOWED_STAFF_ROLES
+                        )
+                          .filter((r) => r !== "PM")
+                          .map((role) => (
+                            <option key={role} value={role}>{role}</option>
+                          ))
                       )}
                     </select>
                   </div>
@@ -428,9 +439,9 @@ export default function AddProjectPage() {
                       value={roleItem.workingType}
                       onChange={(e) => updateRole(roleItem.id, 'workingType', e.target.value)}
                     >
-                      <option value="Dedicated">Dedicated</option>
-                      <option value="Part-time">Part-time</option>
-                      <option value="Ad-hoc">Ad-hoc</option>
+                      {ALLOWED_WORKING_TYPES.map((wt) => (
+                        <option key={wt} value={wt}>{wt}</option>
+                      ))}
                     </select>
                   </div>
 

@@ -83,10 +83,8 @@ END $$;");
             var srSeniorDev = new StaffRole { RoleName = "Senior Dev" };
             var srJuniorDev = new StaffRole { RoleName = "Junior Dev" };
             var srArchitect = new StaffRole { RoleName = "Architect" };
-            var srProjectManager = new StaffRole { RoleName = "Project Manager" };
-            var srSoftwareEngineer = new StaffRole { RoleName = "Software Engineer" };
-            var srQATester = new StaffRole { RoleName = "QA Tester" };
-            _db.StaffRoles.AddRange(srSeniorBA, srJuniorBA, srSeniorDev, srJuniorDev, srArchitect, srProjectManager, srSoftwareEngineer, srQATester);
+            var srPm = new StaffRole { RoleName = "PM" };
+            _db.StaffRoles.AddRange(srSeniorBA, srJuniorBA, srSeniorDev, srJuniorDev, srArchitect, srPm);
 
             // Skills
             var skills = new[]
@@ -294,7 +292,7 @@ END $$;");
                 // New employees
                 new UserStaffRole { UserId = "EMP008", StaffRoleId = srJuniorBA.StaffRoleId },      // Nina: Junior BA (available, no project yet)
                 new UserStaffRole { UserId = "EMP009", StaffRoleId = srSeniorDev.StaffRoleId },    // Omar: Senior Dev (available)
-                new UserStaffRole { UserId = "EMP010", StaffRoleId = srProjectManager.StaffRoleId } // Yuki: Project Manager (available)
+                new UserStaffRole { UserId = "EMP010", StaffRoleId = srPm.StaffRoleId } // Yuki: PM (available)
             );
 
             // Skill mapping
@@ -339,10 +337,10 @@ END $$;");
             AddProject("EMP006", "Internal Tools Dashboard", "Junior Dev", UserProjectStatus.Assigned);
             AddProject("EMP007", "Mobile App Launch", "Senior BA", UserProjectStatus.Assigned);
 
-            AddProject("PM001", "Customer Portal Development", "Project Manager", UserProjectStatus.Assigned);
-            AddProject("PM001", "E-commerce Platform Rebuild", "Project Manager", UserProjectStatus.Assigned);
-            AddProject("PM001", "Cloud Migration Project", "Project Manager", UserProjectStatus.Assigned);
-            AddProject("PM001", "Digital Transformation Initiative", "Project Manager", UserProjectStatus.Assigned);
+            AddProject("PM001", "Customer Portal Development", "PM", UserProjectStatus.Assigned);
+            AddProject("PM001", "E-commerce Platform Rebuild", "PM", UserProjectStatus.Assigned);
+            AddProject("PM001", "Cloud Migration Project", "PM", UserProjectStatus.Assigned);
+            AddProject("PM001", "Digital Transformation Initiative", "PM", UserProjectStatus.Assigned);
 
 
             _db.ContractExtensions.Add(
@@ -370,7 +368,7 @@ END $$;");
                 { "Senior Dev",      srSeniorDev.StaffRoleId },
                 { "Junior Dev",      srJuniorDev.StaffRoleId },
                 { "Architect",       srArchitect.StaffRoleId },
-                { "Project Manager", srProjectManager.StaffRoleId },
+                { "PM", srPm.StaffRoleId },
             };
 
             _db.ProjectRequiredRoles.AddRange(
@@ -380,50 +378,50 @@ END $$;");
                 new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Senior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Junior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Architect"],       RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
-                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
+                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
 
                 // ── Digital Transformation Initiative ──
                 new ProjectRequiredRole { ProjectID = byProject["Digital Transformation Initiative"], StaffRoleId = staffRoleMap["Senior BA"],       RequiredCount = 1, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Digital Transformation Initiative"], StaffRoleId = staffRoleMap["Junior BA"],       RequiredCount = 1, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Digital Transformation Initiative"], StaffRoleId = staffRoleMap["Senior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = byProject["Digital Transformation Initiative"], StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
+                new ProjectRequiredRole { ProjectID = byProject["Digital Transformation Initiative"], StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
 
                 // ── Customer Portal Development ──
                 new ProjectRequiredRole { ProjectID = byProject["Customer Portal Development"], StaffRoleId = staffRoleMap["Senior BA"],       RequiredCount = 1, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Customer Portal Development"], StaffRoleId = staffRoleMap["Junior BA"],       RequiredCount = 1, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Customer Portal Development"], StaffRoleId = staffRoleMap["Senior Dev"],      RequiredCount = 1, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Customer Portal Development"], StaffRoleId = staffRoleMap["Junior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = byProject["Customer Portal Development"], StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
+                new ProjectRequiredRole { ProjectID = byProject["Customer Portal Development"], StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
 
                 // ── E-commerce Platform Rebuild ──
                 new ProjectRequiredRole { ProjectID = byProject["E-commerce Platform Rebuild"], StaffRoleId = staffRoleMap["Senior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["E-commerce Platform Rebuild"], StaffRoleId = staffRoleMap["Junior Dev"],      RequiredCount = 3, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["E-commerce Platform Rebuild"], StaffRoleId = staffRoleMap["Senior BA"],       RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
                 new ProjectRequiredRole { ProjectID = byProject["E-commerce Platform Rebuild"], StaffRoleId = staffRoleMap["Architect"],       RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
-                new ProjectRequiredRole { ProjectID = byProject["E-commerce Platform Rebuild"], StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
+                new ProjectRequiredRole { ProjectID = byProject["E-commerce Platform Rebuild"], StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
 
                 // ── Cloud Migration Project ──
                 new ProjectRequiredRole { ProjectID = byProject["Cloud Migration Project"], StaffRoleId = staffRoleMap["Architect"],       RequiredCount = 1, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Cloud Migration Project"], StaffRoleId = staffRoleMap["Senior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Cloud Migration Project"], StaffRoleId = staffRoleMap["Junior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = byProject["Cloud Migration Project"], StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
+                new ProjectRequiredRole { ProjectID = byProject["Cloud Migration Project"], StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
 
                 // ── Analytics Dashboard ──
                 new ProjectRequiredRole { ProjectID = byProject["Analytics Dashboard"], StaffRoleId = staffRoleMap["Senior Dev"],      RequiredCount = 1, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Analytics Dashboard"], StaffRoleId = staffRoleMap["Junior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Analytics Dashboard"], StaffRoleId = staffRoleMap["Senior BA"],       RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
-                new ProjectRequiredRole { ProjectID = byProject["Analytics Dashboard"], StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
+                new ProjectRequiredRole { ProjectID = byProject["Analytics Dashboard"], StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
 
                 // ── Internal Tools Dashboard ──
                 new ProjectRequiredRole { ProjectID = byProject["Internal Tools Dashboard"], StaffRoleId = staffRoleMap["Junior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Internal Tools Dashboard"], StaffRoleId = staffRoleMap["Senior Dev"],      RequiredCount = 1, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = byProject["Internal Tools Dashboard"], StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
+                new ProjectRequiredRole { ProjectID = byProject["Internal Tools Dashboard"], StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
 
                 // ── Mobile App Launch ──
                 new ProjectRequiredRole { ProjectID = byProject["Mobile App Launch"], StaffRoleId = staffRoleMap["Senior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Mobile App Launch"], StaffRoleId = staffRoleMap["Junior Dev"],      RequiredCount = 2, WorkingType = WorkingType.Dedicated },
                 new ProjectRequiredRole { ProjectID = byProject["Mobile App Launch"], StaffRoleId = staffRoleMap["Senior BA"],       RequiredCount = 1, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = byProject["Mobile App Launch"], StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated }
+                new ProjectRequiredRole { ProjectID = byProject["Mobile App Launch"], StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated }
             );
 
             // ── Project-level Required Skills ──

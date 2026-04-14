@@ -64,7 +64,11 @@ const formatDate = (dateString: string) => {
 };
 
 export default function ProjectDetailsPage() {
+  const ALLOWED_STAFF_ROLES = ["PM", "Senior Dev", "Junior Dev", "Senior BA", "Junior BA", "Architect"];
+  const ALLOWED_WORKING_TYPES = ["Dedicated", "Non-Dedicated"];
+
   const params = useParams();
+  const router = useRouter();
   const idStr = Array.isArray(params.id) ? params.id[0] : params.id;
   const [project, setProject] = useState<BackendProject | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +89,10 @@ export default function ProjectDetailsPage() {
     requiredSkillIds: [] as number[],
   });
   const [formOptions, setFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
+  const allowedStaffRoles = useMemo(
+    () => formOptions.staffRoles.filter((r) => ALLOWED_STAFF_ROLES.includes(r.name)),
+    [formOptions.staffRoles]
+  );
 
   const numericId = useMemo(() => {
     if (!idStr) return null;
@@ -128,7 +136,7 @@ export default function ProjectDetailsPage() {
         estimatedEndDate: editForm.estimatedEndDate ? new Date(editForm.estimatedEndDate).toISOString() : project.estimatedEndDate,
         projectStatus: editForm.projectStatus,
         requiredRoles: editForm.requiredRoles.map(r => {
-          const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Part-time": 1, "Ad-hoc": 1 };
+          const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
           return {
             id: typeof r.id === 'string' && r.id.includes('.') ? 0 : Number(r.id),
             staffRoleId: r.staffRoleId || 0,
@@ -519,7 +527,7 @@ export default function ProjectDetailsPage() {
                         ...editForm,
                         requiredRoles: [...editForm.requiredRoles, {
                           id: Math.random().toString(36).substring(2, 9),
-                          role: 'Software Engineer',
+                          role: 'Senior Dev',
                           count: 1,
                           workingType: 'Dedicated'
                         }]
@@ -553,10 +561,12 @@ export default function ProjectDetailsPage() {
                                 setEditForm({ ...editForm, requiredRoles: newRoles });
                               }}
                             >
-                              <option value="Project Manager">Project Manager</option>
-                              <option value="Senior BA">Senior BA</option>
-                              <option value="Software Engineer">Software Engineer</option>
-                              <option value="QA Tester">QA Tester</option>
+                              {(allowedStaffRoles.length > 0
+                                ? allowedStaffRoles.map((r) => r.name)
+                                : ALLOWED_STAFF_ROLES
+                              ).map((role) => (
+                                <option key={role} value={role}>{role}</option>
+                              ))}
                             </select>
                           </div>
                           <div>
@@ -587,9 +597,9 @@ export default function ProjectDetailsPage() {
                                 setEditForm({ ...editForm, requiredRoles: newRoles });
                               }}
                             >
-                              <option value="Dedicated">Dedicated</option>
-                              <option value="Part-time">Part-time</option>
-                              <option value="Ad-hoc">Ad-hoc</option>
+                              {ALLOWED_WORKING_TYPES.map((wt) => (
+                                <option key={wt} value={wt}>{wt}</option>
+                              ))}
                             </select>
                           </div>
                         </div>

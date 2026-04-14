@@ -230,6 +230,7 @@ export default function MarketingDashboard() {
               notifications.map((req) => (
                 <NotificationItem
                   key={req.id}
+                  projectId={req.projectId}
                   projectName={req.projectName}
                   notes={req.notes}
                   currentStartDate={req.currentStartDate}
@@ -276,7 +277,7 @@ function SubmissionItem({ title, client, date, status, statusColor }: any) {
 }
 
 // New component for displaying a single notification (timeline edit request)
-function NotificationItem({ projectName, notes, currentStartDate, currentEndDate }: any) {
+function NotificationItem({ projectId, projectName, notes, currentStartDate, currentEndDate }: any) {
   return (
     <Link href={`/mrkt/projects/${projectId}?edit=true`} className="block">
       <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl border ... cursor-pointer hover:...">

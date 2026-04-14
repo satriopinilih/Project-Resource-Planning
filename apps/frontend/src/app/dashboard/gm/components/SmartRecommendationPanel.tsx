@@ -113,7 +113,7 @@ const OptionCard: React.FC<{
   isRecommended: boolean;
   label: string;
 }> = ({ option, isRecommended, label }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <div className={`
@@ -728,8 +728,8 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
   if (loading) {
     return (
       <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-[2.5rem] blur opacity-75"></div>
-        <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-[var(--dash-border)] rounded-[2.5rem] p-12 flex flex-col items-center justify-center gap-4 transition-colors duration-300">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-2xl blur opacity-75"></div>
+        <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-[var(--dash-border)] rounded-2xl p-10 flex flex-col items-center justify-center gap-4 transition-colors duration-300">
           <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
           <p className="text-[13px] text-[var(--dash-text-muted)] font-medium">Analyzing team availability and skill matches...</p>
         </div>
@@ -740,8 +740,8 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
   if (error) {
     return (
       <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600/10 to-amber-600/10 rounded-[2.5rem] blur opacity-75"></div>
-        <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-red-500/20 rounded-[2.5rem] p-8 transition-colors duration-300">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600/10 to-amber-600/10 rounded-2xl blur opacity-75"></div>
+        <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-red-500/20 rounded-2xl p-6 transition-colors duration-300">
           <div className="flex items-center gap-3 text-red-400">
             <AlertCircle size={20} />
             <p className="text-[14px] font-semibold">{error}</p>
@@ -761,16 +761,16 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
   return (
     <div className="relative group">
       {/* Glow effect */}
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-[2.5rem] blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
 
-      <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-[var(--dash-border)] rounded-[2.5rem] p-8 overflow-hidden shadow-2xl transition-colors duration-300">
+      <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-[var(--dash-border)] rounded-2xl p-6 overflow-hidden shadow-2xl transition-colors duration-300">
 
         {/* Purple accent border highlight */}
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
         <div className="absolute -left-[1px] top-1/2 -translate-y-1/2 h-40 w-[1px] bg-gradient-to-b from-transparent via-purple-500/50 to-transparent"></div>
 
         {/* Header */}
-        <div className="flex items-start gap-5 mb-8">
+        <div className="flex items-start gap-4 mb-6">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
             <Sparkles size={24} />
           </div>
@@ -796,7 +796,7 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
         )}
 
         {/* Best Plan Banner */}
-        <div className="mb-8 p-4 rounded-2xl bg-green-500/5 border border-green-500/10 flex items-center gap-4 group/banner">
+        <div className="mb-6 p-3.5 rounded-xl bg-green-500/5 border border-green-500/10 flex items-center gap-3 group/banner">
           <div className="p-2 bg-green-500/20 rounded-lg text-green-400 group-hover/banner:scale-110 transition-transform">
             <Zap size={18} fill="currentColor" />
           </div>
@@ -810,7 +810,7 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
         </div>
 
         {/* Comparison Grid */}
-        <div className="flex flex-col md:flex-row gap-6 mb-4 relative">
+        <div className="flex flex-col md:flex-row gap-4 mb-2 relative">
           {/* Overlay loader when processing batch starts */}
           {isProcessing && (
             <div className="absolute inset-0 z-20 bg-[#111318]/70 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center border border-gray-800">

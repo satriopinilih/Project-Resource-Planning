@@ -359,11 +359,11 @@ export default function ProjectDetailsPage() {
       <div className="flex-1 overflow-auto min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
         <AppHeader title="Project Details" role="GM" />
 
-        <main className="flex-1 p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 pb-12">
+        <main className="flex-1 p-5 lg:p-7 max-w-[1360px] mx-auto space-y-6 pb-10">
 
           {/* 1. Project Summary Banner */}
-          <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-8 pb-6 flex flex-col md:flex-row items-start justify-between gap-6">
+          <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden shadow-sm">
+            <div className="p-6 pb-5 flex flex-col md:flex-row items-start justify-between gap-4">
               <div className="space-y-3 flex-1">
                 <div className="flex items-center gap-3">
                   <span className="px-3 py-1 bg-[#2B7FFC]/10 text-[#2B7FFC] text-[11px] font-bold uppercase tracking-widest rounded-md">
@@ -373,7 +373,7 @@ export default function ProjectDetailsPage() {
                     {statusInfo.label}
                   </span>
                 </div>
-                <h1 className="text-3xl font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
+                <h1 className="text-[34px] font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
                 <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed max-w-4xl">{project.projectDescription}</p>
               </div>
 
@@ -394,7 +394,7 @@ export default function ProjectDetailsPage() {
 
             {/* Combined Stats Bar */}
             <div className="grid grid-cols-2 lg:grid-cols-5 border-t border-[var(--dash-border)] bg-[var(--dash-bg-input)]">
-              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
                 <div className="p-2 bg-blue-500/10 rounded-lg"><Calendar size={18} className="text-blue-400" /></div>
                 <div>
                   <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Timeline</p>
@@ -403,14 +403,14 @@ export default function ProjectDetailsPage() {
                   </p>
                 </div>
               </div>
-              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
                 <div className="p-2 bg-amber-500/10 rounded-lg"><TrendingUp size={18} className="text-amber-400" /></div>
                 <div>
                   <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Duration</p>
                   <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{project.estimatedDuration} weeks</p>
                 </div>
               </div>
-              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
                 <div className="p-2 bg-purple-500/10 rounded-lg"><FileText size={18} className="text-purple-400" /></div>
                 <div>
                   <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Priority</p>
@@ -418,7 +418,7 @@ export default function ProjectDetailsPage() {
                 </div>
               </div>
               {/* Staffing Progress merged into stats */}
-              <div className="p-5 lg:col-span-2 flex flex-col justify-center gap-2">
+              <div className="p-4 lg:col-span-2 flex flex-col justify-center gap-2">
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Staffing Progress</span>
                   <span className="text-[12px] text-[var(--dash-text-primary)] font-semibold">{totalFilled} / {totalNeeded} roles</span>
@@ -434,7 +434,7 @@ export default function ProjectDetailsPage() {
 
             {/* Required Skills Row */}
             {(project.requiredSkills?.length ?? 0) > 0 && (
-              <div className="p-4 px-6 border-t border-[var(--dash-border)] flex flex-wrap items-center gap-3 bg-[var(--dash-bg-input)]">
+              <div className="p-3 px-5 border-t border-[var(--dash-border)] flex flex-wrap items-center gap-2.5 bg-[var(--dash-bg-input)]">
                 <LayoutGrid size={14} className="text-[var(--dash-text-faint)]" />
                 <span className="text-[12px] font-medium text-[var(--dash-text-muted)]">Required Skills:</span>
                 {project.requiredSkills.map(skill => (

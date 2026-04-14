@@ -28,6 +28,31 @@ public class ProjectsController : ControllerBase
     private bool IsPM =>
         User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "PM");
 
+    private static readonly HashSet<string> AllowedStaffRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "PM",
+        "Senior Dev",
+        "Junior Dev",
+        "Senior BA",
+        "Junior BA",
+        "Architect"
+    };
+
+    private static readonly Dictionary<string, string> StaffRoleAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Project Manager"] = "PM",
+        ["Software Engineer"] = "Senior Dev",
+        ["QA Tester"] = "Junior Dev"
+    };
+
+    private static string NormalizeStaffRole(string roleName)
+    {
+        if (string.IsNullOrWhiteSpace(roleName)) return roleName;
+        return StaffRoleAliases.TryGetValue(roleName.Trim(), out var normalized)
+            ? normalized
+            : roleName.Trim();
+    }
+
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<ProjectDto>>>> GetAll([FromQuery] string? status)
     {
@@ -196,12 +221,25 @@ public class ProjectsController : ControllerBase
         {
             foreach (var roleDto in request.RequiredRoles)
             {
-                var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == roleDto.RoleName);
+                var normalizedRoleName = NormalizeStaffRole(roleDto.RoleName);
+                if (!AllowedStaffRoles.Contains(normalizedRoleName))
+                {
+                    return BadRequest(ApiResponse<string>.ErrorResponse($"Role '{roleDto.RoleName}' is not allowed. Allowed roles: PM, Senior Dev, Junior Dev, Senior BA, Junior BA, Architect."));
+                }
+
+                var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == normalizedRoleName);
                 if (staffRole == null)
                 {
-                    return BadRequest(ApiResponse<string>.ErrorResponse($"Staff Role '{roleDto.RoleName}' not found. Please ensure all requested roles exist in the HR system."));
+                    staffRole = new StaffRole { RoleName = normalizedRoleName };
+                    _db.StaffRoles.Add(staffRole);
+                    await _db.SaveChangesAsync();
                 }
-                roleMappings.Add((roleDto, staffRole.StaffRoleId));
+                roleMappings.Add((new CreateProjectRoleDto
+                {
+                    RoleName = normalizedRoleName,
+                    Count = roleDto.Count,
+                    WorkingType = roleDto.WorkingType
+                }, staffRole.StaffRoleId));
             }
         }
 
@@ -371,12 +409,25 @@ public class ProjectsController : ControllerBase
         {
             foreach (var roleDto in request.RequiredRoles)
             {
-                var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == roleDto.RoleName);
+                var normalizedRoleName = NormalizeStaffRole(roleDto.RoleName);
+                if (!AllowedStaffRoles.Contains(normalizedRoleName))
+                {
+                    return BadRequest(ApiResponse<string>.ErrorResponse($"Role '{roleDto.RoleName}' is not allowed. Allowed roles: PM, Senior Dev, Junior Dev, Senior BA, Junior BA, Architect."));
+                }
+
+                var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == normalizedRoleName);
                 if (staffRole == null)
                 {
-                    return BadRequest(ApiResponse<string>.ErrorResponse($"Staff Role '{roleDto.RoleName}' not found. Please ensure it exists in the HR system."));
+                    staffRole = new StaffRole { RoleName = normalizedRoleName };
+                    _db.StaffRoles.Add(staffRole);
+                    await _db.SaveChangesAsync();
                 }
-                roleMappings.Add((roleDto, staffRole.StaffRoleId));
+                roleMappings.Add((new CreateProjectRoleDto
+                {
+                    RoleName = normalizedRoleName,
+                    Count = roleDto.Count,
+                    WorkingType = roleDto.WorkingType
+                }, staffRole.StaffRoleId));
             }
         }
 
@@ -450,6 +501,30 @@ public class ProjectsController : ControllerBase
         }
 
         // Re‑fetch with all includes for correct mapping
+        var updatedProject = await _db.Projects
+            .Include(p => p.ProjectRequiredRoles).ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills).ThenInclude(ps => ps.Skill)
+            .Include(p => p.UserProjects).ThenInclude(up => up.User)
+            .FirstAsync(p => p.ProjectID == id);
+
+        return Ok(ApiResponse<ProjectDto>.SuccessResponse(MapToDto(updatedProject)));
+    }
+
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> UpdateProjectStatus(int id, [FromBody] UpdateProjectStatusRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var project = await _db.Projects.FindAsync(id);
+        if (project == null)
+            return NotFound(ApiResponse<ProjectDto>.ErrorResponse("Project not found"));
+
+        project.ProjectStatus = request.ProjectStatus;
+        project.UpdatedAt = DateTime.UtcNow;
+        project.UpdatedBy = CurrentUserId ?? "SystemUser";
+        await _db.SaveChangesAsync();
+
         var updatedProject = await _db.Projects
             .Include(p => p.ProjectRequiredRoles).ThenInclude(pr => pr.StaffRole)
             .Include(p => p.ProjectRequiredSkills).ThenInclude(ps => ps.Skill)
