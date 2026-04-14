@@ -14,7 +14,10 @@ export default function TeamMembersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<'GM' | 'HR' | 'PM' | 'Marketing' | 'Staff' | null>(null);
+<<<<<<< Updated upstream
   const [sessionRoles, setSessionRoles] = useState<string[]>([]);
+=======
+>>>>>>> Stashed changes
 
   // Extension Modal State
   const [extensionModalOpen, setExtensionModalOpen] = useState(false);
@@ -252,6 +255,7 @@ export default function TeamMembersPage() {
                       </div>
                     )}
 
+<<<<<<< Updated upstream
                     {selectedEmployee.employmentType === 'Permanent' ? (
                       <div className="space-y-2">
                         <div className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-center text-[13px] font-medium text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -309,6 +313,14 @@ export default function TeamMembersPage() {
                         )}
                       </div>
                     )}
+=======
+                    <button
+                      onClick={() => setExtensionModalOpen(true)}
+                      className="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold text-[14px] py-3 rounded-xl transition-colors"
+                    >
+                      Request Contract Extension
+                    </button>
+>>>>>>> Stashed changes
                   </div>
 
                   {/* Card 3: Resource Pipeline */}
@@ -433,6 +445,7 @@ export default function TeamMembersPage() {
                     <p className="text-[16px] font-bold">{selectedEmployee.contractEnd || 'Jan 14, 2027'}</p>
                   </div>
 
+<<<<<<< Updated upstream
                   {/* Duration Input */}
                   <div className="space-y-2">
                     <label className="text-[13px] text-gray-500 font-medium">Extension Duration (months)</label>
@@ -444,6 +457,19 @@ export default function TeamMembersPage() {
                       placeholder="12"
                     />
                   </div>
+=======
+                {/* Duration Input */}
+                <div className="space-y-2">
+                  <label className="text-[13px] text-gray-500 font-medium">Extension Duration (months)</label>
+                  <input
+                    type="number"
+                    value={extensionDuration}
+                    onChange={(e) => setExtensionDuration(e.target.value)}
+                    className="w-full bg-[#1a1a1a] border border-gray-800 rounded-lg px-4 py-3 text-[15px] outline-none focus:border-gray-700 transition-colors"
+                    placeholder="12"
+                  />
+                </div>
+>>>>>>> Stashed changes
 
                   {/* Projected New End Date */}
                   <div className="space-y-1">
@@ -462,6 +488,7 @@ export default function TeamMembersPage() {
                     </p>
                   </div>
 
+<<<<<<< Updated upstream
                   {/* Reason Textarea */}
                   <div className="space-y-2">
                     <label className="text-[13px] text-gray-500 font-medium">Reason for Extension</label>
@@ -490,6 +517,35 @@ export default function TeamMembersPage() {
                       Submit Request
                     </button>
                   </div>
+=======
+                {/* Reason Textarea */}
+                <div className="space-y-2">
+                  <label className="text-[13px] text-gray-500 font-medium">Reason for Extension</label>
+                  <textarea
+                    value={extensionReason}
+                    onChange={(e) => setExtensionReason(e.target.value)}
+                    placeholder="Explain why this contract extension is needed..."
+                    rows={4}
+                    className="w-full bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 text-[14px] outline-none focus:border-gray-700 transition-colors resize-none placeholder:text-gray-600"
+                  />
+                </div>
+
+                <div className="pt-4 flex justify-end gap-3">
+                  <button
+                    onClick={() => setExtensionModalOpen(false)}
+                    className="px-6 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] text-white font-bold text-[14px] rounded-lg transition-colors border border-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitExtension}
+                    disabled={submitting || !extensionReason}
+                    className="px-6 py-2.5 bg-white hover:bg-gray-200 disabled:bg-[#404040] disabled:text-[#737373] text-black font-bold text-[14px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    Submit Request
+                  </button>
+>>>>>>> Stashed changes
                 </div>
               )}
             </div>
