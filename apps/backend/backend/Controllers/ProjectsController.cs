@@ -394,6 +394,8 @@ public class ProjectsController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
+        Console.WriteLine($"[DEBUG] UpdateProject {id} - Roles count: {request.RequiredRoles?.Count ?? -1}");
+
         // 1. Pre-fetch and Pre-validate Role Names (Outside Transaction)
         var project = await _db.Projects
             .Include(p => p.ProjectRequiredRoles)
@@ -422,26 +424,32 @@ public class ProjectsController : ControllerBase
                     _db.StaffRoles.Add(staffRole);
                     await _db.SaveChangesAsync();
                 }
+                WorkingType wt = WorkingType.Dedicated;
+                if (roleDto.WorkingType != null && Enum.TryParse<WorkingType>(roleDto.WorkingType.ToString(), true, out var parsedWt))
+                {
+                    wt = parsedWt;
+                }
+
                 roleMappings.Add((new CreateProjectRoleDto
                 {
-                    RoleName = normalizedRoleName,
-                    Count = roleDto.Count,
-                    WorkingType = roleDto.WorkingType
+                    RoleName = staffRole.RoleName,
+                    Count = roleDto.Count > 0 ? roleDto.Count : 1,
+                    WorkingType = wt
                 }, staffRole.StaffRoleId));
             }
         }
 
-        // Update basic fields
-        project.ProjectName = request.ProjectName;
-        project.ClientOrganization = request.ClientOrganization;
-        project.ProjectDescription = request.ProjectDescription;
-        project.EstimatedDuration = request.EstimatedDuration;
-        project.PriorityLevel = request.PriorityLevel;
-        project.EstimatedStartDate = request.EstimatedStartDate;
-        project.EstimatedEndDate = request.EstimatedEndDate;
-        project.ProjectStatus = request.ProjectStatus;
+        // Update basic fields safely (null-aware)
+        if (request.ProjectName != null) project.ProjectName = request.ProjectName;
+        if (request.ClientOrganization != null) project.ClientOrganization = request.ClientOrganization;
+        if (request.ProjectDescription != null) project.ProjectDescription = request.ProjectDescription;
+        if (request.EstimatedDuration.HasValue) project.EstimatedDuration = request.EstimatedDuration.Value;
+        if (request.PriorityLevel.HasValue) project.PriorityLevel = request.PriorityLevel.Value;
+        if (request.EstimatedStartDate.HasValue) project.EstimatedStartDate = request.EstimatedStartDate.Value;
+        if (request.EstimatedEndDate.HasValue) project.EstimatedEndDate = request.EstimatedEndDate.Value;
+        if (request.ProjectStatus.HasValue) project.ProjectStatus = request.ProjectStatus.Value;
         project.UpdatedAt = DateTime.UtcNow;
-        project.UpdatedBy = "SystemUser";
+        project.UpdatedBy = CurrentUserId ?? "SystemUser";
 
         using (var transaction = await _db.Database.BeginTransactionAsync())
         {
@@ -449,8 +457,8 @@ public class ProjectsController : ControllerBase
             {
                 await _db.SaveChangesAsync(); // save basic changes
 
-                // Update skills
-                if (request.RequiredSkillIds != null)
+                // Update skills only if a new list is provided and it's not empty
+                if (request.RequiredSkillIds != null && request.RequiredSkillIds.Any())
                 {
                     var existingSkills = await _db.ProjectRequiredSkills
                         .Where(ps => ps.ProjectId == id)
@@ -467,8 +475,9 @@ public class ProjectsController : ControllerBase
                     }
                 }
 
-                // Update roles
-                if (request.RequiredRoles != null)
+                // Update roles ONLY if we successfully mapped them
+                // SAFETY: Only delete if request.RequiredRoles was sent AND we successfully mapped at least one
+                if (request.RequiredRoles != null && request.RequiredRoles.Any() && roleMappings.Any())
                 {
                     var existingRoles = await _db.ProjectRequiredRoles
                         .Where(pr => pr.ProjectID == id)
@@ -541,6 +550,11 @@ public class ProjectsController : ControllerBase
         if (project == null)
         {
             return NotFound(ApiResponse<ProjectDto>.ErrorResponse("Project not found"));
+        }
+
+        if (project.ProjectStatus != 0)
+        {
+            return BadRequest(ApiResponse<string>.ErrorResponse("Only pending projects can be canceled."));
         }
 
         try

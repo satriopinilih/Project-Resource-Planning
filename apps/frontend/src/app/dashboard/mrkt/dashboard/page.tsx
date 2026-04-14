@@ -13,10 +13,25 @@ import {
   Moon,
   User,
   Loader2,
-  Bell, // added for notifications icon
+  Bell,
+  X,
+  Check,
+  Calendar as CalendarIcon,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
-import { getProjects, BackendProject, getTimelineEditRequests, TimelineEditRequest } from "@/lib/api";
+import { 
+  getProjects, 
+  BackendProject, 
+  getTimelineEditRequests, 
+  TimelineEditRequest,
+  updateProject,
+  fulfillHireRequest,
+  declineHireRequest,
+  deleteProject,
+  getProjectById
+} from "@/lib/api";
+
 
 export default function MarketingDashboard() {
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -31,6 +46,13 @@ export default function MarketingDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState<TimelineEditRequest[]>([]);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(true);
+
+  // Review Modal States
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedReq, setSelectedReq] = useState<TimelineEditRequest | null>(null);
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Initialize theme based on document class
@@ -70,6 +92,93 @@ export default function MarketingDashboard() {
   const scheduled = projects.filter(p => p.projectStatus === 1).length;
   const running = projects.filter(p => p.projectStatus === 2).length;
   const completed = projects.filter(p => p.projectStatus === 3).length;
+
+  const refreshData = () => {
+    setIsLoading(true);
+    getProjects()
+      .then(setProjects)
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+
+    setIsNotificationsLoading(true);
+    getTimelineEditRequests()
+      .then(setNotifications)
+      .catch(console.error)
+      .finally(() => setIsNotificationsLoading(false));
+  };
+
+  const openReviewModal = (req: TimelineEditRequest) => {
+    setSelectedReq(req);
+    setEditStartDate(req.currentStartDate.split('T')[0]);
+    setEditEndDate(req.currentEndDate.split('T')[0]);
+    setReviewModalOpen(true);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedReq) return;
+    setIsSubmitting(true);
+    try {
+      // 1. Fetch current full project data to ensure we don't overwrite with nulls
+      const currentProject = await getProjectById(selectedReq.projectId.toString());
+      
+      // 2. Prepare full payload (Matching Backend DTO exactly)
+      const fullPayload = {
+        ProjectName: currentProject.projectName,
+        ClientOrganization: currentProject.clientOrganization,
+        ProjectDescription: currentProject.projectDescription,
+        EstimatedDuration: currentProject.priorityLevel,
+        PriorityLevel: currentProject.priorityLevel,
+        EstimatedStartDate: new Date(editStartDate).toISOString(),
+        EstimatedEndDate: new Date(editEndDate).toISOString(),
+        ProjectStatus: currentProject.projectStatus,
+        // Map to exact DTO field names: RoleName, Count, WorkingType
+        RequiredRoles: (currentProject as any).requiredRoles.map((r: any) => ({
+           RoleName: r.roleName,
+           Count: r.requiredCount || r.count || 1,
+           WorkingType: r.workingType
+        })),
+        RequiredSkillIds: currentProject.requiredSkillIds || []
+      };
+
+      // 3. Update Project
+      await updateProject(selectedReq.projectId, fullPayload);
+
+      // 4. Fulfill the Hire Request (Timeline Edit Req)
+      await fulfillHireRequest(selectedReq.id, 'Timeline Updated by Marketing');
+      
+      setReviewModalOpen(false);
+      refreshData();
+    } catch (e) {
+      alert("Failed to approve: " + (e instanceof Error ? e.message : "Unknown error"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    if (!selectedReq) return;
+    if (!confirm("Are you sure you want to decline this timeline edit request?")) return;
+    setIsSubmitting(true);
+    try {
+      await declineHireRequest(selectedReq.id, 'Declined by Marketing');
+      setReviewModalOpen(false);
+      refreshData();
+    } catch (e) {
+      alert("Failed to decline: " + (e instanceof Error ? e.message : "Unknown error"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelProject = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to cancel and delete the project "${name}"? This action cannot be undone.`)) return;
+    try {
+      await deleteProject(id);
+      refreshData();
+    } catch (e) {
+      alert("Failed to cancel project: " + (e instanceof Error ? e.message : "Unknown error"));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
@@ -206,6 +315,8 @@ export default function MarketingDashboard() {
                     date={`Start Date: ${project.estimatedStartDate ? new Date(project.estimatedStartDate).toLocaleDateString() : 'TBD'}`}
                     status={statusLabel}
                     statusColor={statusColor}
+                    canDelete={project.projectStatus === 0}
+                    onDelete={() => handleCancelProject(project.projectId, project.projectName)}
                   />
                 );
               })
@@ -228,18 +339,108 @@ export default function MarketingDashboard() {
               <p className="text-gray-500 text-[14px]">No pending edit requests.</p>
             ) : (
               notifications.map((req) => (
-                <NotificationItem
-                  key={req.id}
-                  projectName={req.projectName}
-                  notes={req.notes}
-                  currentStartDate={req.currentStartDate}
-                  currentEndDate={req.currentEndDate}
-                />
+                <div key={req.id} className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl border border-gray-100 dark:border-white/[0.02] transition-colors duration-300">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-medium text-[15px] text-gray-900 dark:text-white">{req.projectName}</h4>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        Pending
+                      </span>
+                    </div>
+                    {req.notes && (
+                      <p className="text-[13px] text-gray-600 dark:text-gray-300 italic">“{req.notes}”</p>
+                    )}
+                    <div className="text-[12px] text-gray-500 dark:text-[#717b96] mt-1 space-y-1">
+                      <p>Current: {new Date(req.currentStartDate).toLocaleDateString()} → {new Date(req.currentEndDate).toLocaleDateString()}</p>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                       <button 
+                         onClick={() => openReviewModal(req)}
+                         className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold rounded-lg transition-colors cursor-pointer"
+                       >
+                         Review & Approve
+                       </button>
+                       <button 
+                         onClick={() => { setSelectedReq(req); handleDecline(); }}
+                         className="px-4 py-2 bg-gray-200 dark:bg-white/5 hover:bg-red-500/10 hover:text-red-500 text-gray-600 dark:text-gray-400 text-[12px] font-bold rounded-lg transition-all cursor-pointer"
+                       >
+                         Decline
+                       </button>
+                    </div>
+                  </div>
+                </div>
               ))
             )}
           </div>
         </section>
       </div>
+
+      {/* Review Timeline Modal */}
+      {reviewModalOpen && selectedReq && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setReviewModalOpen(false)}>
+          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[var(--dash-text-primary)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--dash-border)]">
+              <h3 className="text-[17px] font-bold text-[var(--dash-text-heading)]">Review Timeline Change</h3>
+              <button onClick={() => setReviewModalOpen(false)} className="p-1.5 rounded-lg text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-6 space-y-5">
+              <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl space-y-2">
+                <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest">Requested Changes for:</p>
+                <p className="text-[15px] font-bold text-[var(--dash-text-heading)]">{selectedReq.projectName}</p>
+                <p className="text-[13px] text-[var(--dash-text-muted)] italic mt-2">"{selectedReq.notes}"</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[var(--dash-text-faint)] uppercase tracking-wider">New Start Date</label>
+                  <div className="relative">
+                    <CalendarIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]" />
+                    <input 
+                      type="date" 
+                      value={editStartDate}
+                      onChange={(e) => setEditStartDate(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl text-[13px] outline-none focus:border-blue-500/50 transition-colors" 
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[var(--dash-text-faint)] uppercase tracking-wider">New End Date</label>
+                  <div className="relative">
+                    <CalendarIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]" />
+                    <input 
+                      type="date" 
+                      value={editEndDate}
+                      onChange={(e) => setEditEndDate(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl text-[13px] outline-none focus:border-blue-500/50 transition-colors" 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 border-t border-[var(--dash-border)] flex justify-end gap-3 bg-[var(--dash-bg-input)]/30">
+              <button 
+                onClick={() => setReviewModalOpen(false)}
+                className="px-5 py-2 text-[13px] font-semibold text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleApprove}
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                Approve & Update Project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -260,16 +461,28 @@ function StatCardCustom({ label, value, icon: Icon, iconBg, iconColor, valueColo
   );
 }
 
-function SubmissionItem({ title, client, date, status, statusColor }: any) {
+function SubmissionItem({ title, client, date, status, statusColor, canDelete, onDelete }: any) {
   return (
-    <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-white/[0.02] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-colors cursor-pointer duration-300">
+    <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-white/[0.02] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-all cursor-pointer duration-300 group">
       <div className="flex flex-col gap-1">
         <h4 className="font-medium text-[15px] text-gray-900 dark:text-white transition-colors duration-300">{title}</h4>
         <div className="text-[13px] text-gray-500 dark:text-[#717b96] transition-colors duration-300">{client}</div>
         <div className="text-[13px] text-gray-400 dark:text-[#55607a] transition-colors duration-300">{date}</div>
       </div>
-      <div className={`px-4 py-1.5 rounded-full text-[12px] font-semibold tracking-wide ${statusColor} transition-colors duration-300`}>
-        {status}
+      <div className="flex items-center gap-3">
+        {canDelete && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white hover:bg-red-600 rounded-lg transition-all shadow-md shadow-red-500/20"
+            title="Cancel Submission"
+          >
+            <Trash2 size={14} />
+            <span className="text-[11px] font-bold uppercase">Cancel</span>
+          </button>
+        )}
+        <div className={`px-4 py-1.5 rounded-full text-[12px] font-semibold tracking-wide ${statusColor} transition-colors duration-300`}>
+          {status}
+        </div>
       </div>
     </div>
   );

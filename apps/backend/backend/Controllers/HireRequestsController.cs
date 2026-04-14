@@ -48,7 +48,7 @@ public class HireRequestsController : ControllerBase
             return StatusCode(403, ApiResponse<HireRequestDto>.ErrorResponse("Only GM can create hire requests"));
         }
 
-        var actor = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub") ?? "GM001";
+        var actor = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value ?? "GM001";
 
         var entity = new HireRequest
         {
@@ -102,15 +102,18 @@ public class HireRequestsController : ControllerBase
     public async Task<ActionResult<ApiResponse<HireRequestDto>>> Fulfill(int id, [FromBody] UpdateHireRequestStatusDto request)
     {
         var isHr = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "HR");
-        if (!isHr)
-        {
-            return StatusCode(403, ApiResponse<HireRequestDto>.ErrorResponse("Only HR can fulfill hire requests"));
-        }
+        var isMarketing = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "Marketing");
 
         var row = await _db.HireRequests.FirstOrDefaultAsync(h => h.HireRequestId == id);
         if (row is null)
         {
             return NotFound(ApiResponse<HireRequestDto>.ErrorResponse("Hire request not found"));
+        }
+
+        // Allow HR for regular hired, or Marketing specifically for Timeline Edit Request
+        if (!isHr && !(isMarketing && row.RoleNeeded == "Timeline Edit Request"))
+        {
+            return StatusCode(403, ApiResponse<HireRequestDto>.ErrorResponse("Unauthorized to fulfill this request"));
         }
 
         row.Status = "Fulfilled";
@@ -121,7 +124,7 @@ public class HireRequestsController : ControllerBase
         }
         row.FulfilledAt = DateTime.UtcNow;
         row.UpdatedAt = DateTime.UtcNow;
-        row.UpdatedBy = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "HR";
+        row.UpdatedBy = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value ?? (isMarketing ? "Marketing" : "HR");
         await _db.SaveChangesAsync();
 
         return Ok(ApiResponse<HireRequestDto>.SuccessResponse(Map(row), "Hire request fulfilled"));
@@ -132,15 +135,18 @@ public class HireRequestsController : ControllerBase
     public async Task<ActionResult<ApiResponse<HireRequestDto>>> Decline(int id, [FromBody] UpdateHireRequestStatusDto request)
     {
         var isHr = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "HR");
-        if (!isHr)
-        {
-            return StatusCode(403, ApiResponse<HireRequestDto>.ErrorResponse("Only HR can decline hire requests"));
-        }
+        var isMarketing = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "Marketing");
 
         var row = await _db.HireRequests.FirstOrDefaultAsync(h => h.HireRequestId == id);
         if (row is null)
         {
             return NotFound(ApiResponse<HireRequestDto>.ErrorResponse("Hire request not found"));
+        }
+
+        // Allow HR for regular hired, or Marketing specifically for Timeline Edit Request
+        if (!isHr && !(isMarketing && row.RoleNeeded == "Timeline Edit Request"))
+        {
+            return StatusCode(403, ApiResponse<HireRequestDto>.ErrorResponse("Unauthorized to decline this request"));
         }
 
         row.Status = "Declined";
@@ -150,7 +156,7 @@ public class HireRequestsController : ControllerBase
         }
         row.FulfilledAt = DateTime.UtcNow;
         row.UpdatedAt = DateTime.UtcNow;
-        row.UpdatedBy = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "HR";
+        row.UpdatedBy = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value ?? (isMarketing ? "Marketing" : "HR");
         await _db.SaveChangesAsync();
 
         return Ok(ApiResponse<HireRequestDto>.SuccessResponse(Map(row), "Hire request declined"));

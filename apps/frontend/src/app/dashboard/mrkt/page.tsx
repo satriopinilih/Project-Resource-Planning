@@ -10,9 +10,10 @@ import {
   LayoutDashboard,
   Calendar,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { getProjects, BackendProject } from "@/lib/api";
+import { getProjects, BackendProject, deleteProject } from "@/lib/api";
 
 export default function MarketingDashboard() {
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -25,9 +26,27 @@ export default function MarketingDashboard() {
   const [projects, setProjects] = useState<BackendProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const refreshData = () => {
+    setIsLoading(true);
+    getProjects()
+      .then(setProjects)
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  };
+
   useEffect(() => {
-    getProjects().then(setProjects).catch(console.error).finally(() => setIsLoading(false));
+    refreshData();
   }, []);
+
+  const handleCancelProject = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to cancel and delete the project "${name}"? This action cannot be undone.`)) return;
+    try {
+      await deleteProject(id);
+      refreshData();
+    } catch (e) {
+      alert("Failed to cancel project: " + (e instanceof Error ? e.message : "Unknown error"));
+    }
+  };
 
   const totalSubmitted = projects.length;
   const awaitingApproval = projects.filter((p) => p.projectStatus === 0).length;
@@ -97,7 +116,16 @@ export default function MarketingDashboard() {
               }
 
               return (
-                <SubmissionItem key={project.projectId} title={project.projectName} client={project.clientOrganization || "In-House"} date={`Start Date: ${project.estimatedStartDate ? new Date(project.estimatedStartDate).toLocaleDateString() : "TBD"}`} status={statusLabel} statusColor={statusColor} />
+                <SubmissionItem 
+                  key={project.projectId} 
+                  title={project.projectName} 
+                  client={project.clientOrganization || "In-House"} 
+                  date={`Start Date: ${project.estimatedStartDate ? new Date(project.estimatedStartDate).toLocaleDateString() : "TBD"}`} 
+                  status={statusLabel} 
+                  statusColor={statusColor}
+                  canDelete={project.projectStatus === 0}
+                  onDelete={() => handleCancelProject(project.projectId, project.projectName)}
+                />
               );
             })
           )}
@@ -119,15 +147,29 @@ function StatCardCustom({ label, value, icon: Icon, iconBg, iconColor, valueColo
   );
 }
 
-function SubmissionItem({ title, client, date, status, statusColor }: any) {
+function SubmissionItem({ title, client, date, status, statusColor, canDelete, onDelete }: any) {
   return (
-    <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-white/[0.02] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-colors cursor-pointer duration-300">
+    <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-white/[0.02] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-all cursor-pointer duration-300 group">
       <div className="flex flex-col gap-1">
         <h4 className="font-medium text-[15px] text-gray-900 dark:text-white transition-colors duration-300">{title}</h4>
         <div className="text-[13px] text-gray-500 dark:text-[#717b96] transition-colors duration-300">{client}</div>
         <div className="text-[13px] text-gray-400 dark:text-[#55607a] transition-colors duration-300">{date}</div>
       </div>
-      <div className={`px-4 py-1.5 rounded-full text-[12px] font-semibold tracking-wide ${statusColor} transition-colors duration-300`}>{status}</div>
+      <div className="flex items-center gap-3">
+        {canDelete && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white hover:bg-red-600 rounded-lg transition-all shadow-md shadow-red-500/20"
+            title="Cancel Submission"
+          >
+            <Trash2 size={14} />
+            <span className="text-[11px] font-bold uppercase">Cancel</span>
+          </button>
+        )}
+        <div className={`px-4 py-1.5 rounded-full text-[12px] font-semibold tracking-wide ${statusColor} transition-colors duration-300`}>
+          {status}
+        </div>
+      </div>
     </div>
   );
 }

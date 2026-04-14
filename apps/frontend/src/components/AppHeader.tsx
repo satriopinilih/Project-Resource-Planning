@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Sun, Moon, User } from "lucide-react";
+import { Bell, Sun, Moon, User, Check, X, Calendar } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
 import { getContractExtensionRequests, getProjects, getHireRequests, HireRequest, getRequestHistory } from "@/lib/api";
@@ -73,7 +73,8 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         const pending = await getContractExtensionRequests("Pending");
         setNotifications(pending);
         const hires = await getHireRequests('Open');
-        setHireNotifications(hires);
+        // ❌ Filter OUT timeline requests for HR
+        setHireNotifications(hires.filter(h => h.roleNeeded !== 'Timeline Edit Request'));
       }
       if (userRole === "GM") {
         const reviewed = await getHireRequests();
@@ -87,6 +88,13 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
              return dateB - dateA;
           });
         setGmContractNotifications(processed);
+      }
+      if (userRole === "Marketing") {
+        // ✅ Load timeline edit requests for Marketing
+        // We reuse the setHireNotifications or create a new state? 
+        // Let's reuse setHireNotifications for Marketing but map it to TimelineEditRequest
+        const hires = await getHireRequests('Open');
+        setHireNotifications(hires.filter(h => h.roleNeeded === 'Timeline Edit Request'));
       }
     } catch {
       setNotifications([]);
@@ -133,7 +141,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   useEffect(() => {
     let timer: NodeJS.Timeout;
 
-    if (userRole === "HR" || userRole === "GM") {
+    if (userRole === "HR" || userRole === "GM" || userRole === "Marketing") {
       loadNotifications();
       timer = setInterval(loadNotifications, 10000);
     } else if (userRole === "PM") {
@@ -168,6 +176,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const currentNotifIds = [
     ...(userRole === "HR" ? notifications.map(n => `hr-ext-${n.id}`) : []),
     ...(userRole === "HR" ? hireNotifications.map(n => `hr-hire-${n.hireRequestId}`) : []),
+    ...(userRole === "Marketing" ? hireNotifications.map(n => `mrkt-timeline-${n.hireRequestId}`) : []),
     ...(userRole === "GM" ? gmHireNotifications.map(n => `gm-hire-${n.hireRequestId}`) : []),
     ...(userRole === "GM" ? gmContractNotifications.map(n => `gm-ext-${n.referenceId}`) : []),
     ...(userRole === "PM" ? pmNotifications.map(n => `pm-proj-${n.projectId}`) : [])
@@ -177,7 +186,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
   const handleToggleNotifications = () => {
     if (!isNotificationOpen) {
-      if (userRole === "HR") loadNotifications();
+      if (userRole === "HR" || userRole === "Marketing" || userRole === "GM") {
+        loadNotifications();
+      }
       if (userRole === "PM") loadPMNotifications();
       
       // Mark as read
@@ -233,9 +244,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
           </button>
 
           {isNotificationOpen && (
-            <div className="absolute right-0 mt-3 w-[360px] rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] shadow-[0_20px_40px_rgba(0,0,0,0.2)] overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-[var(--dash-border)]">
-                <h3 className="text-[22px] font-semibold text-[var(--dash-text-heading)]">Notifications</h3>
+            <div className="absolute right-[-10px] mt-3 w-[320px] rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-5 py-4 border-b border-[var(--dash-border-subtle)] bg-[var(--dash-bg-header)]/50">
+                <h3 className="text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight">Notifications</h3>
               </div>
 
               {userRole === "HR" && (notifications.length > 0 || hireNotifications.length > 0) && (
@@ -267,6 +278,51 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                         Requested by {item.requestedByName || item.requestedBy || "GM"}
                       </p>
                     </button>
+                  ))}
+                </div>
+              )}
+
+              {userRole === "Marketing" && hireNotifications.length > 0 && (
+                <div className="max-h-[400px] overflow-y-auto">
+                  {hireNotifications.map((item) => (
+                    <div
+                      key={`mrkt-${item.hireRequestId}`}
+                      className="w-full px-5 py-4 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-300"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">Timeline Request</span>
+                      </div>
+                      <p className="text-[14px] font-semibold text-[var(--dash-text-heading)] leading-tight mb-1">
+                        {item.projectName}
+                      </p>
+                      <p className="text-[12.5px] text-[var(--dash-text-secondary)] mb-4 line-clamp-3 leading-relaxed">
+                        "{item.notes.replace('[TIMELINE EDIT REQUEST] ', '')}"
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsNotificationOpen(false);
+                            router.push('/dashboard/mrkt/dashboard');
+                          }}
+                          className="flex-[2] py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Check size={14} />
+                          Review & Approve
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsNotificationOpen(false);
+                            router.push('/dashboard/mrkt/dashboard');
+                          }}
+                          className="flex-1 py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[12px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-red-500/20"
+                        >
+                          <X size={14} />
+                          Decline
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -305,18 +361,34 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
               {userRole === "GM" && (gmHireNotifications.length > 0 || gmContractNotifications.length > 0) && (
                 <div className="max-h-72 overflow-y-auto">
-                  {gmHireNotifications.slice(0, 6).map((item) => (
-                    <button
-                      key={`gm-hire-${item.hireRequestId}`}
-                      onClick={() => handleGMHireOutcomeClick(item)}
-                      className="w-full text-left px-4 py-3 border-b border-[var(--dash-border-subtle)] last:border-b-0 hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
-                    >
-                      <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
-                        Hire request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> is <span className="font-semibold">{item.status === 'Fulfilled' ? 'Fulfilled' : 'Declined'}</span>
-                      </p>
-                      <p className="text-[12px] text-[var(--dash-text-secondary)] mt-1">Role: {item.roleNeeded}</p>
-                    </button>
-                  ))}
+                  {gmHireNotifications.slice(0, 6).map((item) => {
+                    const isTimeline = item.roleNeeded === 'Timeline Edit Request';
+                    return (
+                      <button
+                        key={`gm-hire-${item.hireRequestId}`}
+                        onClick={() => handleGMHireOutcomeClick(item)}
+                        className="w-full text-left px-5 py-3.5 border-b border-[var(--dash-border-subtle)] last:border-b-0 hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-1 p-1.5 rounded-lg ${isTimeline ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                            {isTimeline ? <Calendar size={14} /> : <User size={14} />}
+                          </div>
+                          <div>
+                            <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                              {isTimeline ? (
+                                <>Timeline edit for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> was <span className={`font-semibold ${item.status === 'Fulfilled' ? 'text-emerald-500' : 'text-red-500'}`}>{item.status === 'Fulfilled' ? 'Approved' : 'Declined'}</span> by Marketing.</>
+                              ) : (
+                                <>Hire request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> is <span className={`font-semibold ${item.status === 'Fulfilled' ? 'text-emerald-500' : 'text-red-500'}`}>{item.status === 'Fulfilled' ? 'Fulfilled' : 'Declined'}</span>.</>
+                              )}
+                            </p>
+                            <p className="text-[11px] text-[var(--dash-text-secondary)] mt-1 opacity-70">
+                              {isTimeline ? 'Timeline Synchronization' : `Role: ${item.roleNeeded}`}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                   {gmContractNotifications.slice(0, 6).map((item) => (
                     <div key={`gm-contract-${item.referenceId}`} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
                       <p className="text-[13px] text-[#d9e0f2] leading-5">
@@ -331,8 +403,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
               {((userRole === "HR" && notifications.length === 0 && hireNotifications.length === 0) || 
                 (userRole === "GM" && gmHireNotifications.length === 0 && gmContractNotifications.length === 0) ||
                 (userRole === "PM" && pmNotifications.length === 0) || 
-                (userRole !== "HR" && userRole !== "PM" && userRole !== "GM")) && (
-                <div className="px-4 py-8 text-center text-[18px] text-[var(--dash-text-muted)]">No notifications</div>
+                (userRole === "Marketing" && hireNotifications.length === 0) ||
+                (!["HR", "PM", "GM", "Marketing"].includes(userRole || ""))) && (
+                <div className="px-4 py-8 text-center text-[13px] text-[var(--dash-text-secondary)]">No notifications</div>
               )}
             </div>
           )}

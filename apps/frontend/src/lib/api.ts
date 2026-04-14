@@ -348,6 +348,12 @@ export async function updateProject(id: number, projectData: any): Promise<Backe
   });
 }
 
+export async function deleteProject(id: number): Promise<void> {
+  await fetchJson(`/api/projects/${id}`, {
+    method: 'DELETE'
+  });
+}
+
 export type AssignMemberPayload = {
   userId: string;
   roleInProject: string;

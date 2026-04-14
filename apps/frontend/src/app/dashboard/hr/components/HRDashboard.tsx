@@ -123,7 +123,7 @@ export default function HRDashboard() {
   }, [employees, expiringEmployees, contractExtensionRequests, hireRequests, requestHistory]);
 
   const activeHireRequests = useMemo(
-    () => hireRequests.filter((r) => r.status !== 'Fulfilled'),
+    () => hireRequests.filter((r) => r.status !== 'Fulfilled' && r.roleNeeded !== 'Timeline Edit Request'),
     [hireRequests]
   );
 

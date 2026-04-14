@@ -40,6 +40,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applyTheme = (dark: boolean) => {
+    if (typeof window === 'undefined') return;
+    
     if (dark) {
       document.documentElement.classList.add('dark');
       document.documentElement.classList.remove('light');
@@ -50,12 +52,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => {
-      const newValue = !prev;
-      applyTheme(newValue);
-      localStorage.setItem('theme', newValue ? 'dark' : 'light');
-      return newValue;
-    });
+    const newValue = !isDarkMode;
+    setIsDarkMode(newValue);
+    applyTheme(newValue);
+    localStorage.setItem('theme', newValue ? 'dark' : 'light');
   };
 
   return (
