@@ -120,6 +120,7 @@ export default function ProjectDetailsPage() {
   const [assignEnd, setAssignEnd] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [assignFromRole, setAssignFromRole] = useState(false); // true = opened from required role card
 
   // Remove member state
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
@@ -193,6 +194,7 @@ export default function ProjectDetailsPage() {
     setAssignError(null);
     setSelectedEmp(null);
     setAssignRole(prefillRole || "");
+    setAssignFromRole(!!prefillRole); // hide role/date fields if opened from a role card
     setAssignStart(toInputDate(project?.estimatedStartDate));
     setAssignEnd(toInputDate(project?.estimatedEndDate));
     setEmpSearch("");
@@ -346,8 +348,8 @@ export default function ProjectDetailsPage() {
   }
 
   const statusInfo = mapStatus(project.projectStatus, project.estimatedStartDate);
-  const totalNeeded = project.requiredRoles?.reduce((s, r) => s + (r.requiredCount ?? 0), 0) || 0;
-  const totalFilled = project.requiredRoles?.reduce((s, r) => s + (r.filledCount ?? 0), 0) || 0;
+  const totalNeeded = (project.requiredRoles || []).reduce((s, r) => s + (r.requiredCount ?? 0), 0);
+  const totalFilled = (project.requiredRoles || []).reduce((s, r) => s + (r.filledCount ?? 0), 0);
   const staffingPct = totalNeeded > 0 ? Math.round((totalFilled / totalNeeded) * 100) : 0;
   const allRolesFilled = totalNeeded > 0 && totalFilled >= totalNeeded && project.projectStatus === 0;
   const isEditingTeam = project.projectStatus === 0 || isEditMode;
@@ -500,7 +502,7 @@ export default function ProjectDetailsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {project.requiredRoles.map((role) => {
                   const membersInRole = project.members?.filter(m => m.role.toLowerCase() === role.roleName.toLowerCase()) || [];
-                  const isFilled = membersInRole.length >= role.requiredCount;
+                  const isFilled = membersInRole.length >= (role.requiredCount ?? 0);
 
                   return (
                     <div key={role.id} className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl overflow-hidden flex flex-col shadow-sm">
@@ -534,7 +536,7 @@ export default function ProjectDetailsPage() {
                         <div className="w-full h-1.5 bg-[var(--dash-bg-page)] rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${isFilled ? "bg-green-500" : "bg-amber-500"}`}
-                            style={{ width: `${Math.min(100, (membersInRole.length / role.requiredCount) * 100)}%` }}
+                            style={{ width: `${Math.min(100, (membersInRole.length / (role.requiredCount ?? 1)) * 100)}%` }}
                           />
                         </div>
                       </div>
@@ -800,39 +802,43 @@ export default function ProjectDetailsPage() {
                 </div>
               )}
 
-              {/* Role field */}
-              <div>
-                <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Role in Project</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Senior Dev, Project Manager..."
-                  value={assignRole}
-                  onChange={(e) => setAssignRole(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 placeholder:text-[var(--dash-text-faint)] transition-colors"
-                />
-              </div>
+              {/* Role field — hidden when opened from a required role card */}
+              {!assignFromRole && (
+                <div>
+                  <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Role in Project</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Senior Dev, Project Manager..."
+                    value={assignRole}
+                    onChange={(e) => setAssignRole(e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 placeholder:text-[var(--dash-text-faint)] transition-colors"
+                  />
+                </div>
+              )}
 
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Start</label>
-                  <input
-                    type="date"
-                    value={assignStart}
-                    onChange={(e) => setAssignStart(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
-                  />
+              {/* Dates — hidden when opened from a required role card */}
+              {!assignFromRole && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Start</label>
+                    <input
+                      type="date"
+                      value={assignStart}
+                      onChange={(e) => setAssignStart(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">End</label>
+                    <input
+                      type="date"
+                      value={assignEnd}
+                      onChange={(e) => setAssignEnd(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">End</label>
-                  <input
-                    type="date"
-                    value={assignEnd}
-                    onChange={(e) => setAssignEnd(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Footer */}

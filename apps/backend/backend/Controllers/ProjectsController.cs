@@ -140,7 +140,7 @@ public class ProjectsController : ControllerBase
         }).ToList();
 
         // Project-level required skills (names + ids)
-        var requiredSkillNames = p.ProjectRequiredSkills
+        var requiredSkills = p.ProjectRequiredSkills
             .Select(ps => ps.Skill.SkillName)
             .Distinct()
             .OrderBy(s => s)
@@ -164,10 +164,9 @@ public class ProjectsController : ControllerBase
             ProjectStatus = p.ProjectStatus,
             IsUnread = currentUserId != null && p.UserProjects.Any(up => up.UserId == currentUserId && !up.IsNotificationRead),
             RequiredRoles = requiredRoles,
-            RequiredSkills = requiredSkillNames,
+            RequiredSkills = requiredSkills,
             RequiredSkillIds = requiredSkillIds,
             Members = p.UserProjects
-                .Where(up => !up.RoleInProject.Equals("Project Manager", StringComparison.OrdinalIgnoreCase))
                 .Select(up => new ProjectMemberDto
                 {
                     UserId = up.UserId,
@@ -175,7 +174,10 @@ public class ProjectsController : ControllerBase
                     Role = up.RoleInProject,
                     StaffRole = up.User?.UserStaffRoles.Select(s => s.StaffRole.RoleName).FirstOrDefault()
                                 ?? up.User?.UserRoles.Select(r => r.Role.RoleName.ToString()).FirstOrDefault()
-                                ?? "Staff"
+                                ?? "Staff",
+                    StartDate = up.StartDate,
+                    EndDate = up.EndDate,
+                    Status = up.Status.ToString()
                 }).ToList()
         };
     }

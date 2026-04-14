@@ -125,8 +125,8 @@ export default function PMProjectDetailsPage() {
   }
 
   const statusInfo = mapStatus(project.projectStatus, project.estimatedStartDate);
-  const totalNeeded = project.requiredRoles?.reduce((s, r) => s + r.requiredCount, 0) || 0;
-  const totalFilled = project.requiredRoles?.reduce((s, r) => s + r.filledCount, 0) || 0;
+  const totalNeeded = project.requiredRoles?.reduce((s, r) => s + (r.requiredCount ?? 0), 0) || 0;
+  const totalFilled = project.requiredRoles?.reduce((s, r) => s + (r.filledCount ?? 0), 0) || 0;
   const staffingPct = totalNeeded > 0 ? Math.round((totalFilled / totalNeeded) * 100) : 0;
 
   return (
@@ -220,7 +220,7 @@ export default function PMProjectDetailsPage() {
                     {project.members?.length ?? 0}
                     {(project.requiredRoles?.length ?? 0) > 0 && (
                       <span className="text-[var(--dash-text-muted)] font-normal">
-                        {" "}/ {project.requiredRoles.reduce((sum, r) => sum + r.requiredCount, 0)} needed
+                        {" "}/ {project.requiredRoles.reduce((sum, r) => sum + (r.requiredCount ?? 0), 0)} needed
                       </span>
                     )}
                   </p>
@@ -238,8 +238,8 @@ export default function PMProjectDetailsPage() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {project.requiredRoles.map((role) => {
-                    const isFilled = role.filledCount >= role.requiredCount;
-                    const isPartial = role.filledCount > 0 && role.filledCount < role.requiredCount;
+                    const isFilled = (role.filledCount ?? 0) >= (role.requiredCount ?? 0);
+                    const isPartial = (role.filledCount ?? 0) > 0 && (role.filledCount ?? 0) < (role.requiredCount ?? 0);
                     return (
                       <div
                         key={role.id}
@@ -272,7 +272,7 @@ export default function PMProjectDetailsPage() {
                         <div className="mt-3">
                           <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[11px] text-[var(--dash-text-muted)]">
-                              {role.filledCount}/{role.requiredCount} filled
+                              {(role.filledCount ?? 0)}/{(role.requiredCount ?? 0)} filled
                             </span>
                             <span className={`text-[11px] font-bold ${isFilled ? "text-green-400" : isPartial ? "text-amber-400" : "text-gray-600"
                               }`}>
@@ -283,7 +283,7 @@ export default function PMProjectDetailsPage() {
                             <div
                               className={`h-full rounded-full transition-all duration-500 ${isFilled ? "bg-green-500" : isPartial ? "bg-amber-500" : "bg-gray-700"
                                 }`}
-                              style={{ width: `${Math.min(100, (role.filledCount / role.requiredCount) * 100)}%` }}
+                              style={{ width: `${Math.min(100, (((role.filledCount ?? 0) / (role.requiredCount ?? 1)) * 100))}%` }}
                             />
                           </div>
                         </div>

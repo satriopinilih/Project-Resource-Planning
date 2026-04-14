@@ -323,9 +323,7 @@ export async function declineContractExtension(contractExtensionRequestID: numbe
 }
 
 export async function getProjects(): Promise<BackendProject[]> {
-  const res = await fetch('/api/projects');
-  if (!res.ok) throw new Error('Failed to fetch projects');
-  return res.json();
+  return fetchJson<BackendProject[]>('/api/projects');
 }
 
 export async function getPendingProjects(): Promise<BackendProject[]> {
