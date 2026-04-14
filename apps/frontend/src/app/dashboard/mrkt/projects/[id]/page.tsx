@@ -22,6 +22,7 @@ import {
 import {
   getProjectById,
   createHireRequest,
+  getHireRequests,
   BackendProject,
   updateProject,
   getEmployeeFormOptions,
@@ -89,6 +90,8 @@ export default function ProjectDetailsPage() {
     requiredSkillIds: [] as number[],
   });
   const [formOptions, setFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
+  const [hasPendingRescheduleRequest, setHasPendingRescheduleRequest] = useState(false);
+  const [rescheduleRequestNote, setRescheduleRequestNote] = useState<string>("");
   const allowedStaffRoles = useMemo(
     () => formOptions.staffRoles.filter((r) => ALLOWED_STAFF_ROLES.includes(r.name)),
     [formOptions.staffRoles]
@@ -119,6 +122,24 @@ export default function ProjectDetailsPage() {
   useEffect(() => {
     fetchProject();
     getEmployeeFormOptions().then(setFormOptions).catch(console.error);
+  }, [numericId]);
+
+  useEffect(() => {
+    const loadRescheduleStatus = async () => {
+      if (!numericId) return;
+      try {
+        const rows = await getHireRequests(undefined, numericId);
+        const timelineRows = rows.filter(
+          (r) => r.roleNeeded === "Timeline Edit Request" && (r.status === "Open" || r.status === "InProgress")
+        );
+        setHasPendingRescheduleRequest(timelineRows.length > 0);
+        setRescheduleRequestNote(timelineRows[0]?.notes || "");
+      } catch {
+        setHasPendingRescheduleRequest(false);
+        setRescheduleRequestNote("");
+      }
+    };
+    loadRescheduleStatus();
   }, [numericId]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -188,6 +209,22 @@ export default function ProjectDetailsPage() {
                   <div className="flex items-center gap-2 text-[12px] font-bold text-[var(--dash-text-muted)]">
                     Step 1 of 2: Assign Timeline & Team
                     <ChevronRight size={14} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hasPendingRescheduleRequest && (
+              <div className="bg-amber-100 border border-amber-300 dark:bg-amber-500/10 dark:border-amber-400/30 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-lg">
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-amber-900 dark:text-amber-200">GM requested a project reschedule</p>
+                    <p className="text-[12px] text-amber-800 dark:text-amber-300 mt-1">
+                      {rescheduleRequestNote ? rescheduleRequestNote.replace("[TIMELINE EDIT REQUEST] ", "") : "Please review this request in the Marketing dashboard notifications."}
+                    </p>
                   </div>
                 </div>
               </div>

@@ -183,6 +183,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   ];
 
   const hasUnread = currentNotifIds.length > 0 && currentNotifIds.some(id => !readNotifIds.includes(id));
+  const unreadCount = currentNotifIds.filter(id => !readNotifIds.includes(id)).length;
 
   const handleToggleNotifications = () => {
     if (!isNotificationOpen) {
@@ -239,7 +240,12 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
           >
             <Bell size={22} strokeWidth={1.8} />
             {hasUnread && (
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)] animate-pulse" />
+              <>
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)] animate-pulse" />
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[var(--dash-bg-header)] leading-none">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              </>
             )}
           </button>
 
@@ -285,9 +291,14 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
               {userRole === "Marketing" && hireNotifications.length > 0 && (
                 <div className="max-h-[400px] overflow-y-auto">
                   {hireNotifications.map((item) => (
-                    <div
+                    <button
                       key={`mrkt-${item.hireRequestId}`}
-                      className="w-full px-5 py-4 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-300"
+                      onClick={() => {
+                        setIsNotificationOpen(false);
+                        if (item.projectId) router.push(`/project/${item.projectId}`);
+                        else router.push('/project');
+                      }}
+                      className="w-full text-left px-5 py-4 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-300"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">Timeline Request</span>
@@ -298,31 +309,8 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       <p className="text-[12.5px] text-[var(--dash-text-secondary)] mb-4 line-clamp-3 leading-relaxed">
                         "{item.notes.replace('[TIMELINE EDIT REQUEST] ', '')}"
                       </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsNotificationOpen(false);
-                            router.push('/dashboard/mrkt/dashboard');
-                          }}
-                          className="flex-[2] py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <Check size={14} />
-                          Review & Approve
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsNotificationOpen(false);
-                            router.push('/dashboard/mrkt/dashboard');
-                          }}
-                          className="flex-1 py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[12px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-red-500/20"
-                        >
-                          <X size={14} />
-                          Decline
-                        </button>
-                      </div>
-                    </div>
+                      <p className="text-[12px] text-[#2B7FFC] mt-1 font-semibold">Click to open project</p>
+                    </button>
                   ))}
                 </div>
               )}
@@ -362,6 +350,24 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
               {userRole === "GM" && (gmHireNotifications.length > 0 || gmContractNotifications.length > 0) && (
                 <div className="max-h-72 overflow-y-auto">
                   {gmHireNotifications.slice(0, 6).map((item) => {
+                    if (item.roleNeeded === 'GM Notification') {
+                      return (
+                        <button
+                          key={`gm-self-${item.hireRequestId}`}
+                          onClick={() => {
+                            setIsNotificationOpen(false);
+                            if (item.projectId) router.push(`/project/${item.projectId}`);
+                            else router.push('/project');
+                          }}
+                          className="w-full text-left px-5 py-3.5 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
+                        >
+                          <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                            {item.notes}
+                          </p>
+                          <p className="text-[11px] text-[var(--dash-text-secondary)] mt-1">Click to open project</p>
+                        </button>
+                      );
+                    }
                     const isTimeline = item.roleNeeded === 'Timeline Edit Request';
                     return (
                       <button
@@ -438,8 +444,13 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
             </p>
           </div>
           {/* Avatar circle */}
-          <div className={`flex items-center justify-center w-11 h-11 rounded-full ${avatarClass} text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)]`}>
-            <User size={22} strokeWidth={2} />
+          <div className="relative">
+            <div className={`flex items-center justify-center w-11 h-11 rounded-full ${avatarClass} text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)]`}>
+              <User size={22} strokeWidth={2} />
+            </div>
+            {hasUnread && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
+            )}
           </div>
           {/* Role Pill */}
           <div className={`px-3 py-1.5 rounded-full text-[13px] font-bold border ${badgeClass}`}>

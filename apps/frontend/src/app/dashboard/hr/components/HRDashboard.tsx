@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Users, AlertTriangle, Hourglass, UserPlus2, CheckCircle2 } from 'lucide-react';
 import StatCard from '@/components/StatCard';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
@@ -24,6 +26,7 @@ import {
 import { ContractExtensionRequest, RequestHistoryItem } from '@/lib/types';
 
 export default function HRDashboard() {
+  const router = useRouter();
   const [employees, setEmployees] = useState<BackendEmployee[]>([]);
   const [contractExtensionRequests, setContractExtensionRequests] = useState<ContractExtensionRequest[]>([]);
   const [hireRequests, setHireRequests] = useState<HireRequest[]>([]);
@@ -246,6 +249,14 @@ export default function HRDashboard() {
     setHireEmployeeModalOpen(true);
   };
 
+  const navigateToSection = (target: string) => {
+    if (target.startsWith('/')) {
+      router.push(target);
+      return;
+    }
+    router.push(`/dashboard#${target}`);
+  };
+
   return (
       <div className="flex-1 flex flex-col min-h-screen">
         <main className="flex-1 p-8">
@@ -265,12 +276,22 @@ export default function HRDashboard() {
             <p className="text-gray-600 dark:text-gray-400 mt-1">Manage employee contracts and extension requests</p>
           </div>
 
-          <div className="grid grid-cols-5 gap-4 mb-8">
-            <StatCard value={stats.totalEmployees} label="Total Employees" icon={<span className="text-2xl">👥</span>} />
-            <StatCard value={stats.contractsExpiring} label="Contracts Expiring" variant="warning" icon={<span className="text-2xl">⚠️</span>} />
-            <StatCard value={stats.pendingRequests} label="Pending Requests" variant="danger" icon={<span className="text-2xl">⏳</span>} />
-            <StatCard value={stats.openHireRequests} label="Open Hire Requests" icon={<span className="text-2xl">➕</span>} />
-            <StatCard value={stats.approvedThisMonth} label="Approved This Month" variant="success" icon={<span className="text-2xl">✅</span>} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+            <button type="button" onClick={() => navigateToSection('/teammember')} className="text-left cursor-pointer">
+              <StatCard value={stats.totalEmployees} label="Total Employees" icon={<Users size={22} />} />
+            </button>
+            <button type="button" onClick={() => navigateToSection('expiring-contracts-section')} className="text-left cursor-pointer">
+              <StatCard value={stats.contractsExpiring} label="Contracts Expiring" variant="warning" icon={<AlertTriangle size={22} />} />
+            </button>
+            <button type="button" onClick={() => navigateToSection('pending-contract-extension-section')} className="text-left cursor-pointer">
+              <StatCard value={stats.pendingRequests} label="Pending Requests" variant="danger" icon={<Hourglass size={22} />} />
+            </button>
+            <button type="button" onClick={() => navigateToSection('hire-requests-section')} className="text-left cursor-pointer">
+              <StatCard value={stats.openHireRequests} label="Open Hire Requests" icon={<UserPlus2 size={22} />} />
+            </button>
+            <button type="button" onClick={() => navigateToSection('request-history-section')} className="text-left cursor-pointer">
+              <StatCard value={stats.approvedThisMonth} label="Approved This Month" variant="success" icon={<CheckCircle2 size={22} />} />
+            </button>
           </div>
 
           <div id="hire-requests-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
@@ -408,7 +429,7 @@ export default function HRDashboard() {
             ))}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <div id="expiring-contracts-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Employees with Expiring Contracts</h2>
             {expiringEmployees.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">No contracts expiring within 2 months</div>
@@ -438,7 +459,7 @@ export default function HRDashboard() {
 
           <EmployeeContractTable showExtensionAction={false} />
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
+          <div id="request-history-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Request History</h2>
             {requestHistory.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">No request history yet</div>

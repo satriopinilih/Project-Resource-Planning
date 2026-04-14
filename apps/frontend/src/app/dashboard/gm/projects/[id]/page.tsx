@@ -178,12 +178,21 @@ export default function ProjectDetailsPage() {
       if (!numericId) return;
       try {
         const rows = await getHireRequests(undefined, numericId);
-        const latest = rows[0];
-        setHireRequestStatus(latest?.status ?? "none");
-        setHireAlreadyRequested(rows.some((r) => r.status === "Open" || r.status === "InProgress"));
+        const hireRows = rows.filter((r) =>
+          r.roleNeeded !== "Timeline Edit Request" &&
+          r.roleNeeded !== "Project Submission Notification" &&
+          r.roleNeeded !== "Project Update Notification"
+        );
+        const timelineRows = rows.filter((r) => r.roleNeeded === "Timeline Edit Request");
+
+        const latestHire = hireRows[0];
+        setHireRequestStatus(latestHire?.status ?? "none");
+        setHireAlreadyRequested(hireRows.some((r) => r.status === "Open" || r.status === "InProgress"));
+        setTimelineEditRequested(timelineRows.some((r) => r.status === "Open" || r.status === "InProgress"));
       } catch {
         setHireRequestStatus("none");
         setHireAlreadyRequested(false);
+        setTimelineEditRequested(false);
       }
     };
     checkExistingHireRequest();
@@ -280,6 +289,15 @@ export default function ProjectDetailsPage() {
         endDate: project.estimatedEndDate,
         notes: hireForm.notes || `Requested from project ${project.projectName}`,
       });
+      await createHireRequest({
+        projectId: project.projectId,
+        projectName: project.projectName,
+        roleNeeded: "GM Notification",
+        quantity: 1,
+        startDate: project.estimatedStartDate,
+        endDate: project.estimatedEndDate,
+        notes: `[GM ACTION] Hire request sent for ${project.projectName}`,
+      });
       setHireRequestOpen(false);
       setHireAlreadyRequested(true);
     } catch (e) {
@@ -299,6 +317,15 @@ export default function ProjectDetailsPage() {
         notes: timelineEditNotes || `GM requesting timeline review for project ${project.projectName}`,
         currentStartDate: project.estimatedStartDate,
         currentEndDate: project.estimatedEndDate,
+      });
+      await createHireRequest({
+        projectId: project.projectId,
+        projectName: project.projectName,
+        roleNeeded: "GM Notification",
+        quantity: 1,
+        startDate: project.estimatedStartDate,
+        endDate: project.estimatedEndDate,
+        notes: `[GM ACTION] Timeline edit requested for ${project.projectName}`,
       });
       setTimelineEditOpen(false);
       setTimelineEditRequested(true);
@@ -471,7 +498,7 @@ export default function ProjectDetailsPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Calendar size={16} />
-                    {timelineEditRequested ? "Timeline Request Sent" : "Request Timeline Edit"}
+                    {timelineEditRequested ? "Already Requested" : "Request Timeline Edit"}
                   </button>
                   {project.projectStatus === 0 && (
                     <button
