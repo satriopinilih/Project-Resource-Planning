@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
 import { getProjects } from "@/lib/api";
@@ -47,7 +47,7 @@ const formatDate = (dateString: string) => {
 
 const tabs = ["All", "Pending", "Scheduled", "Active", "Completed"];
 
-export default function ProjectsPage() {
+function MarketingProjectsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabQuery = searchParams.get("tab");
@@ -318,5 +318,17 @@ export default function ProjectsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#18181b]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" />
+      </div>
+    }>
+      <MarketingProjectsContent />
+    </Suspense>
   );
 }
