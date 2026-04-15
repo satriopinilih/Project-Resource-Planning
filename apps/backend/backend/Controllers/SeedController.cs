@@ -295,12 +295,13 @@ END $$;");
                 new UserStaffRole { UserId = "EMP010", StaffRoleId = srPm.StaffRoleId } // Yuki: PM (available)
             );
 
-            // Skill mapping
+            // Skill mapping — collect all items then AddRange for batch efficiency
+            var allUserSkills = new List<UserSkill>();
             void AddSkills(string userId, params string[] names)
             {
                 foreach (var name in names)
                 {
-                    _db.UserSkills.Add(new UserSkill { UserId = userId, SkillId = byName[name] });
+                    allUserSkills.Add(new UserSkill { UserId = userId, SkillId = byName[name] });
                 }
             }
 
@@ -316,10 +317,14 @@ END $$;");
             AddSkills("EMP009", "Python", "PostgreSQL", "API Design", "System Design", "React", "Node.js"); // Omar: Full-stack Senior Dev
             AddSkills("EMP010", "Testing", "Documentation", "JavaScript", "Git", "Agile"); // Yuki: QA + testing
 
-            // Project assignments
+            // Use AddRange for skill batch insert
+            _db.UserSkills.AddRange(allUserSkills);
+
+            // Project assignments — collect all items then AddRange for batch efficiency
+            var allUserProjects = new List<UserProject>();
             void AddProject(string userId, string projectName, string roleInProject, UserProjectStatus status)
             {
-                _db.UserProjects.Add(new UserProject
+                allUserProjects.Add(new UserProject
                 {
                     UserId = userId,
                     ProjectId = byProject[projectName],
@@ -342,6 +347,8 @@ END $$;");
             AddProject("PM001", "Cloud Migration Project", "PM", UserProjectStatus.Assigned);
             AddProject("PM001", "Digital Transformation Initiative", "PM", UserProjectStatus.Assigned);
 
+            // Use AddRange for project batch insert
+            _db.UserProjects.AddRange(allUserProjects);
 
             _db.ContractExtensions.Add(
                 new ContractExtension
@@ -427,12 +434,13 @@ END $$;");
             // ── Project-level Required Skills ──
             // These are the skills needed for this project (separate from roles)
             // The Smart Recommendation Panel uses these to match employees
+            // Use AddRange for project required skills batch insert
             var projectSkillNames = new[] { "Python", "React", "PostgreSQL", "API Design", "System Design", "Business Analysis", "Testing", "Documentation" };
-            foreach (var skillName in projectSkillNames)
-            {
-                if (byName.TryGetValue(skillName, out var skillId))
-                    _db.ProjectRequiredSkills.Add(new ProjectRequiredSkill { ProjectId = hmsProject.ProjectID, SkillId = skillId });
-            }
+            var projectRequiredSkills = projectSkillNames
+                .Where(skillName => byName.ContainsKey(skillName))
+                .Select(skillName => new ProjectRequiredSkill { ProjectId = hmsProject.ProjectID, SkillId = byName[skillName] })
+                .ToList();
+            _db.ProjectRequiredSkills.AddRange(projectRequiredSkills);
 
             await _db.SaveChangesAsync();
 

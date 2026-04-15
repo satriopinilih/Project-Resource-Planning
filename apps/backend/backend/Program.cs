@@ -1,4 +1,5 @@
 using System.Reflection;
+using backend.Services;
 using Entities;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -51,6 +52,17 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblies(
         Assembly.Load("Commons")
     ));
+
+// 4b. Application Services (business logic layer)
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ContractExtensionService>();
+builder.Services.AddScoped<EmployeeService>();
+builder.Services.AddScoped<HireRequestService>();
+builder.Services.AddScoped<HolidayService>();
+builder.Services.AddScoped<PMProjectService>();
+builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<RecommendationService>();
+builder.Services.AddScoped<RequestHistoryService>();
 
 // 5. JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
