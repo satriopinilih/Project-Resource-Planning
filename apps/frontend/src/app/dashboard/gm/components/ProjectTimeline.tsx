@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { getProjects, BackendProject } from "@/lib/api";
 
 const months = [
@@ -16,30 +16,41 @@ interface TimelineProject {
   id: string;
   name: string;
   client: string;
-  startMonth: number;
-  endMonth: number;
+  startDate: Date;
+  endDate: Date;
   status: ProjectStatus;
 }
 
-// Backend ProjectStatus: 0=Pending, 1=Running, 2=Completed
+// Backend ProjectStatus: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
 function mapStatus(s: number): ProjectStatus {
   if (s === 0) return "pending";
-  if (s === 1) return "running";
-  if (s === 2) return "completed";
-  return "scheduled";
+  if (s === 1) return "scheduled";
+  if (s === 2) return "running";
+  if (s === 3) return "completed";
+  return "pending";
 }
 
 function projectToTimeline(p: BackendProject): TimelineProject {
-  const start = new Date(p.estimatedStartDate);
-  const end = new Date(p.estimatedEndDate);
+  const start = p.estimatedStartDate ? new Date(p.estimatedStartDate) : new Date();
+  const end = p.estimatedEndDate ? new Date(p.estimatedEndDate) : start;
   return {
     id: String(p.projectId),
     name: p.projectName,
     client: p.clientOrganization,
-    startMonth: start.getMonth(),
-    endMonth: end.getMonth(),
+    startDate: start,
+    endDate: end,
     status: mapStatus(p.projectStatus),
   };
+}
+
+function getRangeForYear(project: TimelineProject, year: number) {
+  const projectStartYear = project.startDate.getFullYear();
+  const projectEndYear = project.endDate.getFullYear();
+  if (projectStartYear > year || projectEndYear < year) return null;
+
+  const startMonth = projectStartYear < year ? 0 : project.startDate.getMonth();
+  const endMonth = projectEndYear > year ? 11 : project.endDate.getMonth();
+  return { startMonth, endMonth };
 }
 
 const statusColors: Record<ProjectStatus, string> = {
@@ -67,6 +78,7 @@ export default function ProjectTimeline() {
   const [projects, setProjects] = useState<TimelineProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     getProjects()
@@ -77,9 +89,29 @@ export default function ProjectTimeline() {
 
   return (
     <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300">
-      <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)] mb-6">
-        Project Timeline - 2026
-      </h3>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)]">
+          Project Timeline - {selectedYear}
+        </h3>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedYear((prev) => prev - 1)}
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--dash-border)] px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors"
+          >
+            <ChevronLeft size={14} />
+            Prev
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedYear((prev) => prev + 1)}
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--dash-border)] px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors"
+          >
+            Next
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
 
       {loading && (
         <div className="flex items-center justify-center py-12 gap-2 text-[var(--dash-text-muted)]">
@@ -110,66 +142,69 @@ export default function ProjectTimeline() {
               </div>
 
               {/* Project rows */}
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="grid grid-cols-[220px_repeat(12,1fr)] gap-0 items-center py-3"
-                >
-                  <div className="pr-4">
-                    <p className="text-[13px] font-semibold text-[var(--dash-text-heading)] leading-tight">
-                      {project.name}
-                    </p>
-                    <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5">
-                      {project.client}
-                    </p>
-                  </div>
+              {projects
+                .map((project) => {
+                  const visibleRange = getRangeForYear(project, selectedYear);
+                  if (!visibleRange) return null;
+                  const { startMonth, endMonth } = visibleRange;
 
-                  {months.map((_, monthIdx) => {
-                    const isStart = monthIdx === project.startMonth;
-                    const isInRange =
-                      monthIdx > project.startMonth &&
-                      monthIdx <= project.endMonth;
+                  return (
+                    <div
+                      key={project.id}
+                      className="grid grid-cols-[220px_repeat(12,1fr)] gap-0 items-center py-3"
+                    >
+                      <div className="pr-4">
+                        <p className="text-[13px] font-semibold text-[var(--dash-text-heading)] leading-tight">
+                          {project.name}
+                        </p>
+                        <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5">
+                          {project.client}
+                        </p>
+                      </div>
 
-                    if (isStart) {
-                      const spanCols = Math.max(
-                        1,
-                        project.endMonth - project.startMonth + 1
-                      );
-                      return (
-                        <div
-                          key={monthIdx}
-                          className="relative px-0.5"
-                          style={{ gridColumn: `span ${spanCols}` }}
-                        >
-                          <Link
-                            href={`/project/${project.id}`}
-                            className={`
-                              block w-full py-2 px-3 rounded-md text-[11px] font-semibold text-white
-                              truncate transition-all duration-200 cursor-pointer
-                              ${statusBarColors[project.status]}
-                            `}
-                          >
-                            {project.name}
-                          </Link>
-                        </div>
-                      );
-                    }
+                      {months.map((_, monthIdx) => {
+                        const isStart = monthIdx === startMonth;
+                        const isInRange = monthIdx > startMonth && monthIdx <= endMonth;
 
-                    if (isInRange) return null;
+                        if (isStart) {
+                          const spanCols = Math.max(1, endMonth - startMonth + 1);
+                          return (
+                            <div
+                              key={monthIdx}
+                              className="relative px-0.5"
+                              style={{ gridColumn: `span ${spanCols}` }}
+                            >
+                              <Link
+                                href={`/project/${project.id}`}
+                                className={`
+                                  block w-full py-2 px-3 rounded-md text-[11px] font-semibold text-white
+                                  truncate transition-all duration-200 cursor-pointer
+                                  ${statusBarColors[project.status]}
+                                `}
+                              >
+                                {project.name}
+                              </Link>
+                            </div>
+                          );
+                        }
 
-                    return (
-                      <div
-                        key={monthIdx}
-                        className="h-9 border-l border-[var(--dash-border-subtle)]"
-                      />
-                    );
-                  })}
-                </div>
-              ))}
+                        if (isInRange) return null;
 
-              {projects.length === 0 && (
+                        return (
+                          <div
+                            key={monthIdx}
+                            className="h-9 border-l border-[var(--dash-border-subtle)]"
+                          />
+                        );
+                      })}
+                    </div>
+                  );
+                })
+                .filter(Boolean)}
+
+              {projects.filter((project) => getRangeForYear(project, selectedYear)).length === 0 && (
                 <p className="text-center text-[13px] text-[var(--dash-text-faint)] py-8">
-                  No projects found. Make sure the backend is seeded.
+                  No projects found for {selectedYear}.
                 </p>
               )}
             </div>

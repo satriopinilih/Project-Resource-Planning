@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import {
     CheckCircle2,
@@ -18,7 +18,7 @@ interface UserProfile {
     roles: string[];
 }
 
-export default function SettingsPage() {
+function MarketingSettingsContent() {
     const searchParams = useSearchParams();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -218,6 +218,18 @@ export default function SettingsPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+            </div>
+        }>
+            <MarketingSettingsContent />
+        </Suspense>
     );
 }
 
