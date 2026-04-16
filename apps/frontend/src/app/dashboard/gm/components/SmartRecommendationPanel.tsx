@@ -306,6 +306,18 @@ const CustomizeModal: React.FC<{
   const getAvatarGradient = (name: string) =>
     avatarGradients[name.charCodeAt(0) % avatarGradients.length];
 
+  // Role-based filtering map: show only employees matching the slot's role
+  const getRoleFilter = (roleName: string): string[] => {
+    const r = roleName.toLowerCase();
+    if (r === "pm") return ["pm"];
+    if (r === "architect") return ["architect"];
+    if (r === "senior dev") return ["senior dev"];
+    if (r === "junior dev") return ["senior dev", "junior dev"];
+    if (r === "senior ba") return ["senior ba"];
+    if (r === "junior ba") return ["senior ba", "junior ba"];
+    return []; // empty = no filter, show all
+  };
+
   const sortedEmployees = [...employees].sort((a, b) => {
     const aFree = !a.projects || a.projects.length === 0;
     const bFree = !b.projects || b.projects.length === 0;
@@ -313,6 +325,15 @@ const CustomizeModal: React.FC<{
     if (!aFree && bFree) return 1;
     return a.name.localeCompare(b.name);
   });
+
+  const getFilteredEmployeesForSlot = (slotRole: string) => {
+    const roleFilters = getRoleFilter(slotRole);
+    if (roleFilters.length === 0) return sortedEmployees;
+    return sortedEmployees.filter(emp => {
+      const empRole = (emp.role || "").toLowerCase();
+      return roleFilters.some(rf => empRole.includes(rf));
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
@@ -476,7 +497,7 @@ const CustomizeModal: React.FC<{
                     <span className="font-semibold flex items-center gap-1.5">
                       {isOpen ? "▲ Close picker" : "▼ Change Employee"}
                     </span>
-                    <span className="text-[11px] text-gray-600">{employees.length} employees</span>
+                    <span className="text-[11px] text-gray-600">{getFilteredEmployeesForSlot(slot.role).length} employees</span>
                   </button>
 
                   {isOpen && (
@@ -492,7 +513,7 @@ const CustomizeModal: React.FC<{
                         </button>
                         {/* Divider */}
                         <div className="border-t border-gray-800/60 my-1" />
-                        {sortedEmployees.map(emp => {
+                        {getFilteredEmployeesForSlot(slot.role).map(emp => {
                           const isSelected = slot.userId === emp.id;
                           // Use backend isAvailable as source of truth
                           const isFree = isEmpAvailable(emp.id);

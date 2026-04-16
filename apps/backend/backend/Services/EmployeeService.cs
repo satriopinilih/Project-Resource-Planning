@@ -355,6 +355,7 @@ public class EmployeeService
             {
                 ProjectId = p.ProjectId,
                 ProjectName = p.Project?.ProjectName ?? string.Empty,
+                ClientOrganization = p.Project?.ClientOrganization ?? string.Empty,
                 RoleInProject = p.RoleInProject,
                 StartDate = p.StartDate ?? p.Project?.EstimatedStartDate ?? DateTime.MinValue,
                 EndDate = p.EndDate ?? p.Project?.EstimatedEndDate

@@ -41,7 +41,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
         today.setHours(0, 0, 0, 0);
         if (startDate > today) return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
       }
-      return { label: "Active", class: "bg-green-500/10 text-green-400 border-green-500/20" };
+      return { label: "Running", class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
     default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
@@ -254,29 +254,31 @@ export default function ProjectDetailsPage() {
                     <span className={`px-4 py-2 rounded-full text-[13px] font-semibold ${statusInfo.class}`}>
                       {statusInfo.label}
                     </span>
-                    <button onClick={() => {
-                      setEditForm({
-                        projectName: project.projectName,
-                        clientOrganization: project.clientOrganization,
-                        projectDescription: project.projectDescription,
-                        estimatedDuration: project.estimatedDuration,
-                        priorityLevel: project.priorityLevel,
-                        estimatedStartDate: project.estimatedStartDate ? project.estimatedStartDate.split('T')[0] : '',
-                        estimatedEndDate: project.estimatedEndDate ? project.estimatedEndDate.split('T')[0] : '',
-                        projectStatus: project.projectStatus,
-                        requiredRoles: project.requiredRoles?.map(r => ({
-                          id: r.id || Math.random().toString(36).substring(2, 9),
-                          role: r.roleName,
-                          count: r.requiredCount,
-                          workingType: r.workingType || "Dedicated"
-                        })) || [],
-                        requiredSkillIds: project.requiredSkillIds || [],
-                      });
-                      setEditModalOpen(true);
-                    }}
-                      className="px-5 py-2 bg-[#2B7FFC] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all">
-                      Edit Project
-                    </button>
+                    {project.projectStatus !== 3 && (
+                      <button onClick={() => {
+                        setEditForm({
+                          projectName: project.projectName,
+                          clientOrganization: project.clientOrganization,
+                          projectDescription: project.projectDescription,
+                          estimatedDuration: project.estimatedDuration,
+                          priorityLevel: project.priorityLevel,
+                          estimatedStartDate: project.estimatedStartDate ? project.estimatedStartDate.split('T')[0] : '',
+                          estimatedEndDate: project.estimatedEndDate ? project.estimatedEndDate.split('T')[0] : '',
+                          projectStatus: project.projectStatus,
+                          requiredRoles: project.requiredRoles?.map(r => ({
+                            id: r.id || Math.random().toString(36).substring(2, 9),
+                            role: r.roleName,
+                            count: r.requiredCount,
+                            workingType: r.workingType || "Dedicated"
+                          })) || [],
+                          requiredSkillIds: project.requiredSkillIds || [],
+                        });
+                        setEditModalOpen(true);
+                      }}
+                        className="px-5 py-2 bg-[#2B7FFC] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all">
+                        Edit Project
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
