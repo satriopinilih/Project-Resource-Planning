@@ -48,9 +48,10 @@ export interface RequestHistoryItem {
   employeeName: string;
   staffRole: string;
   extension: string;
+  projectName?: string;
+  reason?: string;
+  reviewNote?: string;
   requestedDate: string;
   status: string;
   reviewedDate?: string;
-  reason?: string;
-  declineReason?: string;
 }

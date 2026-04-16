@@ -40,15 +40,19 @@ public class RequestHistoryService
                 ?? c.User?.UserRoles.Select(x => x.Role.RoleName.ToString()).FirstOrDefault()
                 ?? "Staff",
             Extension = $"{c.ExtensionDuration} months",
+            ProjectName = "-",
+            Reason = c.ReasonForExtension,
+            ReviewNote = c.DeclineReason ?? "-",
             RequestedDate = c.CreatedAt,
             Status = c.Status,
-            ReviewedDate = c.ProcessedAt,
-            Reason = c.ReasonForExtension,
-            DeclineReason = c.DeclineReason
+            ReviewedDate = c.ProcessedAt
         });
 
         var hireRows = await _db.HireRequests
             .AsNoTracking()
+            .Where(h => (h.Status == "Fulfilled" || h.Status == "Declined")
+                        && h.RoleNeeded != "Timeline Edit Request"
+                        && h.RoleNeeded != "GM Notification")
             .OrderByDescending(h => h.CreatedAt)
             .ToListAsync();
 
@@ -56,10 +60,13 @@ public class RequestHistoryService
         {
             RequestType = "Hire New Person",
             ReferenceId = $"HIRE-{h.HireRequestId}",
-            EmployeeId = h.ProjectId?.ToString() ?? "-",
-            EmployeeName = h.ProjectName,
+            EmployeeId = "-",
+            EmployeeName = !string.IsNullOrWhiteSpace(h.HiredEmployeeName) ? h.HiredEmployeeName : "-",
             StaffRole = h.RoleNeeded,
             Extension = "-",
+            ProjectName = h.ProjectName,
+            Reason = h.Notes,
+            ReviewNote = h.Status == "Declined" ? (h.Notes ?? "-") : "-",
             RequestedDate = h.CreatedAt,
             Status = h.Status,
             ReviewedDate = h.FulfilledAt

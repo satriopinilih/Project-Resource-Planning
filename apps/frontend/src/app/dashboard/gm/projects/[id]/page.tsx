@@ -182,6 +182,7 @@ export default function ProjectDetailsPage() {
         const rows = await getHireRequests(undefined, numericId);
         const hireRows = rows.filter((r) =>
           r.roleNeeded !== "Timeline Edit Request" &&
+          r.roleNeeded !== "GM Notification" &&
           r.roleNeeded !== "Project Submission Notification" &&
           r.roleNeeded !== "Project Update Notification"
         );
@@ -308,15 +309,6 @@ export default function ProjectDetailsPage() {
         startDate: project.estimatedStartDate,
         endDate: project.estimatedEndDate,
         notes: hireForm.notes || `Requested from project ${project.projectName}`,
-      });
-      await createHireRequest({
-        projectId: project.projectId,
-        projectName: project.projectName,
-        roleNeeded: "GM Notification",
-        quantity: 1,
-        startDate: project.estimatedStartDate,
-        endDate: project.estimatedEndDate,
-        notes: `[GM ACTION] Hire request sent for ${project.projectName}`,
       });
       setHireRequestOpen(false);
       setHireAlreadyRequested(true);

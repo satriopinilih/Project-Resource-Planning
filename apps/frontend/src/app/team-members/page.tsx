@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
-import { getEmployees, createContractExtension, getContractExtensionRequests, resetEmployeePassword } from '@/lib/api';
+import { getEmployees, getProjects, createContractExtension, getContractExtensionRequests, resetEmployeePassword } from '@/lib/api';
 import { Employee } from '@/lib/types';
 import { getPrimaryRole, getSessionUser } from '@/lib/auth';
 import { Loader2, X } from 'lucide-react';
@@ -37,12 +37,24 @@ export default function TeamMembersPage() {
         setSessionRoles(user?.roles ?? []);
 
         setError(null);
-        const [data, pendingRequests] = await Promise.all([
+        const [data, pendingRequests, projects] = await Promise.all([
           getEmployees(),
-          getContractExtensionRequests('Pending')
+          getContractExtensionRequests('Pending'),
+          getProjects()
         ]);
 
-        setEmployees(data);
+        const projectClientMap = new Map(projects.map((p) => [String(p.projectId), p.clientOrganization || 'In-House']));
+        const hydratedEmployees = data.map((emp) => ({
+          ...emp,
+          projects: (emp.projects ?? []).map((proj) => ({
+            ...proj,
+            client: proj.client && proj.client !== 'In-House'
+              ? proj.client
+              : (projectClientMap.get(String(proj.id)) || proj.client)
+          }))
+        }));
+
+        setEmployees(hydratedEmployees);
         setRequestedEmployeeIds(new Set(pendingRequests.map((request) => request.employeeId)));
         if (data.length > 0) {
           setSelectedMember(data[0].id);

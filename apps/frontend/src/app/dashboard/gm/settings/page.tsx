@@ -19,6 +19,8 @@ interface UserProfile {
     roles: string[];
 }
 
+type HeaderRole = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
+
 function GMSettingsContent() {
     const searchParams = useSearchParams();
     const { isDarkMode, toggleDarkMode } = useTheme();
@@ -82,7 +84,7 @@ function GMSettingsContent() {
 
     return (
         <div className="flex flex-col min-h-screen">
-            <AppHeader title="Settings" role="GM" />
+            <AppHeader title="Settings" role={(profile?.roles?.[0] as HeaderRole) ?? "GM"} />
 
             <div className="p-8 w-full space-y-8 pb-16">
                 {/* Profile Information */}
