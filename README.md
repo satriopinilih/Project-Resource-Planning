@@ -72,21 +72,3 @@ npm run build:backend    # Build .NET project
 ```bash
 npm run lint:frontend    # Run ESLint on the frontend
 ```
-
-## 🧠 Development Workflow & AI Guidelines
-
-To ensure smooth collaboration and prevent technical issues like database synchronization errors, please follow these rules:
-
-### 1. Database Migrations (EF Core)
-- **Immutability**: Never rename, edit, or delete a migration file that has already been pushed to the `main` branch.
-- **Additive Changes**: Always create a NEW migration for any schema changes:
-  ```bash
-  cd apps/backend/backend
-  dotnet ef migrations add <DescriptiveName>
-  ```
-- **Sync Issues**: If you encounter `relation "TableName" already exists` after a `pull`, it means the migration IDs have changed. **Solution**: Drop your local database (`dotnet ef database drop -f`) and run the app again to recreate it.
-
-### 2. AI Interaction (Coder/Vibe Code)
-- **Follow the Rules**: When using AI for coding (e.g., Cursor, Gemini, Claude), ensure it respects the **Immutability** rule for migrations.
-- **Prompting**: If asking AI to change the database, explicitly tell it to: *"Add a new migration instead of editing existing ones."*
-- **Context**: Keep this `README.md` or a `context.md` file updated so the AI understands the project boundaries.

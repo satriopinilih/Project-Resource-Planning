@@ -10,6 +10,7 @@ import {
   LogOut,
   UserCheck,
   FileText,
+  PlusCircle,
 } from "lucide-react";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
@@ -24,23 +25,24 @@ const navByRole: Record<string, NavItem[]> = {
   GM: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
-    { label: "Team Member", href: "/teammember", icon: Users },
+    { label: "Team Member", href: "/team-members", icon: Users },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   HR: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Team Member", href: "/teammember", icon: Users },
+    { label: "Team Member", href: "/team-members", icon: Users },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   PM: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
-    { label: "Team Member", href: "/teammember", icon: Users },
+    { label: "Team Member", href: "/team-members", icon: Users },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   Marketing: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
+    { label: "Add Project", href: "/dashboard/mrkt/add-project", icon: PlusCircle },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   Staff: [

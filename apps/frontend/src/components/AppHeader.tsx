@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Sun, Moon, User } from "lucide-react";
+import { Bell, Sun, Moon, User, Check, X, Calendar } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
-import { getContractExtensionRequests, getProjects, getHireRequests, HireRequest } from "@/lib/api";
+import { getContractExtensionRequests, getProjects, getHireRequests, HireRequest, getRequestHistory } from "@/lib/api";
 import { ContractExtensionRequest } from "@/lib/types";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -55,20 +55,52 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const [notifications, setNotifications] = useState<ContractExtensionRequest[]>([]);
   const [hireNotifications, setHireNotifications] = useState<HireRequest[]>([]);
   const [gmHireNotifications, setGmHireNotifications] = useState<HireRequest[]>([]);
+  const [gmContractNotifications, setGmContractNotifications] = useState<any[]>([]);
   const [pmNotifications, setPmNotifications] = useState<PMNotification[]>([]);
+
+  const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
+  
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('read_notif_ids');
+      if (stored) setReadNotifIds(JSON.parse(stored));
+    } catch {}
+  }, []);
 
   const loadNotifications = async () => {
     try {
-      const pending = await getContractExtensionRequests("Pending");
-      setNotifications(pending);
-      const hires = await getHireRequests('Open');
-      setHireNotifications(hires);
-      const reviewed = await getHireRequests();
-      setGmHireNotifications(reviewed.filter((h) => h.status === 'Fulfilled' || h.status === 'Declined'));
+      if (userRole === "HR") {
+        const pending = await getContractExtensionRequests("Pending");
+        setNotifications(pending);
+        const hires = await getHireRequests('Open');
+        // ❌ Filter OUT timeline requests for HR
+        setHireNotifications(hires.filter(h => h.roleNeeded !== 'Timeline Edit Request'));
+      }
+      if (userRole === "GM") {
+        const reviewed = await getHireRequests();
+        setGmHireNotifications(reviewed.filter((h) => h.status === 'Fulfilled' || h.status === 'Declined'));
+        const extensions = await getRequestHistory('HR');
+        const processed = extensions
+          .filter((r: any) => r.status === 'Approved' || r.status === 'Declined')
+          .sort((a: any, b: any) => {
+             const dateA = new Date(a.reviewedDate || a.requestedDate).getTime();
+             const dateB = new Date(b.reviewedDate || b.requestedDate).getTime();
+             return dateB - dateA;
+          });
+        setGmContractNotifications(processed);
+      }
+      if (userRole === "Marketing") {
+        // ✅ Load timeline edit requests for Marketing
+        // We reuse the setHireNotifications or create a new state? 
+        // Let's reuse setHireNotifications for Marketing but map it to TimelineEditRequest
+        const hires = await getHireRequests('Open');
+        setHireNotifications(hires.filter(h => h.roleNeeded === 'Timeline Edit Request'));
+      }
     } catch {
       setNotifications([]);
       setHireNotifications([]);
       setGmHireNotifications([]);
+      setGmContractNotifications([]);
     }
   };
 
@@ -109,7 +141,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   useEffect(() => {
     let timer: NodeJS.Timeout;
 
-    if (userRole === "HR" || userRole === "GM") {
+    if (userRole === "HR" || userRole === "GM" || userRole === "Marketing") {
       loadNotifications();
       timer = setInterval(loadNotifications, 10000);
     } else if (userRole === "PM") {
@@ -139,6 +171,35 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       setIsNotificationOpen(false);
       router.push(`/project/${notif.projectId}`);
     }
+  };
+
+  const currentNotifIds = [
+    ...(userRole === "HR" ? notifications.map(n => `hr-ext-${n.id}`) : []),
+    ...(userRole === "HR" ? hireNotifications.map(n => `hr-hire-${n.hireRequestId}`) : []),
+    ...(userRole === "Marketing" ? hireNotifications.map(n => `mrkt-timeline-${n.hireRequestId}`) : []),
+    ...(userRole === "GM" ? gmHireNotifications.map(n => `gm-hire-${n.hireRequestId}`) : []),
+    ...(userRole === "GM" ? gmContractNotifications.map(n => `gm-ext-${n.referenceId}`) : []),
+    ...(userRole === "PM" ? pmNotifications.map(n => `pm-proj-${n.projectId}`) : [])
+  ];
+
+  const hasUnread = currentNotifIds.length > 0 && currentNotifIds.some(id => !readNotifIds.includes(id));
+  const unreadCount = currentNotifIds.filter(id => !readNotifIds.includes(id)).length;
+
+  const handleToggleNotifications = () => {
+    if (!isNotificationOpen) {
+      if (userRole === "HR" || userRole === "Marketing" || userRole === "GM") {
+        loadNotifications();
+      }
+      if (userRole === "PM") loadPMNotifications();
+      
+      // Mark as read
+      if (currentNotifIds.length > 0) {
+        const newReadIds = Array.from(new Set([...readNotifIds, ...currentNotifIds]));
+        setReadNotifIds(newReadIds);
+        localStorage.setItem('read_notif_ids', JSON.stringify(newReadIds));
+      }
+    }
+    setIsNotificationOpen((prev) => !prev);
   };
 
   const handleHRHireNotificationClick = () => {
@@ -174,25 +235,24 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       <div className="flex items-center gap-6">
         <div className="relative">
           <button
-            onClick={() => {
-              if (!isNotificationOpen) {
-                if (userRole === "HR") loadNotifications();
-                if (userRole === "PM") loadPMNotifications();
-              }
-              setIsNotificationOpen((prev) => !prev);
-            }}
+            onClick={handleToggleNotifications}
             className="relative p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
           >
             <Bell size={22} strokeWidth={1.8} />
-            {((userRole === "HR" && (notifications.length + hireNotifications.length) > 0) || (userRole === "GM" && gmHireNotifications.length > 0) || (userRole === "PM" && pmNotifications.length > 0)) && (
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
+            {hasUnread && (
+              <>
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)] animate-pulse" />
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[var(--dash-bg-header)] leading-none">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              </>
             )}
           </button>
 
           {isNotificationOpen && (
-            <div className="absolute right-0 mt-3 w-[360px] rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] shadow-[0_20px_40px_rgba(0,0,0,0.2)] overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-[var(--dash-border)]">
-                <h3 className="text-[22px] font-semibold text-[var(--dash-text-heading)]">Notifications</h3>
+            <div className="absolute right-[-10px] mt-3 w-[320px] rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-5 py-4 border-b border-[var(--dash-border-subtle)] bg-[var(--dash-bg-header)]/50">
+                <h3 className="text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight">Notifications</h3>
               </div>
 
               {userRole === "HR" && (notifications.length > 0 || hireNotifications.length > 0) && (
@@ -223,6 +283,33 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       <p className="text-[12px] text-[var(--dash-text-secondary)] mt-1">
                         Requested by {item.requestedByName || item.requestedBy || "GM"}
                       </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {userRole === "Marketing" && hireNotifications.length > 0 && (
+                <div className="max-h-[400px] overflow-y-auto">
+                  {hireNotifications.map((item) => (
+                    <button
+                      key={`mrkt-${item.hireRequestId}`}
+                      onClick={() => {
+                        setIsNotificationOpen(false);
+                        if (item.projectId) router.push(`/project/${item.projectId}`);
+                        else router.push('/project');
+                      }}
+                      className="w-full text-left px-5 py-4 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-300"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">Timeline Request</span>
+                      </div>
+                      <p className="text-[14px] font-semibold text-[var(--dash-text-heading)] leading-tight mb-1">
+                        {item.projectName}
+                      </p>
+                      <p className="text-[12.5px] text-[var(--dash-text-secondary)] mb-4 line-clamp-3 leading-relaxed">
+                        "{item.notes.replace('[TIMELINE EDIT REQUEST] ', '')}"
+                      </p>
+                      <p className="text-[12px] text-[#2B7FFC] mt-1 font-semibold">Click to open project</p>
                     </button>
                   ))}
                 </div>
@@ -260,28 +347,71 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                 </div>
               )}
 
-              {userRole === "GM" && gmHireNotifications.length > 0 && (
+              {userRole === "GM" && (gmHireNotifications.length > 0 || gmContractNotifications.length > 0) && (
                 <div className="max-h-72 overflow-y-auto">
-                  {gmHireNotifications.slice(0, 6).map((item) => (
-                    <button
-                      key={`gm-hire-${item.hireRequestId}`}
-                      onClick={() => handleGMHireOutcomeClick(item)}
-                      className="w-full text-left px-4 py-3 border-b border-[var(--dash-border-subtle)] last:border-b-0 hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
-                    >
-                      <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
-                        Hire request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> is <span className="font-semibold">{item.status === 'Fulfilled' ? 'Fulfilled' : 'Declined'}</span>
+                  {gmHireNotifications.slice(0, 6).map((item) => {
+                    if (item.roleNeeded === 'GM Notification') {
+                      return (
+                        <button
+                          key={`gm-self-${item.hireRequestId}`}
+                          onClick={() => {
+                            setIsNotificationOpen(false);
+                            if (item.projectId) router.push(`/project/${item.projectId}`);
+                            else router.push('/project');
+                          }}
+                          className="w-full text-left px-5 py-3.5 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
+                        >
+                          <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                            {item.notes}
+                          </p>
+                          <p className="text-[11px] text-[var(--dash-text-secondary)] mt-1">Click to open project</p>
+                        </button>
+                      );
+                    }
+                    const isTimeline = item.roleNeeded === 'Timeline Edit Request';
+                    return (
+                      <button
+                        key={`gm-hire-${item.hireRequestId}`}
+                        onClick={() => handleGMHireOutcomeClick(item)}
+                        className="w-full text-left px-5 py-3.5 border-b border-[var(--dash-border-subtle)] last:border-b-0 hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-1 p-1.5 rounded-lg ${isTimeline ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                            {isTimeline ? <Calendar size={14} /> : <User size={14} />}
+                          </div>
+                          <div>
+                            <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                              {isTimeline ? (
+                                <>Timeline edit for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> was <span className={`font-semibold ${item.status === 'Fulfilled' ? 'text-emerald-500' : 'text-red-500'}`}>{item.status === 'Fulfilled' ? 'Approved' : 'Declined'}</span> by Marketing.</>
+                              ) : (
+                                <>Hire request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> is <span className={`font-semibold ${item.status === 'Fulfilled' ? 'text-emerald-500' : 'text-red-500'}`}>{item.status === 'Fulfilled' ? 'Fulfilled' : 'Declined'}</span>.</>
+                              )}
+                            </p>
+                            <p className="text-[11px] text-[var(--dash-text-secondary)] mt-1 opacity-70">
+                              {isTimeline ? 'Timeline Synchronization' : `Role: ${item.roleNeeded}`}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {gmContractNotifications.slice(0, 6).map((item) => (
+                    <div key={`gm-contract-${item.referenceId}`} className="px-4 py-3 border-b border-[#2a3041] last:border-b-0">
+                      <p className="text-[13px] text-[#d9e0f2] leading-5">
+                        Contract extension for <span className="font-semibold">{item.employeeName}</span> was <span className={`font-semibold ${item.status === 'Approved' ? 'text-emerald-400' : 'text-red-400'}`}>{item.status.toLowerCase()}</span> by HR.
                       </p>
-                      <p className="text-[12px] text-[var(--dash-text-secondary)] mt-1">Role: {item.roleNeeded}</p>
-                    </button>
+                      <p className="text-[12px] text-[#93a2c0] mt-1 text-right">{item.reviewedDate || item.requestedDate}</p>
+                    </div>
                   ))}
                 </div>
               )}
 
               {((userRole === "HR" && notifications.length === 0 && hireNotifications.length === 0) || 
-                (userRole === "GM" && gmHireNotifications.length === 0) ||
+                (userRole === "GM" && gmHireNotifications.length === 0 && gmContractNotifications.length === 0) ||
                 (userRole === "PM" && pmNotifications.length === 0) || 
-                (userRole !== "HR" && userRole !== "PM" && userRole !== "GM")) && (
-                <div className="px-4 py-8 text-center text-[18px] text-[var(--dash-text-muted)]">No notifications</div>
+                (userRole === "Marketing" && hireNotifications.length === 0) ||
+                (!["HR", "PM", "GM", "Marketing"].includes(userRole || ""))) && (
+                <div className="px-4 py-8 text-center text-[13px] text-[var(--dash-text-secondary)]">No notifications</div>
               )}
             </div>
           )}
@@ -314,8 +444,13 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
             </p>
           </div>
           {/* Avatar circle */}
-          <div className={`flex items-center justify-center w-11 h-11 rounded-full ${avatarClass} text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)]`}>
-            <User size={22} strokeWidth={2} />
+          <div className="relative">
+            <div className={`flex items-center justify-center w-11 h-11 rounded-full ${avatarClass} text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)]`}>
+              <User size={22} strokeWidth={2} />
+            </div>
+            {hasUnread && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
+            )}
           </div>
           {/* Role Pill */}
           <div className={`px-3 py-1.5 rounded-full text-[13px] font-bold border ${badgeClass}`}>

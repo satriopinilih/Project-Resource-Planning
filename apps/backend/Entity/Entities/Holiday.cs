@@ -7,7 +7,7 @@ namespace Entities.Entities
     public class Holiday
     {
         public int Id { get; set; }
-        public string Name { get; set; } // e.g., "Hari Raya Idul Fitri"
+        public required string Name { get; set; } // e.g., "Hari Raya Idul Fitri"
         public DateTime Date { get; set; }
     }
 }

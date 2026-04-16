@@ -11,7 +11,7 @@ public class UserDto
     public int DepartmentId { get; set; }
     public string DepartmentName { get; set; } = string.Empty;
     public EmployeeType EmployeeType { get; set; }
-    public string ExperienceLevel { get; set; } = string.Empty;
+    public int ExperienceYears { get; set; }
     public DateTime ContractStart { get; set; }
     public DateTime ContractEnd { get; set; }
     public ContractStatus ContractStatus { get; set; }
@@ -25,6 +25,7 @@ public class UserProjectDto
 {
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = string.Empty;
+    public string ClientOrganization { get; set; } = string.Empty;
     public string RoleInProject { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }

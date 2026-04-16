@@ -1,34 +1,31 @@
+using backend.Services;
 using Contracts.DTOs.Common;
 using Contracts.DTOs.Holiday;
-using Entities;
-using Entities.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace backend.Controllers;
 
+/// <summary>
+/// Handles holiday CRUD. All endpoints require authentication.
+/// Controller is thin — all DB logic lives in HolidayService.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class HolidaysController : ControllerBase
 {
-    private readonly ApplicationDbContext _db;
+    private readonly HolidayService _service;
 
-    public HolidaysController(ApplicationDbContext db)
+    public HolidaysController(HolidayService service)
     {
-        _db = db;
+        _service = service;
     }
 
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<HolidayDto>>>> GetAll()
     {
-        var holidays = await _db.Holidays.OrderBy(h => h.Date).ToListAsync();
-        var data = holidays.Select(h => new HolidayDto
-        {
-            Id = h.Id,
-            Name = h.Name,
-            Date = h.Date
-        }).ToList();
-
+        var data = await _service.GetAllAsync();
         return Ok(ApiResponse<List<HolidayDto>>.SuccessResponse(data));
     }
 
@@ -36,30 +33,15 @@ public class HolidaysController : ControllerBase
     public async Task<IActionResult> CreateHoliday([FromBody] CreateHolidayRequest request)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
-
-        var holiday = new Holiday
-        {
-            Name = request.Name,
-            Date = request.Date
-        };
 
         try
         {
-            _db.Holidays.Add(holiday);
-            await _db.SaveChangesAsync();
+            var (success, error, data) = await _service.CreateAsync(request);
+            if (!success)
+                return StatusCode(500, ApiResponse<HolidayDto>.ErrorResponse(error!));
 
-            var dto = new HolidayDto
-            {
-                Id = holiday.Id,
-                Name = holiday.Name,
-                Date = holiday.Date
-            };
-
-            // Using Ok since there is no GetById implemented for Holiday
-            return Ok(ApiResponse<HolidayDto>.SuccessResponse(dto));
+            return Ok(ApiResponse<HolidayDto>.SuccessResponse(data!));
         }
         catch (Exception)
         {

@@ -20,9 +20,7 @@ export interface Employee {
   contractEnd: string;
   contractStatus: 'Active' | 'Expiring Soon';
   daysRemaining?: number;
-  experience?: string;
-  experienceYears?: number;
-  level?: number;
+  experienceYears: number;
   skills?: string[];
   projects?: Project[];
 }
@@ -50,6 +48,9 @@ export interface RequestHistoryItem {
   employeeName: string;
   staffRole: string;
   extension: string;
+  projectName?: string;
+  reason?: string;
+  reviewNote?: string;
   requestedDate: string;
   status: string;
   reviewedDate?: string;

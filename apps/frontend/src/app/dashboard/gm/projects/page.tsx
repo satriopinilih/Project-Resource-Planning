@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
@@ -10,7 +10,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Active" | "Scheduled" | "Pending" | "Completed";
+  status: "Running" | "Scheduled" | "Pending" | "Completed";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -32,7 +32,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string): Project["statu
         today.setHours(0, 0, 0, 0);
         if (startDate > today) return "Scheduled";
       }
-      return "Active";
+      return "Running";
     }
     case 3: return "Completed";
     default: return "Pending";
@@ -46,13 +46,13 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Pending", "Scheduled", "Active", "Completed"];
+const tabs = ["All", "Pending", "Scheduled", "Running", "Completed"];
 
-export default function ProjectsPage() {
+function GMProjectsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabQuery = searchParams.get("tab");
-  
+
   const [activeTab, setActiveTab] = useState(tabs.includes(tabQuery || "") ? tabQuery! : "All");
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,8 +72,8 @@ export default function ProjectsPage() {
     const fetchProjects = async () => {
       try {
         const data = await getProjects();
-          const mappedData: Project[] = data.map((p) => {
-          const pmMember = p.members?.find((m) => 
+        const mappedData: Project[] = data.map((p) => {
+          const pmMember = p.members?.find((m) =>
             m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase().includes("lead")
           );
           return {
@@ -104,11 +104,11 @@ export default function ProjectsPage() {
 
   const filteredProjects = projectsData.filter((project) => {
     const matchesTab = activeTab === "All" || project.status === activeTab;
-    const matchesSearch = 
+    const matchesSearch =
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.id.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesClient = clientFilter === "All Clients" || project.client === clientFilter;
-    
+
     return matchesTab && matchesSearch && matchesClient;
   }).sort((a, b) => {
     switch (sortBy) {
@@ -166,11 +166,10 @@ export default function ProjectsPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-3 text-[13px] font-semibold transition-all relative ${
-                  activeTab === tab
+                className={`pb-3 text-[13px] font-semibold transition-all relative ${activeTab === tab
                     ? "text-[var(--dash-text-heading)]"
                     : "text-[var(--dash-text-faint)] hover:text-[var(--dash-text-muted)]"
-                } cursor-pointer`}
+                  } cursor-pointer`}
               >
                 {tab}
                 {activeTab === tab && (
@@ -220,8 +219,6 @@ export default function ProjectsPage() {
                     <option value="oldest">Timeline (Oldest First)</option>
                     <option value="most-member">Team (Most Members)</option>
                     <option value="least-member">Team (Least Members)</option>
-                    <option value="highest-budget">Budget (Highest)</option>
-                    <option value="lowest-budget">Budget (Lowest)</option>
                   </select>
                 </div>
               </div>
@@ -238,14 +235,13 @@ export default function ProjectsPage() {
                   <th className="font-semibold py-4 px-4">Status</th>
                   <th className="font-semibold py-4 px-4">Timeline</th>
                   <th className="font-semibold py-4 px-4">PM</th>
-                  <th className="font-semibold py-4 px-4">Team</th>
-                  <th className="font-semibold py-4 pr-6 pl-4">Budget</th>
+                  <th className="font-semibold py-4 pr-6 pl-4">Team</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                    <td colSpan={6} className="py-8 text-center text-[var(--dash-text-muted)]">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Loader2 className="w-6 h-6 animate-spin text-[#3b82f6]" />
                         <span className="text-[13px]">Loading projects...</span>
@@ -254,7 +250,7 @@ export default function ProjectsPage() {
                   </tr>
                 ) : filteredProjects.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                    <td colSpan={6} className="py-8 text-center text-[var(--dash-text-muted)]">
                       No projects found.
                     </td>
                   </tr>
@@ -283,17 +279,16 @@ export default function ProjectsPage() {
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${
-                            project.status === "Pending"
+                          className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${project.status === "Pending"
                               ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                               : project.status === "Scheduled"
-                              ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
-                              : project.status === "Active"
-                              ? "bg-green-500/10 text-green-400 border-green-500/20"
-                              : project.status === "Completed"
-                              ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                              : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
-                          }`}
+                                ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                                : project.status === "Running"
+                                  ? "bg-green-500/10 text-green-400 border-green-500/20"
+                                  : project.status === "Completed"
+                                    ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                                    : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                            }`}
                         >
                           {project.status}
                         </span>
@@ -310,11 +305,8 @@ export default function ProjectsPage() {
                           {project.team}
                         </div>
                       </td>
-                      <td className="py-4 pr-6 pl-4">
-                         <div className="flex items-center justify-between">
-                            <span className="text-[13px] font-medium text-[var(--dash-text-primary)]">{project.budget}</span>
-                            <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
-                         </div>
+                      <td className="py-4 pr-6 pl-4 text-right">
+                        <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
                       </td>
                     </tr>
                   ))
@@ -325,5 +317,17 @@ export default function ProjectsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#18181b]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" />
+      </div>
+    }>
+      <GMProjectsContent />
+    </Suspense>
   );
 }

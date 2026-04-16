@@ -1,16 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Calendar as CalendarIcon,
   AlertCircle,
-  Trash2
+  Trash2,
+  Check
 } from "lucide-react";
-import { getHolidays, BackendHoliday, createProject } from "@/lib/api";
+import {
+  getHolidays,
+  BackendHoliday,
+  createProject,
+  getEmployeeFormOptions,
+  EmployeeFormOptions,
+} from "@/lib/api";
 import { useRouter } from "next/navigation";
-
+interface SkillOption {
+  id: number;
+  name: string;
+}
 export default function AddProjectPage() {
+  const ALLOWED_STAFF_ROLES = ["PM", "Senior Dev", "Junior Dev", "Senior BA", "Junior BA", "Architect"];
+  const ALLOWED_WORKING_TYPES = ["Dedicated", "Non-Dedicated"];
+
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
   const [durationWeeks, setDurationWeeks] = useState<number>(5);
   const [startDate, setStartDate] = useState<string>("2026-04-10");
@@ -29,11 +42,13 @@ export default function AddProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [formOptions, setFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
+  const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([]);
 
   const router = useRouter();
 
   const [teamRoles, setTeamRoles] = useState([
-    { id: '1', role: 'Project Manager', count: 1, workingType: 'Dedicated' }
+    { id: '1', role: 'PM', count: 1, workingType: 'Dedicated' }
   ]);
 
   const handleAddRole = () => {
@@ -55,7 +70,15 @@ export default function AddProjectPage() {
 
   useEffect(() => {
     getHolidays().then(setHolidays).catch(console.error);
+
+    // Fetch form options (skills)
+    getEmployeeFormOptions().then(setFormOptions).catch(console.error);
   }, []);
+
+  const allowedStaffRoles = useMemo(
+    () => formOptions.staffRoles.filter((r) => ALLOWED_STAFF_ROLES.includes(r.name)),
+    [formOptions.staffRoles]
+  );
 
   useEffect(() => {
     if (!startDate || durationWeeks <= 0) {
@@ -109,7 +132,7 @@ export default function AddProjectPage() {
 
   const handleFormSubmitRequest = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate completeness, data format, and consistency
     if (!projectName.trim() || !clientOrganization.trim() || !projectDescription.trim()) {
       setError("Please fill in all required text fields.");
@@ -131,7 +154,7 @@ export default function AddProjectPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    
+
     setError(null);
     setIsConfirmModalOpen(true);
   };
@@ -143,7 +166,7 @@ export default function AddProjectPage() {
     setError(null);
 
     const priorityMap: Record<string, number> = { "Low": 0, "Medium": 1, "High": 2 };
-    const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Part-time": 1, "Ad-hoc": 1 };
+    const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
 
     const payload = {
       projectName,
@@ -157,7 +180,8 @@ export default function AddProjectPage() {
         roleName: r.role,
         count: r.count,
         workingType: workingTypeMap[r.workingType] ?? 1
-      }))
+      })),
+      requiredSkillIds: selectedSkillIds
     };
 
     try {
@@ -181,7 +205,7 @@ export default function AddProjectPage() {
   const labelClasses = "block text-[13px] font-medium text-gray-700 dark:text-gray-100 mb-2 mt-1 ml-0.5";
 
   return (
-      <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
       <div className="mt-2" />
 
       {/* Form Card */}
@@ -317,6 +341,47 @@ export default function AddProjectPage() {
             )}
           </div>
 
+          {/* Project-Level Required Skills Checklist */}
+          <div className="mt-8">
+            <label className={labelClasses}>
+              Project-Level Required Skills <span className="text-gray-400 font-normal ml-1">(Optional)</span>
+            </label>
+            <div className="mt-3 bg-gray-50 dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-6">
+                {formOptions.skills.map((skill: SkillOption) => (
+                  <label
+                    key={skill.id}
+                    className="flex items-center gap-3 cursor-pointer group py-0.5"
+                  >
+                    <div className="relative flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedSkillIds.includes(skill.id)}
+                        onChange={(e) => {
+                          setSelectedSkillIds(prev =>
+                            e.target.checked
+                              ? [...prev, skill.id]
+                              : prev.filter(id => id !== skill.id)
+                          );
+                        }}
+                        className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 dark:border-gray-600 checked:bg-blue-600 checked:border-blue-600 transition-all"
+                      />
+                      <Check className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none stroke-[3]" />
+                    </div>
+                    <span className="text-[14px] text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {skill.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {formOptions.skills.length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-[13px]">
+                  Loading skill options...
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Required Team Roles */}
           <div>
             <div className="flex justify-between items-center mb-4 mt-2">
@@ -341,15 +406,19 @@ export default function AddProjectPage() {
                       className={inputClasses}
                       value={roleItem.role}
                       onChange={(e) => updateRole(roleItem.id, 'role', e.target.value)}
-                      disabled={index === 0} // First role always Project Manager
+                      disabled={index === 0}
                     >
-                      <option value="Project Manager">Project Manager</option>
-                      {index !== 0 && (
-                        <>
-                          <option value="Senior BA">Senior BA</option>
-                          <option value="Software Engineer">Software Engineer</option>
-                          <option value="QA Tester">QA Tester</option>
-                        </>
+                      {index === 0 ? (
+                        <option value="PM">PM</option>
+                      ) : (
+                        (allowedStaffRoles.length > 0
+                          ? allowedStaffRoles.map((r) => r.name)
+                          : ALLOWED_STAFF_ROLES
+                        )
+                          .filter((r) => r !== "PM")
+                          .map((role) => (
+                            <option key={role} value={role}>{role}</option>
+                          ))
                       )}
                     </select>
                   </div>
@@ -370,9 +439,9 @@ export default function AddProjectPage() {
                       value={roleItem.workingType}
                       onChange={(e) => updateRole(roleItem.id, 'workingType', e.target.value)}
                     >
-                      <option value="Dedicated">Dedicated</option>
-                      <option value="Part-time">Part-time</option>
-                      <option value="Ad-hoc">Ad-hoc</option>
+                      {ALLOWED_WORKING_TYPES.map((wt) => (
+                        <option key={wt} value={wt}>{wt}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -462,8 +531,8 @@ export default function AddProjectPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-100 dark:border-white/10 pb-4">
                 <span className="text-gray-500 dark:text-gray-400">Timeline</span>
                 <span className="col-span-1 sm:col-span-2 font-medium text-gray-900 dark:text-white">
-                  {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
-                  {' - '} 
+                  {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' - '}
                   {endDateDetails.date?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   <div className="text-[12px] font-normal text-gray-500 mt-0.5">({durationWeeks} weeks estimation)</div>
                 </span>
@@ -480,11 +549,33 @@ export default function AddProjectPage() {
                 <span className="text-gray-500 dark:text-gray-400 mt-1">Team Roles</span>
                 <div className="col-span-1 sm:col-span-2 space-y-2">
                   {teamRoles.map((r, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 p-2 px-3 rounded-lg border border-gray-100 dark:border-white/5">
-                      <span className="font-medium">{r.role} <span className="text-gray-400 mx-1">x</span> {r.count}</span>
-                      <span className="text-[12px] text-gray-500 dark:text-gray-400">{r.workingType}</span>
+                    <div key={idx} className="flex flex-col justify-center text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 p-2 px-3 rounded-lg border border-gray-100 dark:border-white/5">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{r.role} <span className="text-gray-400 mx-1">x</span> {r.count}</span>
+                        <span className="text-[12px] text-gray-500 dark:text-gray-400">{r.workingType}</span>
+                      </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 pb-4">
+                <span className="text-gray-500 dark:text-gray-400 mt-1">Required Skills</span>
+                <div className="col-span-1 sm:col-span-2">
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSkillIds.length > 0 ? (
+                      selectedSkillIds.map(id => {
+                        const skillName = formOptions.skills.find((s: SkillOption) => s.id === id)?.name;
+                        return (
+                          <span key={id} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-medium">
+                            {skillName}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-gray-400 italic">None selected</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -536,6 +627,6 @@ export default function AddProjectPage() {
           </div>
         </div>
       )}
-      </div>
+    </div>
   );
 }

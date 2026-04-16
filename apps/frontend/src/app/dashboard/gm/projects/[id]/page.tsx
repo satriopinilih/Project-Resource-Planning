@@ -9,39 +9,33 @@ import {
   Loader2,
   Briefcase,
   UserPlus,
-  LayoutGrid,
-  ChevronRight,
   X,
   Search,
   Check,
   AlertCircle,
-  Target,
   TrendingUp,
   CheckCircle2,
-  Users2,
-  Building2,
   FileText,
   ShieldAlert,
-  Clock,
+  LayoutGrid,
 } from "lucide-react";
 import {
   getProjectById,
   createHireRequest,
+  createTimelineEditRequest,
+  updateProject,
   BackendProject,
-  BackendProjectMember,
-  BackendRequiredRole,
-  getRawEmployees,
   BackendEmployee,
+  getRawEmployees,
   assignMemberToProject,
   unassignMemberFromProject,
   AssignMemberPayload,
   getHireRequests,
 } from "../../../../../lib/api";
+
 import SmartRecommendationPanel from "../../components/SmartRecommendationPanel";
 
 const mapStatus = (backendStatus: number, startDateStr?: string) => {
-  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
-  // Same as dashboard StatCards and project list
   switch (backendStatus) {
     case 0: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
     case 1: return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
@@ -53,7 +47,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
         today.setHours(0, 0, 0, 0);
         if (startDate > today) return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
       }
-      return { label: "Active", class: "bg-green-500/10 text-green-400 border-green-500/20" };
+      return { label: "Running", class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
     default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
@@ -83,30 +77,25 @@ const toInputDate = (iso: string | null | undefined): string => {
   return d.toISOString().split("T")[0];
 };
 
-/* ── Timeline bar helper ── */
-function TimelineBar({
-  startDate,
-  endDate,
-  projectStart,
-  projectEnd,
-}: {
-  startDate: string | null;
-  endDate: string | null;
+// TimelineBar component
+function TimelineBar({ startDate, endDate, projectStart, projectEnd }: {
+  startDate?: string | null;
+  endDate?: string | null;
   projectStart: string;
-  projectEnd: string;
+  projectEnd?: string | null;
 }) {
   const pStart = new Date(projectStart).getTime();
-  const pEnd = new Date(projectEnd).getTime();
+  const pEnd = projectEnd ? new Date(projectEnd).getTime() : pStart + 365 * 24 * 60 * 60 * 1000;
   const mStart = startDate ? new Date(startDate).getTime() : pStart;
   const mEnd = endDate ? new Date(endDate).getTime() : pEnd;
-  const total = pEnd - pStart || 1;
+  const total = pEnd - pStart;
+  if (total <= 0) return null;
   const left = Math.max(0, Math.min(100, ((mStart - pStart) / total) * 100));
   const width = Math.max(2, Math.min(100 - left, ((mEnd - mStart) / total) * 100));
-
   return (
-    <div className="relative w-full h-2 bg-gray-800 rounded-full overflow-hidden mt-2">
+    <div className="relative w-full h-2 bg-[var(--dash-bg-input)] rounded-full overflow-hidden">
       <div
-        className="absolute top-0 h-full bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] rounded-full transition-all duration-500"
+        className="absolute top-0 h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400"
         style={{ left: `${left}%`, width: `${width}%` }}
       />
     </div>
@@ -131,9 +120,12 @@ export default function ProjectDetailsPage() {
   const [assignEnd, setAssignEnd] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [assignFromRole, setAssignFromRole] = useState(false); // true = opened from required role card
 
   // Remove member state
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+
+  // Hire Request state
   const [hireSubmitting, setHireSubmitting] = useState(false);
   const [hireRequestOpen, setHireRequestOpen] = useState(false);
   const [hireAlreadyRequested, setHireAlreadyRequested] = useState(false);
@@ -143,6 +135,18 @@ export default function ProjectDetailsPage() {
     quantity: 1,
     notes: "",
   });
+
+  // Timeline Edit Request state
+  const [timelineEditOpen, setTimelineEditOpen] = useState(false);
+  const [timelineEditNotes, setTimelineEditNotes] = useState("");
+  const [timelineEditSubmitting, setTimelineEditSubmitting] = useState(false);
+  const [timelineEditRequested, setTimelineEditRequested] = useState(false);
+  const [timelineEditStart, setTimelineEditStart] = useState("");
+  const [timelineEditEnd, setTimelineEditEnd] = useState("");
+
+  // Start Project state
+  const [startingProject, setStartingProject] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const numericId = useMemo(() => {
     if (!idStr) return null;
@@ -170,17 +174,28 @@ export default function ProjectDetailsPage() {
     fetchProject();
   }, [numericId]);
 
+  // Cek existing hire request
   useEffect(() => {
     const checkExistingHireRequest = async () => {
       if (!numericId) return;
       try {
         const rows = await getHireRequests(undefined, numericId);
-        const latest = rows[0];
-        setHireRequestStatus(latest?.status ?? "none");
-        setHireAlreadyRequested(rows.some((r) => r.status === "Open" || r.status === "InProgress"));
+        const hireRows = rows.filter((r) =>
+          r.roleNeeded !== "Timeline Edit Request" &&
+          r.roleNeeded !== "GM Notification" &&
+          r.roleNeeded !== "Project Submission Notification" &&
+          r.roleNeeded !== "Project Update Notification"
+        );
+        const timelineRows = rows.filter((r) => r.roleNeeded === "Timeline Edit Request");
+
+        const latestHire = hireRows[0];
+        setHireRequestStatus(latestHire?.status ?? "none");
+        setHireAlreadyRequested(hireRows.some((r) => r.status === "Open" || r.status === "InProgress"));
+        setTimelineEditRequested(timelineRows.some((r) => r.status === "Open" || r.status === "InProgress"));
       } catch {
         setHireRequestStatus("none");
         setHireAlreadyRequested(false);
+        setTimelineEditRequested(false);
       }
     };
     checkExistingHireRequest();
@@ -191,6 +206,7 @@ export default function ProjectDetailsPage() {
     setAssignError(null);
     setSelectedEmp(null);
     setAssignRole(prefillRole || "");
+    setAssignFromRole(!!prefillRole); // hide role/date fields if opened from a role card
     setAssignStart(toInputDate(project?.estimatedStartDate));
     setAssignEnd(toInputDate(project?.estimatedEndDate));
     setEmpSearch("");
@@ -201,44 +217,54 @@ export default function ProjectDetailsPage() {
         const data = await getRawEmployees();
         setEmployees(data);
       } catch {
-        // silent
       } finally {
         setEmployeesLoading(false);
       }
     }
   };
 
-  // Compute availability for each employee against the current project timeline
-  const getEmployeeAvailability = (emp: BackendEmployee): { available: boolean; reason: string; blockingProject?: string } => {
+  const getEmployeeAvailability = (emp: BackendEmployee) => {
     if (!project) return { available: true, reason: "Available" };
     const projStart = new Date(project.estimatedStartDate).getTime();
     const projEnd = project.estimatedEndDate ? new Date(project.estimatedEndDate).getTime() : projStart + 365 * 24 * 60 * 60 * 1000;
-    if (!emp.projects || emp.projects.length === 0) {
-      return { available: true, reason: "No active assignments" };
-    }
+    if (!emp.projects || emp.projects.length === 0) return { available: true, reason: "No active assignments" };
+
     for (const up of emp.projects) {
       const upStart = new Date(up.startDate).getTime();
       const upEnd = up.endDate ? new Date(up.endDate).getTime() : upStart + 365 * 24 * 60 * 60 * 1000;
       if (upStart < projEnd && upEnd > projStart) {
-        const endDateStr = up.endDate ? formatDate(up.endDate) : "Ongoing";
-        return { available: false, reason: `Busy until ${endDateStr}`, blockingProject: up.projectName };
+        return { available: false, reason: `Busy until ${up.endDate ? formatDate(up.endDate) : "Ongoing"}`, blockingProject: up.projectName };
       }
     }
     return { available: true, reason: "Available for this timeline" };
   };
 
+  // Role-based filtering map: when assigning from a role card, show only matching employees
+  const getRoleFilter = (roleName: string): string[] => {
+    const r = roleName.toLowerCase();
+    if (r === "pm") return ["pm"];
+    if (r === "architect") return ["architect"];
+    if (r === "senior dev") return ["senior dev"];
+    if (r === "junior dev") return ["senior dev", "junior dev"];
+    if (r === "senior ba") return ["senior ba"];
+    if (r === "junior ba") return ["senior ba", "junior ba"];
+    return []; // empty = no filter, show all
+  };
+
   const filteredEmployees = useMemo(() => {
     const assignedIds = new Set(project?.members?.map((m) => m.userId) ?? []);
+    const roleFilters = assignFromRole && assignRole ? getRoleFilter(assignRole) : [];
     return employees
       .filter((emp) => {
         if (assignedIds.has(emp.userId)) return false;
+        // Role-based filtering when opened from a role card
+        if (roleFilters.length > 0) {
+          const empRole = (emp.role || "").toLowerCase();
+          if (!roleFilters.some(rf => empRole.includes(rf))) return false;
+        }
         if (!empSearch) return true;
         const q = empSearch.toLowerCase();
-        return (
-          emp.userName.toLowerCase().includes(q) ||
-          emp.role?.toLowerCase().includes(q) ||
-          emp.email.toLowerCase().includes(q)
-        );
+        return (emp.userName.toLowerCase().includes(q) || emp.role?.toLowerCase().includes(q) || emp.email.toLowerCase().includes(q));
       })
       .sort((a, b) => {
         const aAvail = getEmployeeAvailability(a).available;
@@ -247,26 +273,17 @@ export default function ProjectDetailsPage() {
         if (!aAvail && bAvail) return 1;
         return a.userName.localeCompare(b.userName);
       });
-  }, [employees, empSearch, project?.members, project]);
+  }, [employees, empSearch, project, assignFromRole, assignRole]);
 
   const handleAssign = async () => {
     if (!selectedEmp || !project) return;
     const avail = getEmployeeAvailability(selectedEmp);
-    if (!avail.available) {
-      setAssignError(`Cannot assign ${selectedEmp.userName}: ${avail.reason} (${avail.blockingProject})`);
-      return;
-    }
-    if (!assignRole.trim()) {
-      setAssignError("Please specify a role for this member.");
-      return;
-    }
+    if (!avail.available) return setAssignError(`Cannot assign ${selectedEmp.userName}: ${avail.reason}`);
+    if (!assignRole.trim()) return setAssignError("Please specify a role for this member.");
+
     setAssigning(true);
-    setAssignError(null);
     try {
-      const payload: AssignMemberPayload = {
-        userId: selectedEmp.userId,
-        roleInProject: assignRole.trim(),
-      };
+      const payload: AssignMemberPayload = { userId: selectedEmp.userId, roleInProject: assignRole.trim() };
       if (assignStart) payload.startDate = new Date(assignStart).toISOString();
       if (assignEnd) payload.endDate = new Date(assignEnd).toISOString();
       const updated = await assignMemberToProject(project.projectId, payload);
@@ -302,7 +319,56 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  const handleRequestTimelineEdit = async () => {
+    if (!project) return;
+    try {
+      setTimelineEditSubmitting(true);
+      // Build notes including requested dates
+      const requestedDateInfo = (timelineEditStart || timelineEditEnd)
+        ? `\nRequested Timeline: ${timelineEditStart ? formatDate(timelineEditStart) : "(same)"} - ${timelineEditEnd ? formatDate(timelineEditEnd) : "(same)"}`
+        : "";
+      const fullNotes = (timelineEditNotes || `GM requesting timeline review for project ${project.projectName}`) + requestedDateInfo;
 
+      await createTimelineEditRequest({
+        projectId: project.projectId,
+        projectName: project.projectName,
+        notes: fullNotes,
+        currentStartDate: project.estimatedStartDate,
+        currentEndDate: project.estimatedEndDate,
+      });
+      await createHireRequest({
+        projectId: project.projectId,
+        projectName: project.projectName,
+        roleNeeded: "GM Notification",
+        quantity: 1,
+        startDate: project.estimatedStartDate,
+        endDate: project.estimatedEndDate,
+        notes: `[GM ACTION] Timeline edit requested for ${project.projectName}`,
+      });
+      setTimelineEditOpen(false);
+      setTimelineEditRequested(true);
+      setTimelineEditNotes("");
+      setTimelineEditStart("");
+      setTimelineEditEnd("");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to send timeline edit request");
+    } finally {
+      setTimelineEditSubmitting(false);
+    }
+  };
+
+  const handleStartProject = async () => {
+    if (!project) return;
+    setStartingProject(true);
+    try {
+      await updateProject(project.projectId, { projectStatus: 1 });
+      await fetchProject();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to start project");
+    } finally {
+      setStartingProject(false);
+    }
+  };
 
   const handleRemoveMember = async (userId: string) => {
     if (!project) return;
@@ -329,532 +395,254 @@ export default function ProjectDetailsPage() {
   }
 
   const statusInfo = mapStatus(project.projectStatus, project.estimatedStartDate);
-  const totalNeeded = project.requiredRoles?.reduce((s, r) => s + r.requiredCount, 0) || 0;
-  const totalFilled = project.requiredRoles?.reduce((s, r) => s + r.filledCount, 0) || 0;
+  const totalNeeded = (project.requiredRoles || []).reduce((s, r) => s + (r.requiredCount ?? 0), 0);
+  const totalFilled = (project.requiredRoles || []).reduce((s, r) => s + (r.filledCount ?? 0), 0);
   const staffingPct = totalNeeded > 0 ? Math.round((totalFilled / totalNeeded) * 100) : 0;
+  const allRolesFilled = totalNeeded > 0 && totalFilled >= totalNeeded && project.projectStatus === 0;
+  const isEditingTeam = project.projectStatus === 0 || isEditMode;
 
   return (
     <>
       <div className="flex-1 overflow-auto min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
         <AppHeader title="Project Details" role="GM" />
 
-        <main className="flex-1 p-8 overflow-y-auto">
-          <div className="w-full space-y-8 pb-12">
+        <main className="flex-1 p-5 lg:p-7 max-w-[1360px] mx-auto space-y-6 pb-10">
 
-            {/* Status Context Header */}
-            {project.projectStatus === 0 && (
-              <div className="bg-[#1e3a8a]/20 border border-[#1e3a8a]/40 rounded-xl p-4 flex items-center justify-between">
+          {/* 1. Project Summary Banner */}
+          <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden shadow-sm">
+            <div className="p-6 pb-5 flex flex-col md:flex-row items-start justify-between gap-4">
+              <div className="space-y-3 flex-1">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[#1e3a8a]/40 text-[#60a5fa] rounded-lg">
-                    <LayoutGrid size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">Project Setup Phase</p>
-                    <p className="text-[12px] text-[#60a5fa]">Marketing has initiated this project. Finalize timeline and staff assignment below.</p>
-                  </div>
+                  <span className="px-3 py-1 bg-[#2B7FFC]/10 text-[#2B7FFC] text-[11px] font-bold uppercase tracking-widest rounded-md">
+                    {project.clientOrganization}
+                  </span>
+                  <span className={`px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-widest border ${statusInfo.class}`}>
+                    {statusInfo.label}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <h1 className="text-[34px] font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
+                <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed max-w-4xl">{project.projectDescription}</p>
+              </div>
+
+              {project.projectStatus !== 0 && project.projectStatus !== 3 && (
+                <div className="flex gap-3 shrink-0">
                   <button
-                    onClick={() => setHireRequestOpen(true)}
-                    disabled={hireSubmitting || hireAlreadyRequested}
-                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold disabled:opacity-50"
+                    onClick={() => setIsEditMode(!isEditMode)}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+                      isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
+                    }`}
                   >
-                    {hireAlreadyRequested
-                      ? "Already Requested"
-                      : hireRequestStatus === "Declined"
-                        ? "Declined - Request Again"
-                        : hireRequestStatus === "Fulfilled"
-                          ? "Fulfilled - Request Again"
-                          : "Request New Hire"}
+                    {isEditMode ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
+                    {isEditMode ? "Done Editing" : "Edit Project"}
                   </button>
-                  <div className="flex items-center gap-2 text-[12px] font-bold text-[var(--dash-text-muted)]">
-                    Step 1 of 2: Assign Timeline & Team
-                    <ChevronRight size={14} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── 1. Project Summary Banner ── */}
-            <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden shadow-sm">
-              {/* Header */}
-              <div className="p-8 pb-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-3 max-w-3xl flex-1 mr-6">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-[#2B7FFC]/10 rounded-lg">
-                        <Briefcase size={18} className="text-[#2B7FFC]" />
-                      </div>
-                      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
-                        {project.clientOrganization}
-                      </span>
-                    </div>
-                    <h1 className="text-[26px] font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
-                    <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed">
-                      {project.projectDescription}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className={`px-4 py-2 rounded-full text-[13px] font-semibold ${statusInfo.class}`}>
-                      {statusInfo.label}
-                    </span>
-                    <button className="px-5 py-2 bg-[#2B7FFC] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all">
-                      Edit Project
-                    </button>
-                    <button className="p-2 border border-red-500/30 text-red-500 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-all">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats Bar */}
-              <div className="grid grid-cols-2 md:grid-cols-4 border-t border-[var(--dash-border)]">
-                <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
-                  <div className="p-2 bg-blue-500/10 rounded-lg"><Calendar size={16} className="text-blue-400" /></div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Est. Start Date</p>
-                    <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{formatDate(project.estimatedStartDate)}</p>
-                  </div>
-                </div>
-                <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
-                  <div className="p-2 bg-purple-500/10 rounded-lg"><Clock size={16} className="text-purple-400" /></div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Est. End Date</p>
-                    <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{formatDate(project.estimatedEndDate)}</p>
-                  </div>
-                </div>
-                <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
-                  <div className="p-2 bg-amber-500/10 rounded-lg"><TrendingUp size={16} className="text-amber-400" /></div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Est. Duration</p>
-                    <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{project.estimatedDuration} weeks</p>
-                  </div>
-                </div>
-                <div className="p-5 flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 dark:bg-green-500/10 rounded-lg"><Users2 size={16} className="text-emerald-700 dark:text-green-400" /></div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Assigned</p>
-                    <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">
-                      {project.members?.length ?? 0}
-                      {(project.requiredRoles?.length ?? 0) > 0 && (
-                        <span className="text-gray-500 font-normal">
-                          {" "}/ {project.requiredRoles.reduce((sum, r) => sum + r.requiredCount, 0)} needed
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Required Roles Section — Marketing's staffing request */}
-              {(project.requiredRoles?.length ?? 0) > 0 && (
-                <div className="border-t border-[var(--dash-border)] p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Target size={16} className="text-[#2B7FFC]" />
-                    <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)] uppercase tracking-wider">Required Team Roles</h3>
-                    <span className="ml-auto text-[11px] text-gray-500">Requested by Marketing</span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {project.requiredRoles.map((role) => {
-                      const isFilled = role.filledCount >= role.requiredCount;
-                      const isPartial = role.filledCount > 0 && role.filledCount < role.requiredCount;
-                      return (
-                        <div
-                          key={role.id}
-                          className={`relative p-4 rounded-xl border transition-all ${isFilled
-                              ? "bg-green-500/5 border-green-500/25"
-                              : isPartial
-                                ? "bg-amber-500/5 border-amber-500/25"
-                                : "bg-[var(--dash-bg-input)] border-[var(--dash-border)]"
-                            }`}
-                        >
-                          {/* Fill indicator */}
-                          <div className="flex items-start justify-between mb-3">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${role.workingType === "Dedicated"
-                                ? "bg-blue-500/15 text-blue-400"
-                                : "bg-purple-500/15 text-purple-400"
-                              }`}>
-                              {role.workingType}
-                            </span>
-                            {isFilled ? (
-                              <CheckCircle2 size={16} className="text-green-400 shrink-0" />
-                            ) : isPartial ? (
-                              <ShieldAlert size={16} className="text-amber-400 shrink-0" />
-                            ) : (
-                              <UserPlus size={16} className="text-gray-600 shrink-0" />
-                            )}
-                          </div>
-
-                          <p className="text-[14px] font-bold text-[var(--dash-text-heading)] mb-1">{role.roleName}</p>
-                          <p className="text-[11px] text-gray-500 mb-2">×{role.requiredCount} needed</p>
-
-                          {/* Progress */}
-                          <div className="mt-3">
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[11px] text-gray-500">
-                                {role.filledCount}/{role.requiredCount} filled
-                              </span>
-                              <span className={`text-[11px] font-bold ${isFilled ? "text-green-400" : isPartial ? "text-amber-400" : "text-gray-600"
-                                }`}>
-                                {isFilled ? "Complete" : isPartial ? "Partial" : "Open"}
-                              </span>
-                            </div>
-                            <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${isFilled
-                                    ? "bg-green-500"
-                                    : isPartial
-                                      ? "bg-amber-500"
-                                      : "bg-gray-700"
-                                  }`}
-                                style={{ width: `${Math.min(100, (role.filledCount / role.requiredCount) * 100)}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Required Skills Section (Project-level, separate from roles) */}
-                  {(project.requiredSkills?.length ?? 0) > 0 && (
-                    <div className="mt-5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <LayoutGrid size={14} className="text-purple-400" />
-                        <h4 className="text-[12px] font-bold text-gray-400 uppercase tracking-wider">Required Skills</h4>
-                        <span className="ml-auto text-[11px] text-gray-600">{project.requiredSkills.length} skills</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {project.requiredSkills.map((skill) => (
-                          <span
-                            key={skill}
-                            className="inline-flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-lg bg-[var(--dash-bg-input)] text-[var(--dash-text-primary)] border border-[var(--dash-border)] font-medium hover:border-purple-500/40 hover:text-purple-500 dark:hover:text-purple-300 transition-colors"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500/60 shrink-0"></span>
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Staffing progress summary */}
-                  {(() => {
-                    const totalNeeded = project.requiredRoles.reduce((s, r) => s + r.requiredCount, 0);
-                    const totalFilled = project.requiredRoles.reduce((s, r) => s + r.filledCount, 0);
-                    const pct = totalNeeded > 0 ? Math.round((totalFilled / totalNeeded) * 100) : 0;
-                    return (
-                      <div className="mt-4 p-3 bg-[var(--dash-bg-input)] rounded-xl border border-[var(--dash-border)] flex items-center gap-4">
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-1.5">
-                            <span className="text-[12px] text-gray-400 font-medium">Overall Staffing Progress</span>
-                            <span className={`text-[12px] font-bold ${pct === 100 ? "text-green-400" : pct > 0 ? "text-amber-400" : "text-gray-500"
-                              }`}>{pct}%</span>
-                          </div>
-                          <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-700 ${pct === 100
-                                  ? "bg-gradient-to-r from-green-600 to-green-400"
-                                  : "bg-gradient-to-r from-amber-600 to-amber-400"
-                                }`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                        <span className="text-[12px] font-semibold text-[var(--dash-text-primary)] shrink-0">
-                          {totalFilled} / {totalNeeded} roles filled
-                        </span>
-                      </div>
-                    );
-                  })()}
                 </div>
               )}
+            </div>
 
-              {/* Priority badge */}
-              <div className="border-t border-[var(--dash-border)] px-6 py-3 flex items-center gap-2">
-                <FileText size={13} className="text-gray-600" />
-                <span className="text-[12px] text-gray-500">Priority:</span>
-                <span className={`text-[12px] font-bold ${project.priorityLevel === 2 ? "text-red-400" :
-                    project.priorityLevel === 1 ? "text-amber-400" : "text-green-400"
-                  }`}>
-                  {mapPriority(project.priorityLevel)}
-                </span>
-                <span className="mx-2 text-gray-700">·</span>
-                <Building2 size={13} className="text-gray-600" />
-                <span className="text-[12px] text-gray-500">Client:</span>
-                <span className="text-[12px] text-[var(--dash-text-primary)] font-medium">{project.clientOrganization}</span>
+            {/* Combined Stats Bar */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 border-t border-[var(--dash-border)] bg-[var(--dash-bg-input)]">
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
+                <div className="p-2 bg-blue-500/10 rounded-lg"><Calendar size={18} className="text-blue-400" /></div>
+                <div>
+                  <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Timeline</p>
+                  <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">
+                    {formatDate(project.estimatedStartDate)} - {formatDate(project.estimatedEndDate)}
+                  </p>
+                </div>
               </div>
-            </section>
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
+                <div className="p-2 bg-amber-500/10 rounded-lg"><TrendingUp size={18} className="text-amber-400" /></div>
+                <div>
+                  <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Duration</p>
+                  <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{project.estimatedDuration} weeks</p>
+                </div>
+              </div>
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
+                <div className="p-2 bg-purple-500/10 rounded-lg"><FileText size={18} className="text-purple-400" /></div>
+                <div>
+                  <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Priority</p>
+                  <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{mapPriority(project.priorityLevel)}</p>
+                </div>
+              </div>
+              {/* Staffing Progress merged into stats */}
+              <div className="p-4 lg:col-span-2 flex flex-col justify-center gap-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Staffing Progress</span>
+                  <span className="text-[12px] text-[var(--dash-text-primary)] font-semibold">{totalFilled} / {totalNeeded} roles</span>
+                </div>
+                <div className="w-full h-2 bg-[var(--dash-bg-page)] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${staffingPct === 100 ? "bg-green-500" : "bg-[#2B7FFC]"}`}
+                    style={{ width: `${staffingPct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
 
-            {project.projectStatus === 0 ? (
-              /* ── PLANNING UI (For Upcoming Projects) ── */
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2 space-y-8">
-                  {/* Assigned Team Members Component */}
-                  <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] tracking-tight">Assign Team Members</h2>
-                    </div>
+            {/* Required Skills Row */}
+            {(project.requiredSkills?.length ?? 0) > 0 && (
+              <div className="p-3 px-5 border-t border-[var(--dash-border)] flex flex-wrap items-center gap-2.5 bg-[var(--dash-bg-input)]">
+                <LayoutGrid size={14} className="text-[var(--dash-text-faint)]" />
+                <span className="text-[12px] font-medium text-[var(--dash-text-muted)]">Required Skills:</span>
+                {project.requiredSkills.map(skill => (
+                  <span key={skill} className="px-2.5 py-1 rounded-md bg-[var(--dash-bg-card)] text-[var(--dash-text-primary)] text-[11px] border border-[var(--dash-border)]">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
 
-                    <div className="space-y-6">
-                      {project.requiredRoles?.map((role) => {
-                        const membersInRole = project.members?.filter(
-                          (m) =>
-                            m.role.toLowerCase() === role.roleName.toLowerCase()
-                        ) || [];
-                        const isDedicated = role.workingType === 'Dedicated';
+          {/* 2. Smart Recommendations */}
+          {project.projectStatus === 0 && numericId && (
+            <SmartRecommendationPanel projectId={numericId} />
+          )}
 
-                        return (
-                          <div key={role.id} className="border border-[var(--dash-border)] rounded-[1.25rem] bg-[var(--dash-bg-input)] p-6 shadow-sm overflow-hidden relative">
-                            {/* Accent line for top of card */}
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
+          {/* 3. Role Management & Team */}
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight">Role Management & Team</h2>
+              {isEditingTeam && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setHireRequestOpen(true)}
+                    disabled={hireAlreadyRequested}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <UserPlus size={16} />
+                    {hireAlreadyRequested ? "Hire Requested" : "Request New Hire"}
+                  </button>
+                  <button
+                    onClick={() => setTimelineEditOpen(true)}
+                    disabled={timelineEditRequested}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Calendar size={16} />
+                    {timelineEditRequested ? "Already Requested" : "Request Timeline Edit"}
+                  </button>
+                  {project.projectStatus === 0 && (
+                    <button
+                      onClick={handleStartProject}
+                      disabled={!allRolesFilled || startingProject}
+                      title={!allRolesFilled ? "All required roles must be filled before starting" : "Start this project"}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-[13px] font-bold transition-all disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed shadow-lg shadow-green-500/20 disabled:shadow-none"
+                    >
+                      {startingProject ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                      {startingProject ? "Starting..." : "Start Project"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
-                            <div className="flex justify-between items-start mb-5">
-                              <div className="space-y-1.5">
-                                <div className="flex items-center gap-3">
-                                  <h3 className="text-[var(--dash-text-heading)] font-black text-[16px] tracking-tight">{role.roleName}</h3>
-                                  <span className={`text-[10px] px-2.5 py-0.5 rounded border font-bold uppercase tracking-wider ${isDedicated
-                                      ? 'bg-[#8b5cf6]/10 text-[#a78bfa] border-[#8b5cf6]/20'
-                                      : 'bg-[#10b981]/10 text-[#34d399] border-[#10b981]/20'
-                                    }`}>
-                                    {role.workingType}
-                                  </span>
+            {(!project.requiredRoles || project.requiredRoles.length === 0) ? (
+              <div className="py-16 text-center border-2 border-dashed border-[var(--dash-border)] rounded-2xl">
+                <Briefcase size={32} className="mx-auto text-[var(--dash-text-faint)] mb-3" />
+                <p className="text-[var(--dash-text-muted)] text-[14px]">No specific roles required. Manage your team freely.</p>
+                {isEditingTeam && (
+                  <button onClick={() => openAssignModal()} className="text-blue-400 text-[13px] mt-2 font-bold hover:underline">
+                    Assign members manually
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {project.requiredRoles.map((role) => {
+                  const membersInRole = project.members?.filter(m => m.role.toLowerCase() === role.roleName.toLowerCase()) || [];
+                  const isFilled = membersInRole.length >= (role.requiredCount ?? 0);
+
+                  return (
+                    <div key={role.id} className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl overflow-hidden flex flex-col shadow-sm">
+                      {/* Role Header */}
+                      <div className="p-5 border-b border-[var(--dash-border)] bg-[var(--dash-bg-input)]">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)] flex items-center gap-2">
+                              {role.roleName}
+                              {isFilled && <CheckCircle2 size={16} className="text-green-400" />}
+                            </h3>
+                            <span className="inline-block mt-1.5 px-2 py-0.5 bg-[var(--dash-bg-card)] text-[var(--dash-text-muted)] text-[10px] uppercase font-bold tracking-wider rounded border border-[var(--dash-border)]">
+                              {role.workingType}
+                            </span>
+                          </div>
+                          {!isFilled && isEditingTeam && (
+                            <button
+                              onClick={() => openAssignModal(role.roleName)}
+                              className="px-3 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md text-[12px] font-bold flex items-center gap-1.5 transition-colors"
+                            >
+                              <UserPlus size={14} /> Assign ({membersInRole.length}/{role.requiredCount})
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Progress */}
+                        <div className="flex items-center justify-between text-[11px] font-medium text-[var(--dash-text-muted)] mb-1.5">
+                          <span>Progress</span>
+                          <span>{membersInRole.length} / {role.requiredCount} Filled</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-[var(--dash-bg-page)] rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${isFilled ? "bg-green-500" : "bg-amber-500"}`}
+                            style={{ width: `${Math.min(100, (membersInRole.length / (role.requiredCount ?? 1)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Assigned Members List */}
+                      <div className="p-3 flex-1 flex flex-col gap-2 min-h-[120px]">
+                        {membersInRole.length === 0 ? (
+                          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
+                            <ShieldAlert size={20} className="text-amber-500/50 mb-2" />
+                            <p className="text-[12px] text-[var(--dash-text-faint)]">No members assigned.</p>
+                          </div>
+                        ) : (
+                          membersInRole.map(member => (
+                            <div key={member.userId} className="p-3 bg-[var(--dash-bg-input)] rounded-xl border border-[var(--dash-border)] flex items-center justify-between group hover:border-[var(--dash-border-hover,#555)] transition-colors">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-8 h-8 rounded-full bg-[#3b82f6]/20 text-[#3b82f6] flex items-center justify-center font-bold text-[11px] shrink-0">
+                                  {member.userName.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                 </div>
-                                <p className="text-[13px] text-gray-400 font-medium">Need {role.requiredCount} <span className="mx-1">•</span> Selected {membersInRole.length}</p>
-
-                                {isDedicated ? (
-                                  <p className="text-[11px] text-amber-500/90 font-medium flex items-center gap-1.5 mt-2">
-                                    <AlertCircle size={13} /> Must not have overlapping assignments
+                                <div className="min-w-0">
+                                  <p className="text-[13px] font-bold text-[var(--dash-text-primary)] truncate">{member.userName}</p>
+                                  <p className="text-[11px] text-[var(--dash-text-faint)] truncate">
+                                    {formatDate(member.startDate || project.estimatedStartDate)} - {formatDate(member.endDate || project.estimatedEndDate)}
                                   </p>
-                                ) : (
-                                  <p className="text-[11px] text-[#34d399]/90 font-medium flex items-center gap-1.5 mt-2">
-                                    <CheckCircle2 size={13} /> Can work on multiple projects in parallel
-                                  </p>
-                                )}
+                                </div>
                               </div>
-
-                              {membersInRole.length < role.requiredCount && (
+                              {isEditingTeam && (
                                 <button
-                                  onClick={() => openAssignModal(role.roleName)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 text-[12px] font-bold rounded-lg transition-all"
+                                  onClick={() => handleRemoveMember(member.userId)}
+                                  disabled={removingUserId === member.userId}
+                                  className="p-1.5 text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 rounded-md opacity-0 group-hover:opacity-100 transition-all shrink-0 cursor-pointer disabled:opacity-50"
                                 >
-                                  <UserPlus size={14} /> Assign
+                                  {removingUserId === member.userId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                                 </button>
                               )}
                             </div>
-
-                            <div className="space-y-3 mt-4">
-                              {membersInRole.map(member => (
-                                <div key={member.userId} className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-4 flex items-center justify-between group hover:border-gray-600 transition-colors">
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600/30 to-purple-600/30 border border-blue-500/20 flex items-center justify-center text-blue-400 font-black text-[14px] flex-shrink-0">
-                                      {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                                    </div>
-                                    <div>
-                                      <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
-                                      <p className="text-[11px] text-[var(--dash-text-secondary)]">{member.role}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                    <div className="text-right">
-                                      <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Timeline</span>
-                                      <span className="text-[11px] text-[var(--dash-text-primary)] font-medium bg-[var(--dash-bg-input)] px-2 py-1 rounded border border-[var(--dash-border)]">
-                                        {member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)} — {member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}
-                                      </span>
-                                    </div>
-                                    <button
-                                      onClick={() => handleRemoveMember(member.userId)}
-                                      disabled={removingUserId === member.userId}
-                                      className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer disabled:opacity-50"
-                                      title="Remove from project"
-                                    >
-                                      {removingUserId === member.userId ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-
-                              {membersInRole.length === 0 && (
-                                <div className="py-6 border-2 border-dashed border-gray-700/50 rounded-xl flex items-center justify-center">
-                                  <p className="text-[13px] text-[var(--dash-text-faint)] font-medium italic">No members assigned to this role yet.</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {(!project.requiredRoles || project.requiredRoles.length === 0) && (
-                        <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-gray-700/50 rounded-xl bg-[#1a1c1e]/30">
-                          <Briefcase size={36} className="text-gray-600 mb-4" />
-                          <p className="text-gray-400 text-[14px] font-medium">No roles required for this project.</p>
-                          <button onClick={() => openAssignModal()} className="text-blue-400 text-[13px] mt-2 font-bold hover:underline">
-                            Assign members manually
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-
-                  {/* Recommendations */}
-                  {numericId && <SmartRecommendationPanel projectId={numericId} />}
-                </div>
-
-                <div className="space-y-8">
-                  {/* Assignment Sidebar */}
-                  <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assignment Detail</h2>
-                      <Clock size={18} className="text-gray-500" />
-                    </div>
-
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">Start Date</p>
-                        <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[14px] font-medium text-[var(--dash-text-primary)]">
-                          <Calendar size={16} className="text-[#3b82f6]" />
-                          {project.estimatedStartDate ? formatDate(project.estimatedStartDate) : 'Click to Set Date'}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-[12px] text-gray-500 font-bold uppercase tracking-wider">End Date</p>
-                        <div className="flex items-center gap-3 p-3 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[14px] font-medium text-[var(--dash-text-primary)]">
-                          <Calendar size={16} className="text-[#3b82f6]" />
-                          {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Click to Set Date'}
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-gray-700/50">
-                        <div className="flex justify-between items-center mb-2">
-                          <p className="text-[13px] text-gray-400">Project Duration</p>
-                          <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">{project.estimatedDuration || 8} Weeks</p>
-                        </div>
-                        <div className="flex justify-between items-center mb-4">
-                          <p className="text-[13px] text-gray-400">Team Members</p>
-                          <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">{project.members?.length ?? 0}</p>
-                        </div>
-                        <button
-                          onClick={() => openAssignModal()}
-                          className="w-full py-3 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-xl text-[14px] font-bold transition-all shadow-lg shadow-[#3b82f6]/20 cursor-pointer"
-                        >
-                          Assign New Member
-                        </button>
+                          ))
+                        )}
                       </div>
                     </div>
-                  </section>
-                </div>
-              </div>
-            ) : (
-              /* ── STANDARD UI (For Active/Completed Projects) ── */
-              <div className="space-y-6">
-                {/* Assigned Team */}
-                <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assigned Team</h2>
-                    <button
-                      onClick={() => openAssignModal()}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all cursor-pointer"
-                    >
-                      <UserPlus size={16} />
-                      Assign Member
-                    </button>
-                  </div>
-                  {(!project.members || project.members.length === 0) ? (
-                    <div className="py-8 text-center border border-dashed border-gray-700 rounded-xl">
-                      <p className="text-gray-500 text-[14px]">No team members assigned.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {project.members.map((member) => (
-                        <div key={member.userId} className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 hover:border-gray-600/50 transition-colors group">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-full border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-[#1e3a8a]/40 flex items-center justify-center text-blue-700 dark:text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
-                                {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                              </div>
-                              <div>
-                                <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
-                                <p className="text-[12px] text-[var(--dash-text-secondary)]">{member.role} · {member.staffRole || 'Member'}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-[#064e3b]/30 dark:text-[#34d399] dark:border-[#064e3b]/50">
-                                {member.status || "Assigned"}
-                              </span>
-                              <button
-                                onClick={() => handleRemoveMember(member.userId)}
-                                disabled={removingUserId === member.userId}
-                                className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer disabled:opacity-50"
-                                title="Remove from project"
-                              >
-                                {removingUserId === member.userId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Timeline bar */}
-                          <div className="mt-4">
-                            <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
-                              <span>{member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)}</span>
-                              <span>{member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}</span>
-                            </div>
-                            <TimelineBar
-                              startDate={member.startDate}
-                              endDate={member.endDate}
-                              projectStart={project.estimatedStartDate}
-                              projectEnd={project.estimatedEndDate}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
-
-                {/* Timeline Info */}
-                <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-                  <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)] mb-6">Project Timeline</h2>
-                  <div className="grid grid-cols-3 gap-8">
-                    <div className="space-y-1.5">
-                      <p className="text-[12px] text-gray-500 font-medium">Start Date</p>
-                      <div className="flex items-center gap-2 text-[14px] font-medium text-[var(--dash-text-primary)]">
-                        <Calendar size={16} className="text-gray-400" />
-                        {formatDate(project.estimatedStartDate)}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-[12px] text-gray-500 font-medium">End Date</p>
-                      <div className="flex items-center gap-2 text-[14px] font-medium text-[var(--dash-text-primary)]">
-                        <Calendar size={16} className="text-gray-400" />
-                        {project.estimatedEndDate ? formatDate(project.estimatedEndDate) : 'Ongoing'}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-[12px] text-gray-500 font-medium">Duration</p>
-                      <div className="text-[14px] font-medium text-[var(--dash-text-primary)]">
-                        {project.estimatedDuration || 8} weeks
-                      </div>
-                    </div>
-                  </div>
-                </section>
+                  );
+                })}
               </div>
             )}
+          </section>
 
-          </div>
+          {/* Footer filler */}
+          <div className="h-10" />
+
         </main>
       </div>
 
-      {/* ── Assign Member Modal (Redesigned) ── */}
+      {/* ── Assign Member Modal ── */}
       {assignModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
           onClick={() => setAssignModalOpen(false)}
         >
           <div
-            className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl text-[var(--dash-text-primary)]"
+            className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl text-[var(--dash-text-primary)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -890,20 +678,20 @@ export default function ProjectDetailsPage() {
                   placeholder="Search employee..."
                   value={empSearch}
                   onChange={(e) => setEmpSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 placeholder:text-[var(--dash-text-faint)] transition-colors"
+                  className="w-full pl-9 pr-4 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 placeholder:text-[var(--dash-text-faint)] transition-colors"
                 />
               </div>
 
               {/* Employee list */}
               {employeesLoading ? (
-                <div className="flex items-center justify-center py-10 text-gray-500 gap-2">
+                <div className="flex items-center justify-center py-10 text-[var(--dash-text-faint)] gap-2">
                   <Loader2 size={16} className="animate-spin" />
                   <span className="text-[13px]">Loading...</span>
                 </div>
               ) : (
-                <div className="max-h-[240px] overflow-y-auto space-y-1 pr-1">
+                <div className="max-h-[280px] overflow-y-auto space-y-2.5 pr-2">
                   {filteredEmployees.length === 0 ? (
-                    <p className="text-center py-8 text-gray-600 text-[13px]">No employees found.</p>
+                    <p className="text-center py-8 text-[var(--dash-text-faint)] text-[13px]">No employees found.</p>
                   ) : (
                     filteredEmployees.map((emp) => {
                       const isSelected = selectedEmp?.userId === emp.userId;
@@ -918,59 +706,79 @@ export default function ProjectDetailsPage() {
                             if (!assignRole) setAssignRole(emp.role || "");
                           }}
                           disabled={!avail.available}
-                          className={`w-full text-left px-3 py-3 rounded-xl border transition-all flex items-center gap-3 ${!avail.available
-                              ? "border-[var(--dash-border)] bg-[var(--dash-bg-input)] opacity-50 cursor-not-allowed"
-                              : isSelected
-                                ? "border-[#3b82f6] bg-[#3b82f6]/10 cursor-pointer"
-                                : "border-[var(--dash-border)] bg-[var(--dash-bg-input)] hover:border-gray-700 hover:bg-[var(--dash-bg-hover)] cursor-pointer"
+                          className={`w-full text-left p-4 rounded-xl border transition-all flex flex-col gap-2 ${!avail.available
+                            ? "border-[var(--dash-border)] bg-[var(--dash-bg-input)] opacity-60 cursor-not-allowed"
+                            : isSelected
+                              ? "border-[#3b82f6] bg-[#3b82f6]/10 cursor-pointer shadow-sm"
+                              : "border-[var(--dash-border)] bg-[var(--dash-bg-input)] hover:border-[#3b82f6]/40 hover:bg-[var(--dash-bg-hover)] cursor-pointer"
                             }`}
                         >
-                          {/* Avatar */}
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[12px] flex-shrink-0 ${!avail.available ? "bg-gray-800 text-gray-600" : "bg-[#1e3a8a]/30 text-[#60a5fa]"
-                            }`}>
-                            {emp.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                          </div>
+                          <div className="flex items-start gap-4 w-full">
+                            {/* Avatar */}
+                            <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-[14px] flex-shrink-0 mt-0.5 ${!avail.available ? "bg-[var(--dash-bg-page)] text-[var(--dash-text-faint)]" : "bg-[#1e3a8a]/40 text-[#60a5fa]"}`}>
+                              {emp.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                            </div>
 
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className={`text-[13px] font-semibold truncate ${!avail.available ? "text-[var(--dash-text-faint)]" : "text-[var(--dash-text-primary)]"}`}>
-                                {emp.userName}
+                            {/* Main Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                  <p className={`text-[15px] font-bold truncate ${!avail.available ? "text-[var(--dash-text-faint)]" : "text-[var(--dash-text-heading)]"}`}>
+                                    {emp.userName}
+                                  </p>
+                                  {avail.available ? (
+                                    <span className="flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                      Available
+                                    </span>
+                                  ) : (
+                                    <span className="flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/20">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                                      Unavailable
+                                    </span>
+                                  )}
+                                </div>
+                                {isSelected && avail.available && (
+                                  <div className="w-5 h-5 rounded-full bg-[#3b82f6] flex items-center justify-center flex-shrink-0 shadow-md">
+                                    <Check size={12} className="text-white" />
+                                  </div>
+                                )}
+                              </div>
+
+                              <p className={`text-[12px] mt-1 font-medium ${!avail.available ? "text-[var(--dash-text-faint)]" : "text-[var(--dash-text-muted)]"}`}>
+                                {emp.role}
+                                {emp.departmentName ? ` · ${emp.departmentName}` : ''}
+                                {emp.experienceYears !== undefined ? ` · ${emp.experienceYears} yr experience` : ''}
                               </p>
-                              {avail.available ? (
-                                <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                  Available
-                                </span>
-                              ) : (
-                                <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/15 text-red-400 border border-red-500/20">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                                  Unavailable
-                                </span>
+
+                              {!avail.available && (
+                                <div className="mt-2 flex items-start gap-2 text-red-400/80 bg-red-500/5 p-2 rounded-lg border border-red-500/10">
+                                  <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+                                  <p className="text-[12px] leading-snug">
+                                    <span className="font-semibold">{avail.reason}</span>
+                                    {avail.blockingProject && <><br /><span className="opacity-80">Conflict: {avail.blockingProject}</span></>}
+                                  </p>
+                                </div>
                               )}
                             </div>
-                            <p className={`text-[11px] truncate ${!avail.available ? "text-gray-600" : "text-gray-500"}`}>
-                              {emp.role} · {emp.departmentName}
-                            </p>
-                            {!avail.available && (
-                              <p className="text-[10px] text-red-400/80 mt-0.5">
-                                <ShieldAlert size={10} className="inline mr-1" />
-                                {avail.reason} — {avail.blockingProject}
-                              </p>
-                            )}
                           </div>
 
-                          {/* Right side */}
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {avail.available && emp.skills?.slice(0, 2).map((skill) => (
-                              <span key={skill} className="px-1.5 py-0.5 text-[9px] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[var(--dash-text-muted)] rounded font-medium hidden md:inline">{skill}</span>
-                            ))}
-                            {isSelected && avail.available && (
-                              <div className="w-5 h-5 rounded-full bg-[#3b82f6] flex items-center justify-center ml-1">
-                                <Check size={12} className="text-white" />
-                              </div>
-                            )}
-                          </div>
+                          {/* Skills */}
+                          {avail.available && emp.skills && emp.skills.length > 0 && (
+                            <div className="pl-[60px] flex flex-wrap gap-1.5">
+                              {emp.skills.map((skill) => (
+                                <span
+                                  key={skill}
+                                  className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border ${isSelected
+                                    ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                                    : "bg-[var(--dash-bg-page)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                                    }`}
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </button>
                       );
                     })
@@ -978,46 +786,50 @@ export default function ProjectDetailsPage() {
                 </div>
               )}
 
-              {/* Role field */}
-              <div>
-                <label className="block text-[11px] text-gray-500 font-semibold mb-1.5 uppercase tracking-wider">Role in Project</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Senior Dev, Project Manager..."
-                  value={assignRole}
-                  onChange={(e) => setAssignRole(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 placeholder:text-[var(--dash-text-faint)] transition-colors"
-                />
-              </div>
+              {/* Role field — hidden when opened from a required role card */}
+              {!assignFromRole && (
+                <div>
+                  <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Role in Project</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Senior Dev, Project Manager..."
+                    value={assignRole}
+                    onChange={(e) => setAssignRole(e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 placeholder:text-[var(--dash-text-faint)] transition-colors"
+                  />
+                </div>
+              )}
 
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] text-gray-500 font-semibold mb-1.5 uppercase tracking-wider">Start</label>
-                  <input
-                    type="date"
-                    value={assignStart}
-                    onChange={(e) => setAssignStart(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light dark]"
-                  />
+              {/* Dates — hidden when opened from a required role card */}
+              {!assignFromRole && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Start</label>
+                    <input
+                      type="date"
+                      value={assignStart}
+                      onChange={(e) => setAssignStart(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">End</label>
+                    <input
+                      type="date"
+                      value={assignEnd}
+                      onChange={(e) => setAssignEnd(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] text-gray-500 font-semibold mb-1.5 uppercase tracking-wider">End</label>
-                  <input
-                    type="date"
-                    value={assignEnd}
-                    onChange={(e) => setAssignEnd(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light dark]"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Footer */}
             <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--dash-border)]">
-              <div className="text-[12px] text-gray-500">
+              <div className="text-[12px] text-[var(--dash-text-muted)]">
                 {selectedEmp ? (
-                  <span>Selected: <span className="text-[var(--dash-text-heading)] font-semibold">{selectedEmp.userName}</span> as <span className="text-blue-500 dark:text-blue-400 font-semibold">{assignRole || "..."}</span></span>
+                  <span>Selected: <span className="text-[var(--dash-text-heading)] font-semibold">{selectedEmp.userName}</span> as <span className="text-blue-400 font-semibold">{assignRole || "..."}</span></span>
                 ) : (
                   <span className="italic">No employee selected</span>
                 )}
@@ -1043,6 +855,7 @@ export default function ProjectDetailsPage() {
         </div>
       )}
 
+      {/* ── Hire Request Modal ── */}
       {hireRequestOpen && project && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setHireRequestOpen(false)}>
           <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-[var(--dash-text-primary)]" onClick={(e) => e.stopPropagation()}>
@@ -1062,7 +875,7 @@ export default function ProjectDetailsPage() {
                 <select
                   value={hireForm.roleNeeded}
                   onChange={(e) => setHireForm((p) => ({ ...p, roleNeeded: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px]"
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)]"
                 >
                   <option>Senior Dev</option>
                   <option>Junior Dev</option>
@@ -1079,7 +892,7 @@ export default function ProjectDetailsPage() {
                   min={1}
                   value={hireForm.quantity}
                   onChange={(e) => setHireForm((p) => ({ ...p, quantity: Number(e.target.value) || 1 }))}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px]"
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)]"
                 />
               </div>
 
@@ -1090,7 +903,7 @@ export default function ProjectDetailsPage() {
                   value={hireForm.notes}
                   onChange={(e) => setHireForm((p) => ({ ...p, notes: e.target.value }))}
                   placeholder="Reason and context for HR"
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px]"
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)] placeholder:text-[var(--dash-text-faint)]"
                 />
               </div>
             </div>
@@ -1098,7 +911,75 @@ export default function ProjectDetailsPage() {
             <div className="px-6 py-4 border-t border-[var(--dash-border)] flex justify-end gap-2">
               <button onClick={() => setHireRequestOpen(false)} className="px-4 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] font-semibold text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)]">Cancel</button>
               <button onClick={handleRequestHireFromProject} disabled={hireSubmitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-[13px] font-semibold text-white disabled:opacity-50">
-                {hireSubmitting ? "Sending..." : "Hire"}
+                {hireSubmitting ? "Sending..." : "Send Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Timeline Edit Request Modal ── */}
+      {timelineEditOpen && project && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setTimelineEditOpen(false)}>
+          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-[var(--dash-text-primary)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--dash-border)]">
+              <h3 className="text-[17px] font-bold text-[var(--dash-text-heading)]">Request Timeline Edit</h3>
+              <button onClick={() => setTimelineEditOpen(false)} className="p-1.5 rounded-lg text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)]"><X size={18} /></button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Project</label>
+                <div className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px]">{project.projectName}</div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Current Timeline</label>
+                <div className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-amber-400">
+                  {formatDate(project.estimatedStartDate)} - {formatDate(project.estimatedEndDate)}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Requested Timeline</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-[var(--dash-text-faint)] mb-1 uppercase tracking-wider font-bold">Start Date</label>
+                    <input
+                      type="date"
+                      value={timelineEditStart}
+                      onChange={(e) => setTimelineEditStart(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[var(--dash-text-faint)] mb-1 uppercase tracking-wider font-bold">End Date</label>
+                    <input
+                      type="date"
+                      value={timelineEditEnd}
+                      onChange={(e) => setTimelineEditEnd(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Notes</label>
+                <textarea
+                  rows={3}
+                  value={timelineEditNotes}
+                  onChange={(e) => setTimelineEditNotes(e.target.value)}
+                  placeholder="e.g. Please delay the start date by 2 weeks due to resource constraints."
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)] placeholder:text-[var(--dash-text-faint)]"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-[var(--dash-border)] flex justify-end gap-2">
+              <button onClick={() => setTimelineEditOpen(false)} className="px-4 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] font-semibold text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)]">Cancel</button>
+              <button onClick={handleRequestTimelineEdit} disabled={timelineEditSubmitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-[13px] font-semibold text-white disabled:opacity-50">
+                {timelineEditSubmitting ? "Sending..." : "Submit Request"}
               </button>
             </div>
           </div>

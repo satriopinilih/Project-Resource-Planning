@@ -4,10 +4,12 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace Entities.Migrations
 {
     /// <inheritdoc />
-    public partial class Initialfix : Migration
+    public partial class InitialProjectResources : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -30,6 +32,48 @@ namespace Entities.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "HireRequests",
+                columns: table => new
+                {
+                    HireRequestId = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RequestedBy = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    ProjectId = table.Column<int>(type: "integer", nullable: true),
+                    ProjectName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    RoleNeeded = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    Quantity = table.Column<int>(type: "integer", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Notes = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Open"),
+                    HiredEmployeeName = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
+                    FulfilledBy = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    FulfilledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    CreatedBy = table.Column<string>(type: "text", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HireRequests", x => x.HireRequestId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Holidays",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Holidays", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Projects",
                 columns: table => new
                 {
@@ -41,6 +85,7 @@ namespace Entities.Migrations
                     EstimatedDuration = table.Column<int>(type: "integer", nullable: false),
                     PriorityLevel = table.Column<string>(type: "text", nullable: false),
                     EstimatedStartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EstimatedEndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ProjectStatus = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
@@ -101,7 +146,7 @@ namespace Entities.Migrations
                     Password = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     DepartmentId = table.Column<int>(type: "integer", nullable: false),
                     EmployeeType = table.Column<string>(type: "text", nullable: false),
-                    ExperienceLevel = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ExperienceYears = table.Column<int>(type: "integer", nullable: false),
                     ContractStart = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ContractEnd = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ContractStatus = table.Column<string>(type: "text", nullable: false),
@@ -122,6 +167,32 @@ namespace Entities.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ProjectRequiredSkills",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ProjectId = table.Column<int>(type: "integer", nullable: false),
+                    SkillId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProjectRequiredSkills", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProjectRequiredSkills_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "ProjectID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProjectRequiredSkills_Skills_SkillId",
+                        column: x => x.SkillId,
+                        principalTable: "Skills",
+                        principalColumn: "SkillID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ProjectRequiredRoles",
                 columns: table => new
                 {
@@ -130,7 +201,8 @@ namespace Entities.Migrations
                     ProjectID = table.Column<int>(type: "integer", nullable: false),
                     StaffRoleId = table.Column<int>(type: "integer", nullable: false),
                     RequiredCount = table.Column<int>(type: "integer", nullable: false),
-                    WorkingType = table.Column<string>(type: "text", nullable: false)
+                    WorkingType = table.Column<string>(type: "text", nullable: false),
+                    RequiredSkill = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -194,7 +266,10 @@ namespace Entities.Migrations
                     UserId = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     ProjectId = table.Column<int>(type: "integer", nullable: false),
                     RoleInProject = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Status = table.Column<string>(type: "text", nullable: false)
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    IsNotificationRead = table.Column<bool>(type: "boolean", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    EndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -291,6 +366,19 @@ namespace Entities.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.InsertData(
+                table: "Holidays",
+                columns: new[] { "Id", "Date", "Name" },
+                values: new object[,]
+                {
+                    { 1, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "New Year's Day" },
+                    { 2, new DateTime(2026, 4, 3, 0, 0, 0, 0, DateTimeKind.Utc), "Good Friday" },
+                    { 3, new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Utc), "Easter Sunday" },
+                    { 4, new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Labour Day" },
+                    { 5, new DateTime(2026, 8, 17, 0, 0, 0, 0, DateTimeKind.Utc), "Independence Day" },
+                    { 6, new DateTime(2026, 12, 25, 0, 0, 0, 0, DateTimeKind.Utc), "Christmas Day" }
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_ContractExtensions_RequestedBy",
                 table: "ContractExtensions",
@@ -316,6 +404,16 @@ namespace Entities.Migrations
                 name: "IX_ProjectRequiredRoles_StaffRoleId",
                 table: "ProjectRequiredRoles",
                 column: "StaffRoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProjectRequiredSkills_ProjectId",
+                table: "ProjectRequiredSkills",
+                column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProjectRequiredSkills_SkillId",
+                table: "ProjectRequiredSkills",
+                column: "SkillId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Skills_SkillName",
@@ -388,7 +486,16 @@ namespace Entities.Migrations
                 name: "ContractExtensions");
 
             migrationBuilder.DropTable(
+                name: "HireRequests");
+
+            migrationBuilder.DropTable(
+                name: "Holidays");
+
+            migrationBuilder.DropTable(
                 name: "ProjectRequiredRoles");
+
+            migrationBuilder.DropTable(
+                name: "ProjectRequiredSkills");
 
             migrationBuilder.DropTable(
                 name: "UserProjects");

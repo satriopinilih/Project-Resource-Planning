@@ -83,10 +83,8 @@ END $$;");
             var srSeniorDev = new StaffRole { RoleName = "Senior Dev" };
             var srJuniorDev = new StaffRole { RoleName = "Junior Dev" };
             var srArchitect = new StaffRole { RoleName = "Architect" };
-            var srProjectManager = new StaffRole { RoleName = "Project Manager" };
-            var srSoftwareEngineer = new StaffRole { RoleName = "Software Engineer" };
-            var srQATester = new StaffRole { RoleName = "QA Tester" };
-            _db.StaffRoles.AddRange(srSeniorBA, srJuniorBA, srSeniorDev, srJuniorDev, srArchitect, srProjectManager, srSoftwareEngineer, srQATester);
+            var srPm = new StaffRole { RoleName = "PM" };
+            _db.StaffRoles.AddRange(srSeniorBA, srJuniorBA, srSeniorDev, srJuniorDev, srArchitect, srPm);
 
             // Skills
             var skills = new[]
@@ -117,121 +115,22 @@ END $$;");
             };
             _db.Skills.AddRange(skills);
 
-            // Projects
+            // Projects (minimal auto-seed)
             var projects = new[]
             {
-                new Project { 
-                    ProjectName = "Digital Transformation Initiative", 
-                    ClientOrganization = "TechCorp Inc.", 
-                    ProjectDescription = "Transformation", 
-                    EstimatedDuration = 13, 
-                    PriorityLevel = PriorityLevel.High, 
-                    EstimatedStartDate = new DateTime(2026, 1, 6, 0, 0, 0, DateTimeKind.Utc), 
+                new Project {
+                    ProjectName = "Digital Transformation Initiative",
+                    ClientOrganization = "TechCorp Inc.",
+                    ProjectDescription = "Transformation",
+                    EstimatedDuration = 13,
+                    PriorityLevel = PriorityLevel.High,
+                    EstimatedStartDate = new DateTime(2026, 1, 6, 0, 0, 0, DateTimeKind.Utc),
                     EstimatedEndDate = new DateTime(2026, 1, 6, 0, 0, 0, DateTimeKind.Utc).AddMonths(13),
-                    ProjectStatus = ProjectStatus.Completed, 
-                    CreatedAt = now, 
-                    UpdatedAt = now, 
-                    CreatedBy = "system", 
-                    UpdatedBy = "system" 
-                },
-                new Project { 
-                    ProjectName = "Customer Portal Development", 
-                    ClientOrganization = "RetailMax Ltd.", 
-                    ProjectDescription = "Portal", 
-                    EstimatedDuration = 8, 
-                    PriorityLevel = PriorityLevel.Medium, 
-                    EstimatedStartDate = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc), 
-                    EstimatedEndDate = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(8),
-                    ProjectStatus = ProjectStatus.Running, 
-                    CreatedAt = now, 
-                    UpdatedAt = now, 
-                    CreatedBy = "system", 
-                    UpdatedBy = "system" 
-                },
-                new Project { 
-                    ProjectName = "E-commerce Platform Rebuild", 
-                    ClientOrganization = "ShopHub Co.", 
-                    ProjectDescription = "Rebuild", 
-                    EstimatedDuration = 21, 
-                    PriorityLevel = PriorityLevel.High, 
-                    EstimatedStartDate = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), 
-                    EstimatedEndDate = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(21),
-                    ProjectStatus = ProjectStatus.Running, 
-                    CreatedAt = now, 
-                    UpdatedAt = now, 
-                    CreatedBy = "system", 
-                    UpdatedBy = "system" 
-                },
-                new Project { 
-                    ProjectName = "Cloud Migration Project", 
-                    ClientOrganization = "FinanceFirst Bank", 
-                    ProjectDescription = "Migration", 
-                    EstimatedDuration = 26, 
-                    PriorityLevel = PriorityLevel.High, 
-                    EstimatedStartDate = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 
-                    EstimatedEndDate = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(26),
-                    ProjectStatus = ProjectStatus.Running, 
-                    CreatedAt = now, 
-                    UpdatedAt = now, 
-                    CreatedBy = "system", 
-                    UpdatedBy = "system" 
-                },
-                new Project { 
-                    ProjectName = "Analytics Dashboard", 
-                    ClientOrganization = "DataInsights Corp.", 
-                    ProjectDescription = "Analytics", 
-                    EstimatedDuration = 15, 
-                    PriorityLevel = PriorityLevel.Medium, 
-                    EstimatedStartDate = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), 
-                    EstimatedEndDate = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc).AddMonths(15),
-                    ProjectStatus = ProjectStatus.Completed, 
-                    CreatedAt = now, 
-                    UpdatedAt = now, 
-                    CreatedBy = "system", 
-                    UpdatedBy = "system" 
-                },
-                new Project { 
-                    ProjectName = "Internal Tools Dashboard", 
-                    ClientOrganization = "Internal", 
-                    ProjectDescription = "Internal tools", 
-                    EstimatedDuration = 14, 
-                    PriorityLevel = PriorityLevel.Medium, 
-                    EstimatedStartDate = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc), 
-                    EstimatedEndDate = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc).AddMonths(14),
-                    ProjectStatus = ProjectStatus.Running, 
-                    CreatedAt = now, 
-                    UpdatedAt = now, 
-                    CreatedBy = "system", 
-                    UpdatedBy = "system" 
-                },
-                new Project { 
-                    ProjectName = "Mobile App Launch", 
-                    ClientOrganization = "TravelEase Inc.", 
-                    ProjectDescription = "Mobile launch", 
-                    EstimatedDuration = 14, 
-                    PriorityLevel = PriorityLevel.High, 
-                    EstimatedStartDate = new DateTime(2026, 2, 10, 0, 0, 0, DateTimeKind.Utc), 
-                    EstimatedEndDate = new DateTime(2026, 2, 10, 0, 0, 0, DateTimeKind.Utc).AddMonths(14),
-                    ProjectStatus = ProjectStatus.Running, 
-                    CreatedAt = now, 
-                    UpdatedAt = now, 
-                    CreatedBy = "system", 
-                    UpdatedBy = "system" 
-                },
-                // ── TEST PROJECT for Smart Recommendation Panel ──
-                new Project { 
-                    ProjectName = "Healthcare Management System", 
-                    ClientOrganization = "MediCare Solutions", 
-                    ProjectDescription = "Build an integrated healthcare management platform with patient tracking, appointment scheduling, billing integration, and analytics dashboard. Requires strong BA skills for requirements gathering and senior engineering for the backend API and cloud architecture.", 
-                    EstimatedDuration = 16, 
-                    PriorityLevel = PriorityLevel.High, 
-                    EstimatedStartDate = now.AddDays(7), 
-                    EstimatedEndDate = now.AddDays(7).AddMonths(16),
-                    ProjectStatus = ProjectStatus.Pending, 
-                    CreatedAt = now, 
-                    UpdatedAt = now, 
-                    CreatedBy = "MKT001", 
-                    UpdatedBy = "MKT001" 
+                    ProjectStatus = ProjectStatus.Completed,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    CreatedBy = "system",
+                    UpdatedBy = "system"
                 }
             };
             _db.Projects.AddRange(projects);
@@ -240,26 +139,20 @@ END $$;");
 
             var users = new[]
             {
-                new User { UserId = "HR123", UserName = "HR Manager", Email = "hr.manager@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "10", ContractStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "GM001", UserName = "General Manager", Email = "gm@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "15", ContractStart = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "MKT001", UserName = "Market Manager", Email = "mrkt@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "15", ContractStart = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "HR123", UserName = "HR Manager", Email = "hr.manager@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 10, ContractStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "GM001", UserName = "General Manager", Email = "gm@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 15, ContractStart = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "PM001", UserName = "Project Manager", Email = "pm@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 10, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "MKT001", UserName = "Market Manager", Email = "mrkt@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 15, ContractStart = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
 
-                new User { UserId = "EMP001", UserName = "Sarah Johnson", Email = "sarah.johnson@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "8", ContractStart = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 14, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP002", UserName = "Michael Chen", Email = "michael.chen@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceLevel = "3", ContractStart = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP003", UserName = "Jessica Brown", Email = "jessica.brown@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "6", ContractStart = new DateTime(2024, 7, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP004", UserName = "Alex Turner", Email = "alex.turner@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "9", ContractStart = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP005", UserName = "Rachel Lee", Email = "rachel.lee@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceLevel = "5", ContractStart = new DateTime(2024, 8, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 5, 6, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.ExpiringSoon, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP006", UserName = "Linda Martinez", Email = "linda.martinez@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceLevel = "2", ContractStart = new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 9, 30, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP007", UserName = "David Kim", Email = "david.kim@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "7", ContractStart = new DateTime(2024, 9, 15, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 9, 14, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "PM001", UserName = "Project Manager", Email = "pm@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "10", ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-
-                // ── NEW EMPLOYEES for Smart Recommendation test ──
-                new User { UserId = "EMP008", UserName = "Nina Patel", Email = "nina.patel@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "5", ContractStart = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 5, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP009", UserName = "Omar Hassan", Email = "omar.hassan@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceLevel = "7", ContractStart = new DateTime(2024, 11, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 10, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP010", UserName = "Yuki Tanaka", Email = "yuki.tanaka@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceLevel = "4", ContractStart = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
+                new User { UserId = "EMP001", UserName = "Sarah Johnson", Email = "sarah.johnson@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 8, ContractStart = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 14, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP002", UserName = "Michael Chen", Email = "michael.chen@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceYears = 3, ContractStart = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
             };
             _db.Users.AddRange(users);
             await _db.SaveChangesAsync();
+
+            var existingUserIds = await _db.Users
+                .Select(u => u.UserId)
+                .ToHashSetAsync();
 
             var byName = skills.ToDictionary(s => s.SkillName, s => s.SkillID);
             var byProject = projects.ToDictionary(p => p.ProjectName, p => p.ProjectID);
@@ -271,60 +164,54 @@ END $$;");
                 new UserRole { UserId = "PM001", RoleId = rolePm.RoleId },
                 new UserRole { UserId = "MKT001", RoleId = roleMrkt.RoleId },
                 new UserRole { UserId = "EMP001", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP002", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP003", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP004", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP005", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP006", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP007", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP008", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP009", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP010", RoleId = roleStaff.RoleId }
+                new UserRole { UserId = "EMP002", RoleId = roleStaff.RoleId }
             );
 
             // Staff roles (display)
             _db.UserStaffRoles.AddRange(
                 new UserStaffRole { UserId = "EMP001", StaffRoleId = srSeniorBA.StaffRoleId },
                 new UserStaffRole { UserId = "EMP002", StaffRoleId = srJuniorBA.StaffRoleId },
-                new UserStaffRole { UserId = "EMP003", StaffRoleId = srSeniorDev.StaffRoleId },
-                new UserStaffRole { UserId = "EMP004", StaffRoleId = srArchitect.StaffRoleId },
-                new UserStaffRole { UserId = "EMP005", StaffRoleId = srSeniorDev.StaffRoleId },
-                new UserStaffRole { UserId = "EMP006", StaffRoleId = srJuniorDev.StaffRoleId },
-                new UserStaffRole { UserId = "EMP007", StaffRoleId = srSeniorBA.StaffRoleId },
-                // New employees
-                new UserStaffRole { UserId = "EMP008", StaffRoleId = srJuniorBA.StaffRoleId },      // Nina: Junior BA (available, no project yet)
-                new UserStaffRole { UserId = "EMP009", StaffRoleId = srSeniorDev.StaffRoleId },    // Omar: Senior Dev (available)
-                new UserStaffRole { UserId = "EMP010", StaffRoleId = srProjectManager.StaffRoleId } // Yuki: Project Manager (available)
+                new UserStaffRole { UserId = "PM001", StaffRoleId = srPm.StaffRoleId }
             );
 
-            // Skill mapping
+            // Skill mapping — collect all items then AddRange for batch efficiency
+            var allUserSkills = new List<UserSkill>();
             void AddSkills(string userId, params string[] names)
             {
                 foreach (var name in names)
                 {
-                    _db.UserSkills.Add(new UserSkill { UserId = userId, SkillId = byName[name] });
+                    allUserSkills.Add(new UserSkill { UserId = userId, SkillId = byName[name] });
                 }
             }
 
             AddSkills("EMP001", "Business Analysis", "Requirements Gathering", "Stakeholder Management");
             AddSkills("EMP002", "Business Analysis", "Documentation", "Testing");
-            AddSkills("EMP003", "React", "Node.js", "TypeScript", "System Design");
-            AddSkills("EMP004", "Solution Architecture", "Cloud Design", "Microservices", "System Integration");
-            AddSkills("EMP005", "Python", "Django", "PostgreSQL", "API Design");
-            AddSkills("EMP006", "JavaScript", "React", "CSS", "Git");
-            AddSkills("EMP007", "Business Analysis", "Agile", "Scrum", "Product Management");
-            // New employee skills
-            AddSkills("EMP008", "Business Analysis", "Requirements Gathering", "Documentation", "Agile"); // Nina: Strong BA
-            AddSkills("EMP009", "Python", "PostgreSQL", "API Design", "System Design", "React", "Node.js"); // Omar: Full-stack Senior Dev
-            AddSkills("EMP010", "Testing", "Documentation", "JavaScript", "Git", "Agile"); // Yuki: QA + testing
+            AddSkills("PM001", "Agile", "Scrum", "Product Management");
 
-            // Project assignments
+            // Use AddRange for skill batch insert
+            _db.UserSkills.AddRange(allUserSkills);
+
+            // Project assignments — collect all items then AddRange for batch efficiency
+            var allUserProjects = new List<UserProject>();
+            var skippedProjectAssignments = new List<string>();
             void AddProject(string userId, string projectName, string roleInProject, UserProjectStatus status)
             {
-                _db.UserProjects.Add(new UserProject
+                if (!existingUserIds.Contains(userId))
+                {
+                    skippedProjectAssignments.Add($"{userId}:{projectName}");
+                    return;
+                }
+
+                if (!byProject.TryGetValue(projectName, out var projectId))
+                {
+                    skippedProjectAssignments.Add($"{userId}:{projectName}");
+                    return;
+                }
+
+                allUserProjects.Add(new UserProject
                 {
                     UserId = userId,
-                    ProjectId = byProject[projectName],
+                    ProjectId = projectId,
                     RoleInProject = roleInProject,
                     Status = status
                 });
@@ -332,18 +219,16 @@ END $$;");
 
             AddProject("EMP001", "Digital Transformation Initiative", "Senior BA", UserProjectStatus.Completed);
             AddProject("EMP002", "Digital Transformation Initiative", "Junior BA", UserProjectStatus.Completed);
-            AddProject("EMP002", "Customer Portal Development", "Junior BA", UserProjectStatus.Assigned);
-            AddProject("EMP003", "E-commerce Platform Rebuild", "Senior Dev", UserProjectStatus.Assigned);
-            AddProject("EMP004", "Cloud Migration Project", "Architect", UserProjectStatus.Assigned);
-            AddProject("EMP005", "Analytics Dashboard", "Senior Dev", UserProjectStatus.Completed);
-            AddProject("EMP006", "Internal Tools Dashboard", "Junior Dev", UserProjectStatus.Assigned);
-            AddProject("EMP007", "Mobile App Launch", "Senior BA", UserProjectStatus.Assigned);
+            AddProject("PM001", "Digital Transformation Initiative", "PM", UserProjectStatus.Assigned);
 
-            AddProject("PM001", "Customer Portal Development", "Project Manager", UserProjectStatus.Assigned);
-            AddProject("PM001", "E-commerce Platform Rebuild", "Project Manager", UserProjectStatus.Assigned);
-            AddProject("PM001", "Cloud Migration Project", "Project Manager", UserProjectStatus.Assigned);
-            AddProject("PM001", "Digital Transformation Initiative", "Project Manager", UserProjectStatus.Assigned);
+            // Use AddRange for project batch insert
+            _db.UserProjects.AddRange(allUserProjects);
 
+            if (skippedProjectAssignments.Count > 0)
+            {
+                return StatusCode(500, ApiResponse<string>.ErrorResponse(
+                    $"Seed failed: Missing references for project assignments ({string.Join(", ", skippedProjectAssignments)})"));
+            }
 
             _db.ContractExtensions.Add(
                 new ContractExtension
@@ -360,9 +245,8 @@ END $$;");
                 }
             );
 
-            // ── ProjectRequiredRoles for Healthcare Management System ──
-            // This is what the Smart Recommendation Panel uses to generate team suggestions
-            var hmsProject = projects.First(p => p.ProjectName == "Healthcare Management System");
+            // ── ProjectRequiredRoles for Digital Transformation Initiative only ──
+            var dtiProject = projects.First(p => p.ProjectName == "Digital Transformation Initiative");
             var staffRoleMap = new Dictionary<string, int>
             {
                 { "Senior BA",       srSeniorBA.StaffRoleId },
@@ -370,27 +254,24 @@ END $$;");
                 { "Senior Dev",      srSeniorDev.StaffRoleId },
                 { "Junior Dev",      srJuniorDev.StaffRoleId },
                 { "Architect",       srArchitect.StaffRoleId },
-                { "Project Manager", srProjectManager.StaffRoleId },
+                { "PM", srPm.StaffRoleId },
             };
 
             _db.ProjectRequiredRoles.AddRange(
-                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Senior BA"],  RequiredCount = 1, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Junior BA"],  RequiredCount = 1, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Senior Dev"], RequiredCount = 2, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Junior Dev"], RequiredCount = 2, WorkingType = WorkingType.Dedicated },
-                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Architect"],  RequiredCount = 1, WorkingType = WorkingType.NonDedicated },
-                new ProjectRequiredRole { ProjectID = hmsProject.ProjectID, StaffRoleId = staffRoleMap["Project Manager"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated }
+                // ── Digital Transformation Initiative ──
+                new ProjectRequiredRole { ProjectID = dtiProject.ProjectID, StaffRoleId = staffRoleMap["Senior BA"], RequiredCount = 1, WorkingType = WorkingType.Dedicated },
+                new ProjectRequiredRole { ProjectID = dtiProject.ProjectID, StaffRoleId = staffRoleMap["Junior BA"], RequiredCount = 1, WorkingType = WorkingType.Dedicated },
+                new ProjectRequiredRole { ProjectID = dtiProject.ProjectID, StaffRoleId = staffRoleMap["Senior Dev"], RequiredCount = 1, WorkingType = WorkingType.Dedicated },
+                new ProjectRequiredRole { ProjectID = dtiProject.ProjectID, StaffRoleId = staffRoleMap["PM"], RequiredCount = 1, WorkingType = WorkingType.NonDedicated }
             );
 
             // ── Project-level Required Skills ──
-            // These are the skills needed for this project (separate from roles)
-            // The Smart Recommendation Panel uses these to match employees
-            var projectSkillNames = new[] { "Python", "React", "PostgreSQL", "API Design", "System Design", "Business Analysis", "Testing", "Documentation" };
-            foreach (var skillName in projectSkillNames)
-            {
-                if (byName.TryGetValue(skillName, out var skillId))
-                    _db.ProjectRequiredSkills.Add(new ProjectRequiredSkill { ProjectId = hmsProject.ProjectID, SkillId = skillId });
-            }
+            var projectSkillNames = new[] { "Business Analysis", "Requirements Gathering", "Testing", "Documentation" };
+            var projectRequiredSkills = projectSkillNames
+                .Where(skillName => byName.ContainsKey(skillName))
+                .Select(skillName => new ProjectRequiredSkill { ProjectId = dtiProject.ProjectID, SkillId = byName[skillName] })
+                .ToList();
+            _db.ProjectRequiredSkills.AddRange(projectRequiredSkills);
 
             await _db.SaveChangesAsync();
 

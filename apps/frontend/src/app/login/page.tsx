@@ -43,34 +43,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = async (identifier: string) => {
-    setUserId(identifier);
-    setPassword("password123");
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await login(identifier, "password123");
-      localStorage.setItem("auth_token", result.token);
-      localStorage.setItem("auth_user", JSON.stringify({
-        userId: result.userId,
-        userName: result.userName,
-        email: result.email,
-        roles: result.roles,
-        mustChangePassword: result.mustChangePassword
-      }));
-      if (result.mustChangePassword) {
-        router.push('/settings?forcePasswordChange=1');
-      } else {
-        router.push(getDashboardPathByRoles(result.roles));
-      }
-    } catch {
-      setError("Invalid User ID or Password");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-[#f0f4ff] via-[#e8eefb] to-[#f5f7ff] overflow-hidden p-6">
       {/* Subtle animated background blobs */}
@@ -116,7 +88,7 @@ export default function LoginPage() {
             <input
               id="userId"
               type="text"
-              placeholder="HR123 or hr.manager@company.com"
+              placeholder="UserId"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               className="w-full h-12 px-4 text-[0.95rem] text-[#1a1f36] bg-[#f7f9fc] border-[1.5px] border-[#e2e8f0] rounded-xl outline-none transition-all duration-200 placeholder:text-[#a0aec0] hover:border-[#c5d1e8] hover:bg-[#f0f4fb] focus:border-[#3366ff] focus:bg-white focus:shadow-[0_0_0_3px_rgba(51,102,255,0.1)]"
@@ -164,46 +136,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="w-full mt-7">
-          <h3 className="text-center text-sm font-medium text-gray-700 mb-3">Quick Login (Demo)</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("GM001")}
-              className="h-11 rounded-xl bg-[#e7dbff] text-[#6a00ff] font-semibold hover:opacity-90"
-            >
-              GM
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("PM001")}
-              className="h-11 rounded-xl bg-[#d7f2de] text-[#0c8f45] font-semibold hover:opacity-90"
-            >
-              PM
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("MKT001")}
-              className="h-11 rounded-xl bg-[#dce8f8] text-[#1950d6] font-semibold hover:opacity-90"
-            >
-              Marketing
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("EMP001")}
-              className="h-11 rounded-xl bg-[#f6e7cf] text-[#d14f00] font-semibold hover:opacity-90"
-            >
-              Staff
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("HR123")}
-              className="h-11 rounded-xl bg-[#f1dff0] text-[#b02086] font-semibold hover:opacity-90 col-span-2"
-            >
-              HR
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

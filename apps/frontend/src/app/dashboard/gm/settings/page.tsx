@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useSearchParams } from "next/navigation";
 import {
@@ -19,7 +19,9 @@ interface UserProfile {
     roles: string[];
 }
 
-export default function SettingsPage() {
+type HeaderRole = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
+
+function GMSettingsContent() {
     const searchParams = useSearchParams();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -82,7 +84,7 @@ export default function SettingsPage() {
 
     return (
         <div className="flex flex-col min-h-screen">
-        <AppHeader title="Settings" role="GM" />
+            <AppHeader title="Settings" role={(profile?.roles?.[0] as HeaderRole) ?? "GM"} />
 
             <div className="p-8 w-full space-y-8 pb-16">
                 {/* Profile Information */}
@@ -172,25 +174,25 @@ export default function SettingsPage() {
                         )}
 
                         <form onSubmit={handleChangePassword} className="space-y-4 w-full">
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
-                            <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
-                            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
-                            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
-                        </div>
-                        {passwordError && <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>}
-                        {passwordSuccess && <p className="text-sm text-green-600 dark:text-green-400">{passwordSuccess}</p>}
-                        <div className="flex justify-center">
-                            <button type="submit" disabled={savingPassword} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
-                                {savingPassword ? "Saving..." : "Update Password"}
-                            </button>
-                        </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 py-2.5 text-sm" />
+                            </div>
+                            {passwordError && <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>}
+                            {passwordSuccess && <p className="text-sm text-green-600 dark:text-green-400">{passwordSuccess}</p>}
+                            <div className="flex justify-center">
+                                <button type="submit" disabled={savingPassword} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                                    {savingPassword ? "Saving..." : "Update Password"}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -223,6 +225,18 @@ export default function SettingsPage() {
                 </div>
             </div >
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+            </div>
+        }>
+            <GMSettingsContent />
+        </Suspense>
     );
 }
 

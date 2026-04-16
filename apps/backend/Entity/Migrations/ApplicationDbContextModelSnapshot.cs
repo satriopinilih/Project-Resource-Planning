@@ -481,10 +481,8 @@ namespace Entities.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ExperienceLevel")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int>("ExperienceYears")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Password")
                         .IsRequired()

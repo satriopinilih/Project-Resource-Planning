@@ -51,6 +51,12 @@ public class ApplicationDbContext : DbContext
             .Property(pr => pr.WorkingType)
             .HasConversion<string>();
 
+        modelBuilder.Entity<ProjectRequiredRole>()
+            .Ignore(pr => pr.RequiredSkill);
+
+        modelBuilder.Entity<ProjectRequiredRole>()
+            .Ignore(pr => pr.RequiredSkill);
+
         modelBuilder.Entity<UserProject>()
             .Property(up => up.Status)
             .HasConversion<string>();

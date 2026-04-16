@@ -21,6 +21,7 @@ export type LoginResponse = {
 type BackendUserProject = {
   projectId: number;
   projectName: string;
+  clientOrganization?: string;
   roleInProject: string;
   startDate: string;
   endDate: string | null;
@@ -34,7 +35,7 @@ type BackendUser = {
   departmentId: number;
   departmentName: string;
   employeeType: 'Contract' | 'Permanent' | string | number;
-  experienceLevel: string;
+  experienceYears: number;
   contractStart: string;
   contractEnd: string;
   contractStatus: 'Active' | 'Expired' | 'ExpiringSoon';
@@ -63,6 +64,9 @@ type BackendRequestHistoryItem = {
   employeeName: string;
   staffRole: string;
   extension: string;
+  projectName?: string;
+  reason?: string;
+  reviewNote?: string;
   requestedDate: string;
   status: string;
   reviewedDate: string | null;
@@ -83,8 +87,8 @@ export type BackendRequiredRole = {
   staffRoleId: number;
   roleName: string;
   requiredCount: number;
-  workingType: string;
-  filledCount: number;
+  workingType: string | number;
+  filledCount?: number;
 };
 
 export type BackendProject = {
@@ -100,6 +104,7 @@ export type BackendProject = {
   members: BackendProjectMember[];
   requiredRoles: BackendRequiredRole[];
   requiredSkills: string[]; // Project-level skill requirements
+  requiredSkillIds: number[];
   isUnread: boolean;
 };
 
@@ -117,7 +122,7 @@ export type BackendEmployee = {
   departmentId: number;
   departmentName: string;
   employeeType: number; // 0=Contract,1=Permanent
-  experienceLevel: string;
+  experienceYears: number;
   contractStart: string;
   contractEnd: string;
   contractStatus: number; // 0=Active,1=Expired,2=ExpiringSoon
@@ -171,7 +176,7 @@ const formatDate = (date: string) =>
 const mapProject = (project: BackendUserProject): Project => ({
   id: String(project.projectId),
   name: project.projectName,
-  client: 'Client',
+  client: project.clientOrganization || 'In-House',
   startDate: formatDate(project.startDate),
   endDate: project.endDate ? formatDate(project.endDate) : 'Ongoing',
   status: 'Active'
@@ -198,7 +203,7 @@ const mapEmployee = (user: BackendUser): Employee => {
     contractEnd: formatDate(user.contractEnd),
     contractStatus,
     daysRemaining: user.daysRemaining,
-    experience: user.experienceLevel,
+    experienceYears: user.experienceYears,
     skills: user.skills,
     projects: user.projects.map(mapProject)
   };
@@ -340,10 +345,16 @@ export async function getProjectById(id: string): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`);
 }
 
-export async function updateProject(id: number, projectData: Partial<BackendProject>): Promise<BackendProject> {
+export async function updateProject(id: number, projectData: any): Promise<BackendProject> {
   return fetchJson<BackendProject>(`/api/projects/${id}`, {
     method: 'PUT',
     body: JSON.stringify(projectData)
+  });
+}
+
+export async function deleteProject(id: number): Promise<void> {
+  await fetchJson(`/api/projects/${id}`, {
+    method: 'DELETE'
   });
 }
 
@@ -381,6 +392,14 @@ export async function getEmployeeFormOptions(): Promise<EmployeeFormOptions> {
   return fetchJson<EmployeeFormOptions>('/api/employees/form-options');
 }
 
+export async function getNextEmployeeUserId(staffRoleId?: number): Promise<string> {
+  const query = typeof staffRoleId === 'number' && staffRoleId > 0
+    ? `?staffRoleId=${staffRoleId}`
+    : '';
+  const data = await fetchJson<{ userId: string }>(`/api/employees/next-user-id${query}`);
+  return data.userId;
+}
+
 export async function createContractExtension(
   userId: string,
   extensionDuration: number,
@@ -399,7 +418,7 @@ export type CreateEmployeeRequest = {
   password: string;
   departmentId: number;
   employeeType: number;
-  experienceLevel: string;
+  experienceYears: number;
   contractStart: string;
   contractEnd: string;
   skillIds: number[];
@@ -449,6 +468,9 @@ export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryIte
     employeeName: item.employeeName,
     staffRole: item.staffRole,
     extension: item.extension,
+    projectName: item.projectName,
+    reason: item.reason || undefined,
+    reviewNote: item.reviewNote || undefined,
     requestedDate: formatDate(item.requestedDate),
     status: item.status,
     reviewedDate: item.reviewedDate ? formatDate(item.reviewedDate) : undefined
@@ -469,6 +491,29 @@ export async function createHireRequest(payload: CreateHireRequestPayload): Prom
     body: JSON.stringify(payload)
   });
 }
+
+export async function createTimelineEditRequest(payload: {
+  projectId: number;
+  projectName: string;
+  notes: string;
+  currentStartDate: string;
+  currentEndDate: string;
+}): Promise<HireRequest> {
+  return fetchJson<HireRequest>('/api/hirerequests', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: payload.projectId,
+      projectName: payload.projectName,
+      roleNeeded: 'Timeline Edit Request',
+      quantity: 1,
+      startDate: payload.currentStartDate,
+      endDate: payload.currentEndDate,
+      notes: `[TIMELINE EDIT REQUEST] ${payload.notes}`,
+    } satisfies CreateHireRequestPayload)
+  });
+}
+
+
 
 export async function startHireRequest(id: number): Promise<void> {
   await fetchJson(`/api/hirerequests/${id}/start`, { method: 'POST' });
@@ -515,6 +560,15 @@ export interface TimelineItem {
     projectId?: number;
   }[];
 }
+export interface TimelineEditRequest {
+  id: number;
+  projectId: number;
+  projectName: string;
+  notes: string;
+  currentStartDate: string;
+  currentEndDate: string;
+  status?: 'pending' | 'approved' | 'rejected';
+}
 
 export async function getTimelineStats(): Promise<TimelineStats> {
   return fetchRaw<TimelineStats>('/api/timeline/stats');
@@ -530,6 +584,34 @@ export async function getResourceTimeline(): Promise<TimelineItem[]> {
 
 export async function getHolidays(): Promise<BackendHoliday[]> {
   return fetchJson<BackendHoliday[]>('/api/holidays');
+}
+
+export async function getTimelineEditRequests(): Promise<TimelineEditRequest[]> {
+  const allHireRequests = await getHireRequests();
+
+  const timelineEditRequests = allHireRequests.filter(
+    (req) =>
+      req.roleNeeded === 'Timeline Edit Request' &&
+      (req.status === 'Open' || req.status === 'InProgress')
+  );
+
+  return timelineEditRequests.map((req) => {
+    let notes = req.notes;
+    const prefix = '[TIMELINE EDIT REQUEST] ';
+    if (notes.startsWith(prefix)) {
+      notes = notes.substring(prefix.length);
+    }
+
+    return {
+      id: req.hireRequestId,
+      projectId: req.projectId ?? 0,
+      projectName: req.projectName,
+      notes: notes,
+      currentStartDate: req.startDate,
+      currentEndDate: req.endDate,
+      status: 'pending', // ✅ always 'pending' for these filtered requests
+    };
+  });
 }
 
 // ── Smart Recommendation Panel Types ──

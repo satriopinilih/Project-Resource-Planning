@@ -48,9 +48,9 @@ export default function MarketingSidebar() {
             localStorage.removeItem("auth_user");
             window.location.href = "/login";
           }}
-          className="flex items-center gap-4 px-4 py-3 rounded-xl text-[15px] font-medium text-gray-600 dark:text-[var(--dash-text-primary)] hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full group"
+          className="flex items-center gap-4 px-4 py-3 rounded-xl text-[15px] font-medium text-gray-600 dark:text-[var(--dash-text-primary)] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full group"
         >
-          <LogOut size={20} className="text-gray-500 dark:text-[var(--dash-text-muted)] group-hover:text-red-600 dark:group-hover:text-red-400" />
+          <LogOut size={20} className="text-gray-500 dark:text-[var(--dash-text-muted)] group-hover:text-red-700 dark:group-hover:text-red-400" />
           Logout
         </button>
       </div>
