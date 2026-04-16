@@ -18,6 +18,7 @@ import {
   getEmployeeFormOptions,
   getHireRequests,
   getRawEmployees,
+  getNextEmployeeUserId,
   getRequestHistory,
   startHireRequest,
   EmployeeFormOptions,
@@ -200,12 +201,7 @@ export default function HRDashboard() {
       return;
     }
 
-    const existingNumericIds = employees
-      .map((e) => e.userId)
-      .filter((id) => /^EMP\d+$/.test(id))
-      .map((id) => Number(id.slice(3)));
-    const nextNumber = (existingNumericIds.length ? Math.max(...existingNumericIds) : 199) + 1;
-    const nextId = `EMP${String(nextNumber).padStart(3, '0')}`;
+    const nextId = await getNextEmployeeUserId(hireForm.staffRoleId);
 
     setIsAddingEmployee(true);
     setHireFormError(null);
@@ -221,7 +217,9 @@ export default function HRDashboard() {
         contractStart: hireForm.contractStart,
         contractEnd: hireForm.contractEnd,
         skillIds: hireForm.skillIds,
-        roleIds: [hireForm.roleId],
+        roleIds: [
+          employeeFormOptions.roles.find((r) => r.name === (hireForm.role === 'PM' ? 'PM' : 'Staff'))?.id ?? hireForm.roleId
+        ],
         staffRoleIds: hireForm.staffRoleId ? [hireForm.staffRoleId] : []
       });
 
@@ -593,7 +591,14 @@ export default function HRDashboard() {
                   onChange={(e) => {
                     const nextStaffRoleId = Number(e.target.value);
                     const selected = employeeFormOptions.staffRoles.find((r) => r.id === nextStaffRoleId);
-                    setHireForm((prev) => ({ ...prev, staffRoleId: nextStaffRoleId, role: selected?.name ?? prev.role }));
+                    const mappedRoleName = selected?.name === 'PM' ? 'PM' : 'Staff';
+                    const mappedRoleId = employeeFormOptions.roles.find((r) => r.name === mappedRoleName)?.id ?? hireForm.roleId;
+                    setHireForm((prev) => ({
+                      ...prev,
+                      staffRoleId: nextStaffRoleId,
+                      role: selected?.name ?? prev.role,
+                      roleId: mappedRoleId
+                    }));
                   }}
                   className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm"
                 >

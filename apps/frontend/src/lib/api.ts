@@ -388,6 +388,14 @@ export async function getEmployeeFormOptions(): Promise<EmployeeFormOptions> {
   return fetchJson<EmployeeFormOptions>('/api/employees/form-options');
 }
 
+export async function getNextEmployeeUserId(staffRoleId?: number): Promise<string> {
+  const query = typeof staffRoleId === 'number' && staffRoleId > 0
+    ? `?staffRoleId=${staffRoleId}`
+    : '';
+  const data = await fetchJson<{ userId: string }>(`/api/employees/next-user-id${query}`);
+  return data.userId;
+}
+
 export async function createContractExtension(
   userId: string,
   extensionDuration: number,
