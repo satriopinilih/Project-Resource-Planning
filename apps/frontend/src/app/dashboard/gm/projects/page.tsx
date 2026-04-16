@@ -10,7 +10,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Active" | "Scheduled" | "Pending" | "Completed";
+  status: "Running" | "Scheduled" | "Pending" | "Completed";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -32,7 +32,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string): Project["statu
         today.setHours(0, 0, 0, 0);
         if (startDate > today) return "Scheduled";
       }
-      return "Active";
+      return "Running";
     }
     case 3: return "Completed";
     default: return "Pending";
@@ -46,7 +46,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Pending", "Scheduled", "Active", "Completed"];
+const tabs = ["All", "Pending", "Scheduled", "Running", "Completed"];
 
 function GMProjectsContent() {
   const router = useRouter();
@@ -219,8 +219,6 @@ function GMProjectsContent() {
                     <option value="oldest">Timeline (Oldest First)</option>
                     <option value="most-member">Team (Most Members)</option>
                     <option value="least-member">Team (Least Members)</option>
-                    <option value="highest-budget">Budget (Highest)</option>
-                    <option value="lowest-budget">Budget (Lowest)</option>
                   </select>
                 </div>
               </div>
@@ -237,14 +235,13 @@ function GMProjectsContent() {
                   <th className="font-semibold py-4 px-4">Status</th>
                   <th className="font-semibold py-4 px-4">Timeline</th>
                   <th className="font-semibold py-4 px-4">PM</th>
-                  <th className="font-semibold py-4 px-4">Team</th>
-                  <th className="font-semibold py-4 pr-6 pl-4">Budget</th>
+                  <th className="font-semibold py-4 pr-6 pl-4">Team</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                    <td colSpan={6} className="py-8 text-center text-[var(--dash-text-muted)]">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Loader2 className="w-6 h-6 animate-spin text-[#3b82f6]" />
                         <span className="text-[13px]">Loading projects...</span>
@@ -253,7 +250,7 @@ function GMProjectsContent() {
                   </tr>
                 ) : filteredProjects.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                    <td colSpan={6} className="py-8 text-center text-[var(--dash-text-muted)]">
                       No projects found.
                     </td>
                   </tr>
@@ -286,7 +283,7 @@ function GMProjectsContent() {
                               ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                               : project.status === "Scheduled"
                                 ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
-                                : project.status === "Active"
+                                : project.status === "Running"
                                   ? "bg-green-500/10 text-green-400 border-green-500/20"
                                   : project.status === "Completed"
                                     ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
@@ -308,11 +305,8 @@ function GMProjectsContent() {
                           {project.team}
                         </div>
                       </td>
-                      <td className="py-4 pr-6 pl-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[13px] font-medium text-[var(--dash-text-primary)]">{project.budget}</span>
-                          <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
-                        </div>
+                      <td className="py-4 pr-6 pl-4 text-right">
+                        <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
                       </td>
                     </tr>
                   ))

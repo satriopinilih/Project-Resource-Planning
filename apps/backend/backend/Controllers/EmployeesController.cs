@@ -61,6 +61,13 @@ public class EmployeesController : ControllerBase
         return Ok(ApiResponse<EmployeeFormOptionsDto>.SuccessResponse(data));
     }
 
+    [HttpGet("next-user-id")]
+    public async Task<ActionResult<ApiResponse<object>>> GetNextUserId([FromQuery] int? staffRoleId)
+    {
+        var userId = await _service.GetNextUserIdAsync(staffRoleId);
+        return Ok(ApiResponse<object>.SuccessResponse(new { userId }));
+    }
+
     [HttpPost]
     public async Task<ActionResult<ApiResponse<CreateUserResultDto>>> Create([FromBody] CreateUserDto request)
     {
