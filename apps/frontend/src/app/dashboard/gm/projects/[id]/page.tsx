@@ -47,7 +47,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
         today.setHours(0, 0, 0, 0);
         if (startDate > today) return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
       }
-      return { label: "Active", class: "bg-green-500/10 text-green-400 border-green-500/20" };
+      return { label: "Running", class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
     default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
@@ -141,6 +141,8 @@ export default function ProjectDetailsPage() {
   const [timelineEditNotes, setTimelineEditNotes] = useState("");
   const [timelineEditSubmitting, setTimelineEditSubmitting] = useState(false);
   const [timelineEditRequested, setTimelineEditRequested] = useState(false);
+  const [timelineEditStart, setTimelineEditStart] = useState("");
+  const [timelineEditEnd, setTimelineEditEnd] = useState("");
 
   // Start Project state
   const [startingProject, setStartingProject] = useState(false);
@@ -236,11 +238,29 @@ export default function ProjectDetailsPage() {
     return { available: true, reason: "Available for this timeline" };
   };
 
+  // Role-based filtering map: when assigning from a role card, show only matching employees
+  const getRoleFilter = (roleName: string): string[] => {
+    const r = roleName.toLowerCase();
+    if (r === "pm") return ["pm"];
+    if (r === "architect") return ["architect"];
+    if (r === "senior dev") return ["senior dev"];
+    if (r === "junior dev") return ["senior dev", "junior dev"];
+    if (r === "senior ba") return ["senior ba"];
+    if (r === "junior ba") return ["senior ba", "junior ba"];
+    return []; // empty = no filter, show all
+  };
+
   const filteredEmployees = useMemo(() => {
     const assignedIds = new Set(project?.members?.map((m) => m.userId) ?? []);
+    const roleFilters = assignFromRole && assignRole ? getRoleFilter(assignRole) : [];
     return employees
       .filter((emp) => {
         if (assignedIds.has(emp.userId)) return false;
+        // Role-based filtering when opened from a role card
+        if (roleFilters.length > 0) {
+          const empRole = (emp.role || "").toLowerCase();
+          if (!roleFilters.some(rf => empRole.includes(rf))) return false;
+        }
         if (!empSearch) return true;
         const q = empSearch.toLowerCase();
         return (emp.userName.toLowerCase().includes(q) || emp.role?.toLowerCase().includes(q) || emp.email.toLowerCase().includes(q));
@@ -252,7 +272,7 @@ export default function ProjectDetailsPage() {
         if (!aAvail && bAvail) return 1;
         return a.userName.localeCompare(b.userName);
       });
-  }, [employees, empSearch, project]);
+  }, [employees, empSearch, project, assignFromRole, assignRole]);
 
   const handleAssign = async () => {
     if (!selectedEmp || !project) return;
@@ -311,10 +331,16 @@ export default function ProjectDetailsPage() {
     if (!project) return;
     try {
       setTimelineEditSubmitting(true);
+      // Build notes including requested dates
+      const requestedDateInfo = (timelineEditStart || timelineEditEnd)
+        ? `\nRequested Timeline: ${timelineEditStart ? formatDate(timelineEditStart) : "(same)"} - ${timelineEditEnd ? formatDate(timelineEditEnd) : "(same)"}`
+        : "";
+      const fullNotes = (timelineEditNotes || `GM requesting timeline review for project ${project.projectName}`) + requestedDateInfo;
+
       await createTimelineEditRequest({
         projectId: project.projectId,
         projectName: project.projectName,
-        notes: timelineEditNotes || `GM requesting timeline review for project ${project.projectName}`,
+        notes: fullNotes,
         currentStartDate: project.estimatedStartDate,
         currentEndDate: project.estimatedEndDate,
       });
@@ -330,6 +356,8 @@ export default function ProjectDetailsPage() {
       setTimelineEditOpen(false);
       setTimelineEditRequested(true);
       setTimelineEditNotes("");
+      setTimelineEditStart("");
+      setTimelineEditEnd("");
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to send timeline edit request");
     } finally {
@@ -404,7 +432,7 @@ export default function ProjectDetailsPage() {
                 <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed max-w-4xl">{project.projectDescription}</p>
               </div>
 
-              {project.projectStatus !== 0 && (
+              {project.projectStatus !== 0 && project.projectStatus !== 3 && (
                 <div className="flex gap-3 shrink-0">
                   <button
                     onClick={() => setIsEditMode(!isEditMode)}
@@ -550,7 +578,7 @@ export default function ProjectDetailsPage() {
                               onClick={() => openAssignModal(role.roleName)}
                               className="px-3 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md text-[12px] font-bold flex items-center gap-1.5 transition-colors"
                             >
-                              <UserPlus size={14} /> Assign
+                              <UserPlus size={14} /> Assign ({membersInRole.length}/{role.requiredCount})
                             </button>
                           )}
                         </div>
@@ -921,9 +949,33 @@ export default function ProjectDetailsPage() {
               </div>
 
               <div>
-                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Proposed Timeline & Notes</label>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Requested Timeline</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-[var(--dash-text-faint)] mb-1 uppercase tracking-wider font-bold">Start Date</label>
+                    <input
+                      type="date"
+                      value={timelineEditStart}
+                      onChange={(e) => setTimelineEditStart(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[var(--dash-text-faint)] mb-1 uppercase tracking-wider font-bold">End Date</label>
+                    <input
+                      type="date"
+                      value={timelineEditEnd}
+                      onChange={(e) => setTimelineEditEnd(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Notes</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={timelineEditNotes}
                   onChange={(e) => setTimelineEditNotes(e.target.value)}
                   placeholder="e.g. Please delay the start date by 2 weeks due to resource constraints."

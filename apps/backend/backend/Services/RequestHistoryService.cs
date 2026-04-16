@@ -42,7 +42,9 @@ public class RequestHistoryService
             Extension = $"{c.ExtensionDuration} months",
             RequestedDate = c.CreatedAt,
             Status = c.Status,
-            ReviewedDate = c.ProcessedAt
+            ReviewedDate = c.ProcessedAt,
+            Reason = c.ReasonForExtension,
+            DeclineReason = c.DeclineReason
         });
 
         var hireRows = await _db.HireRequests

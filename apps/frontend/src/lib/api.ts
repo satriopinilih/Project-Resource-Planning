@@ -21,6 +21,7 @@ export type LoginResponse = {
 type BackendUserProject = {
   projectId: number;
   projectName: string;
+  clientOrganization: string;
   roleInProject: string;
   startDate: string;
   endDate: string | null;
@@ -66,6 +67,8 @@ type BackendRequestHistoryItem = {
   requestedDate: string;
   status: string;
   reviewedDate: string | null;
+  reason: string | null;
+  declineReason: string | null;
 };
 
 export type BackendProjectMember = {
@@ -172,7 +175,7 @@ const formatDate = (date: string) =>
 const mapProject = (project: BackendUserProject): Project => ({
   id: String(project.projectId),
   name: project.projectName,
-  client: 'Client',
+  client: project.clientOrganization || 'Client',
   startDate: formatDate(project.startDate),
   endDate: project.endDate ? formatDate(project.endDate) : 'Ongoing',
   status: 'Active'
@@ -458,7 +461,9 @@ export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryIte
     extension: item.extension,
     requestedDate: formatDate(item.requestedDate),
     status: item.status,
-    reviewedDate: item.reviewedDate ? formatDate(item.reviewedDate) : undefined
+    reviewedDate: item.reviewedDate ? formatDate(item.reviewedDate) : undefined,
+    reason: item.reason || undefined,
+    declineReason: item.declineReason || undefined
   }));
 }
 

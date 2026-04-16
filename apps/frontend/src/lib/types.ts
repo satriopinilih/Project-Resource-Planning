@@ -51,4 +51,6 @@ export interface RequestHistoryItem {
   requestedDate: string;
   status: string;
   reviewedDate?: string;
+  reason?: string;
+  declineReason?: string;
 }
