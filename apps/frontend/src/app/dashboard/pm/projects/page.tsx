@@ -10,7 +10,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Running" | "Upcoming" | "Completed" | "On Hold";
+  status: "Running" | "Scheduled" | "Completed" | "On Hold";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -21,7 +21,7 @@ interface Project {
 const mapStatus = (backendStatus: number): Project["status"] => {
   switch (backendStatus) {
     case 0: return "On Hold";    // Pending in DB
-    case 1: return "Upcoming";   // Scheduled in DB
+    case 1: return "Scheduled";   // Scheduled in DB
     case 2: return "Running";     // Running in DB
     case 3: return "Completed";  // Completed in DB
     default: return "On Hold";
@@ -35,7 +35,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Running", "Upcoming", "Completed"];
+const tabs = ["All", "Running", "Scheduled", "Completed"];
 
 function PMProjectsContent() {
   const router = useRouter();
@@ -261,7 +261,7 @@ function PMProjectsContent() {
                     </td>
                     <td className="py-4 px-4">
                       <span
-                        className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${project.status === "Upcoming"
+                        className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${project.status === "Scheduled"
                           ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
                           : project.status === "Running"
                             ? "bg-green-500/10 text-green-400 border-green-500/20"
