@@ -387,6 +387,11 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                                 <>Hire request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> is <span className={`font-semibold ${item.status === 'Fulfilled' ? 'text-emerald-500' : 'text-red-500'}`}>{item.status === 'Fulfilled' ? 'Fulfilled' : 'Declined'}</span>.</>
                               )}
                             </p>
+                            {item.status === 'Declined' && item.notes && (
+                              <p className="text-[11px] text-[var(--dash-text-secondary)] mt-1">
+                                Note: {item.notes}
+                              </p>
+                            )}
                             <p className="text-[11px] text-[var(--dash-text-secondary)] mt-1 opacity-70">
                               {isTimeline ? 'Timeline Synchronization' : `Role: ${item.roleNeeded}`}
                             </p>
@@ -400,6 +405,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       <p className="text-[13px] text-[#d9e0f2] leading-5">
                         Contract extension for <span className="font-semibold">{item.employeeName}</span> was <span className={`font-semibold ${item.status === 'Approved' ? 'text-emerald-400' : 'text-red-400'}`}>{item.status.toLowerCase()}</span> by HR.
                       </p>
+                      {item.status === 'Declined' && item.reviewNote && item.reviewNote !== '-' && (
+                        <p className="text-[12px] text-[#93a2c0] mt-1">Note: {item.reviewNote}</p>
+                      )}
                       <p className="text-[12px] text-[#93a2c0] mt-1 text-right">{item.reviewedDate || item.requestedDate}</p>
                     </div>
                   ))}
