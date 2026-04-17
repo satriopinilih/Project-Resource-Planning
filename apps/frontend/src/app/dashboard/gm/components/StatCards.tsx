@@ -64,7 +64,7 @@ export default function StatCards() {
       icon: TrendingUp,
       iconColor: "text-[#22c55e]",
       iconBg: "bg-[#22c55e]/10",
-      href: "/project?tab=Active",
+      href: "/project?tab=Running",
     },
     {
       label: "Completed",

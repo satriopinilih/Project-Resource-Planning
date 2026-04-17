@@ -158,6 +158,46 @@ public class EmployeeService
         };
     }
 
+    public async Task<string> GetNextUserIdAsync(int? staffRoleId)
+    {
+        var prefix = "EMP";
+
+        if (staffRoleId.HasValue)
+        {
+            var staffRoleName = await _db.StaffRoles
+                .AsNoTracking()
+                .Where(sr => sr.StaffRoleId == staffRoleId.Value)
+                .Select(sr => sr.RoleName)
+                .FirstOrDefaultAsync();
+
+            if (string.Equals(staffRoleName, "PM", StringComparison.OrdinalIgnoreCase))
+            {
+                prefix = "PM";
+            }
+        }
+
+        var existingIds = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.UserId.StartsWith(prefix))
+            .Select(u => u.UserId)
+            .ToListAsync();
+
+        var maxNumber = 0;
+        foreach (var id in existingIds)
+        {
+            if (id.Length <= prefix.Length)
+                continue;
+
+            var suffix = id[prefix.Length..];
+            if (int.TryParse(suffix, out var parsed) && parsed > maxNumber)
+            {
+                maxNumber = parsed;
+            }
+        }
+
+        return $"{prefix}{(maxNumber + 1):D3}";
+    }
+
     /// <summary>
     /// Creates a new employee with associated skills, roles, and staff roles.
     /// Uses AddRange instead of looped Add calls for batch efficiency.
@@ -315,6 +355,7 @@ public class EmployeeService
             {
                 ProjectId = p.ProjectId,
                 ProjectName = p.Project?.ProjectName ?? string.Empty,
+                ClientOrganization = p.Project?.ClientOrganization ?? string.Empty,
                 RoleInProject = p.RoleInProject,
                 StartDate = p.StartDate ?? p.Project?.EstimatedStartDate ?? DateTime.MinValue,
                 EndDate = p.EndDate ?? p.Project?.EstimatedEndDate

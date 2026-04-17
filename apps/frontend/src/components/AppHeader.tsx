@@ -295,10 +295,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       key={`mrkt-${item.hireRequestId}`}
                       onClick={() => {
                         setIsNotificationOpen(false);
-                        if (item.projectId) router.push(`/project/${item.projectId}`);
-                        else router.push('/project');
+                        router.push('/dashboard#timeline-edit-requests-section');
                       }}
-                      className="w-full text-left px-5 py-4 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-300"
+                      className="w-full text-left px-5 py-4 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-all duration-300 cursor-pointer"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">Timeline Request</span>
@@ -309,7 +308,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       <p className="text-[12.5px] text-[var(--dash-text-secondary)] mb-4 line-clamp-3 leading-relaxed">
                         "{item.notes.replace('[TIMELINE EDIT REQUEST] ', '')}"
                       </p>
-                      <p className="text-[12px] text-[#2B7FFC] mt-1 font-semibold">Click to open project</p>
+                      <p className="text-[12px] text-[#2B7FFC] mt-1 font-semibold">Click to review request</p>
                     </button>
                   ))}
                 </div>
@@ -387,6 +386,11 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                                 <>Hire request for <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span> is <span className={`font-semibold ${item.status === 'Fulfilled' ? 'text-emerald-500' : 'text-red-500'}`}>{item.status === 'Fulfilled' ? 'Fulfilled' : 'Declined'}</span>.</>
                               )}
                             </p>
+                            {item.status === 'Declined' && item.notes && (
+                              <p className="text-[11px] text-[var(--dash-text-secondary)] mt-1">
+                                Note: {item.notes}
+                              </p>
+                            )}
                             <p className="text-[11px] text-[var(--dash-text-secondary)] mt-1 opacity-70">
                               {isTimeline ? 'Timeline Synchronization' : `Role: ${item.roleNeeded}`}
                             </p>
@@ -400,6 +404,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       <p className="text-[13px] text-[#d9e0f2] leading-5">
                         Contract extension for <span className="font-semibold">{item.employeeName}</span> was <span className={`font-semibold ${item.status === 'Approved' ? 'text-emerald-400' : 'text-red-400'}`}>{item.status.toLowerCase()}</span> by HR.
                       </p>
+                      {item.status === 'Declined' && item.reviewNote && item.reviewNote !== '-' && (
+                        <p className="text-[12px] text-[#93a2c0] mt-1">Note: {item.reviewNote}</p>
+                      )}
                       <p className="text-[12px] text-[#93a2c0] mt-1 text-right">{item.reviewedDate || item.requestedDate}</p>
                     </div>
                   ))}

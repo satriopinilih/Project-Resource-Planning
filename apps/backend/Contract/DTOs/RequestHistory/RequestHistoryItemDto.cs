@@ -8,6 +8,9 @@ public class RequestHistoryItemDto
     public string EmployeeName { get; set; } = string.Empty;
     public string StaffRole { get; set; } = string.Empty;
     public string Extension { get; set; } = "-";
+    public string ProjectName { get; set; } = "-";
+    public string Reason { get; set; } = "-";
+    public string ReviewNote { get; set; } = "-";
     public DateTime RequestedDate { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime? ReviewedDate { get; set; }
