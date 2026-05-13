@@ -115,6 +115,18 @@ export default function TeamMembersPage() {
     return name.split(' ').map(n => n[0]).join('');
   };
 
+  let selectedStatus = 'Active';
+  let selectedStatusClasses = 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50';
+  if (selectedEmployee && selectedEmployee.employmentType !== 'Permanent' && selectedEmployee.daysRemaining !== undefined) {
+    if (selectedEmployee.daysRemaining < 15) {
+      selectedStatus = 'Urgent';
+      selectedStatusClasses = 'bg-red-900/30 text-red-400 border-red-900/50';
+    } else if (selectedEmployee.daysRemaining < 30) {
+      selectedStatus = 'Expiring Soon';
+      selectedStatusClasses = 'bg-[#78350f]/30 text-[#fbbf24] border-[#78350f]/50';
+    }
+  }
+
   return (
     <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
       <AppSidebar role={role} />
@@ -145,40 +157,55 @@ export default function TeamMembersPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                {employees.map((employee) => (
-                  <button
-                    key={employee.id}
-                    onClick={() => setSelectedMember(employee.id)}
-                    className={`w-full text-left p-4 rounded-xl transition-all border ${selectedMember === employee.id
-                      ? 'border-[#3b82f6] bg-[#1e3a8a]/10 shadow-sm'
-                      : 'border-transparent bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)]'
-                       }`}
-                  >
-                    <div className="font-semibold text-[15px] text-[var(--dash-text-heading)] truncate">{employee.name}</div>
-                    {canResetPassword && (
-                      <div className="text-[12px] text-[var(--dash-text-faint)] mt-0.5 truncate">User ID: {employee.id}</div>
-                    )}
-                    <div className="text-[13px] text-[var(--dash-text-secondary)] mt-0.5 truncate">{employee.role}</div>
-                    {employee.experienceYears !== undefined && (
-                      <div className="text-[12px] text-[var(--dash-text-faint)] mt-1">Exp: {employee.experienceYears} yrs</div>
-                    )}
+                {employees.map((employee) => {
+                  let badgeStatus = 'Active';
+                  let badgeClasses = 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40';
+                  
+                  if (employee.employmentType !== 'Permanent' && employee.daysRemaining !== undefined) {
+                    if (employee.daysRemaining < 15) {
+                      badgeStatus = 'Urgent';
+                      badgeClasses = 'bg-red-100 text-red-800 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-400/40';
+                    } else if (employee.daysRemaining < 30) {
+                      badgeStatus = 'Expiring Soon';
+                      badgeClasses = 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/40';
+                    }
+                  }
 
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded border ${(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/40' : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40'}`}>
-                        {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.employmentType !== 'Permanent' ? 'Expiring Soon' : 'Active'}
-                      </span>
-
-                      {(employee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && employee.daysRemaining !== undefined && employee.employmentType !== 'Permanent' && (
-                        <div className="flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                          <span>{employee.daysRemaining} days left</span>
-                        </div>
+                  return (
+                    <button
+                      key={employee.id}
+                      onClick={() => setSelectedMember(employee.id)}
+                      className={`w-full text-left p-4 rounded-xl transition-all border ${selectedMember === employee.id
+                        ? 'border-[#3b82f6] bg-[#1e3a8a]/10 shadow-sm'
+                        : 'border-transparent bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)]'
+                        }`}
+                    >
+                      <div className="font-semibold text-[15px] text-[var(--dash-text-heading)] truncate">{employee.name}</div>
+                      {canResetPassword && (
+                        <div className="text-[12px] text-[var(--dash-text-faint)] mt-0.5 truncate">User ID: {employee.id}</div>
                       )}
-                    </div>
-                  </button>
-                ))}
+                      <div className="text-[13px] text-[var(--dash-text-secondary)] mt-0.5 truncate">{employee.role}</div>
+                      {employee.experienceYears !== undefined && (
+                        <div className="text-[12px] text-[var(--dash-text-faint)] mt-1">Exp: {employee.experienceYears} yrs</div>
+                      )}
+
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded border ${badgeClasses}`}>
+                          {badgeStatus}
+                        </span>
+
+                        {badgeStatus !== 'Active' && employee.daysRemaining !== undefined && (
+                          <div className={`flex items-center gap-1 text-[11px] font-medium ${badgeStatus === 'Urgent' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-300'}`}>
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span>{employee.daysRemaining} days left</span>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -226,8 +253,8 @@ export default function TeamMembersPage() {
                   <div className="bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] p-6">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)]">Contract Information</h3>
-                      <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg border ${(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && selectedEmployee.employmentType !== 'Permanent' ? 'bg-[#78350f]/30 text-[#fbbf24] border-[#78350f]/50' : 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50'}`}>
-                        {(selectedEmployee.daysRemaining ?? Number.MAX_SAFE_INTEGER) <= 60 && selectedEmployee.employmentType !== 'Permanent' ? 'Expiring Soon' : 'Active'}
+                      <span className={`inline-block px-3 py-1 text-[12px] font-medium rounded-lg border ${selectedStatusClasses}`}>
+                        {selectedStatus}
                       </span>
                     </div>
 
