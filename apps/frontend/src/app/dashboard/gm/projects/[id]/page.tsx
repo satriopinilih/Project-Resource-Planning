@@ -50,7 +50,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
         today.setHours(0, 0, 0, 0);
         if (startDate > today) return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
       }
-      return { label: "Active", class: "bg-green-500/10 text-green-400 border-green-500/20" };
+      return { label: "Running", class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
     default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
@@ -147,6 +147,8 @@ export default function ProjectDetailsPage() {
   const [timelineEditNotes, setTimelineEditNotes] = useState("");
   const [timelineEditSubmitting, setTimelineEditSubmitting] = useState(false);
   const [timelineEditRequested, setTimelineEditRequested] = useState(false);
+  const [timelineEditStart, setTimelineEditStart] = useState("");
+  const [timelineEditEnd, setTimelineEditEnd] = useState("");
 
   // Start Project state
   const [startingProject, setStartingProject] = useState(false);
@@ -184,12 +186,22 @@ export default function ProjectDetailsPage() {
       if (!numericId) return;
       try {
         const rows = await getHireRequests(undefined, numericId);
-        const latest = rows[0];
-        setHireRequestStatus(latest?.status ?? "none");
-        setHireAlreadyRequested(rows.some((r) => r.status === "Open" || r.status === "InProgress"));
+        const hireRows = rows.filter((r) =>
+          r.roleNeeded !== "Timeline Edit Request" &&
+          r.roleNeeded !== "GM Notification" &&
+          r.roleNeeded !== "Project Submission Notification" &&
+          r.roleNeeded !== "Project Update Notification"
+        );
+        const timelineRows = rows.filter((r) => r.roleNeeded === "Timeline Edit Request");
+
+        const latestHire = hireRows[0];
+        setHireRequestStatus(latestHire?.status ?? "none");
+        setHireAlreadyRequested(hireRows.some((r) => r.status === "Open" || r.status === "InProgress"));
+        setTimelineEditRequested(timelineRows.some((r) => r.status === "Open" || r.status === "InProgress"));
       } catch {
         setHireRequestStatus("none");
         setHireAlreadyRequested(false);
+        setTimelineEditRequested(false);
       }
     };
     checkExistingHireRequest();
@@ -233,11 +245,29 @@ export default function ProjectDetailsPage() {
     return { available: true, reason: "Available for this timeline" };
   };
 
+  // Role-based filtering map: when assigning from a role card, show only matching employees
+  const getRoleFilter = (roleName: string): string[] => {
+    const r = roleName.toLowerCase();
+    if (r === "pm") return ["pm"];
+    if (r === "architect") return ["architect"];
+    if (r === "senior dev") return ["senior dev"];
+    if (r === "junior dev") return ["senior dev", "junior dev"];
+    if (r === "senior ba") return ["senior ba"];
+    if (r === "junior ba") return ["senior ba", "junior ba"];
+    return []; // empty = no filter, show all
+  };
+
   const filteredEmployees = useMemo(() => {
     const assignedIds = new Set(project?.members?.map((m) => m.userId) ?? []);
+    const roleFilters = assignFromRole && assignRole ? getRoleFilter(assignRole) : [];
     return employees
       .filter((emp) => {
         if (assignedIds.has(emp.userId)) return false;
+        // Role-based filtering when opened from a role card
+        if (roleFilters.length > 0) {
+          const empRole = (emp.role || "").toLowerCase();
+          if (!roleFilters.some(rf => empRole.includes(rf))) return false;
+        }
         if (!empSearch) return true;
         const q = empSearch.toLowerCase();
         return (emp.userName.toLowerCase().includes(q) || emp.role?.toLowerCase().includes(q) || emp.email.toLowerCase().includes(q));
@@ -249,7 +279,7 @@ export default function ProjectDetailsPage() {
         if (!aAvail && bAvail) return 1;
         return a.userName.localeCompare(b.userName);
       });
-  }, [employees, empSearch, project]);
+  }, [employees, empSearch, project, assignFromRole, assignRole]);
 
   const handleAssign = async () => {
     if (!selectedEmp || !project) return;
@@ -299,16 +329,33 @@ export default function ProjectDetailsPage() {
     if (!project) return;
     try {
       setTimelineEditSubmitting(true);
+      // Build notes including requested dates
+      const requestedDateInfo = (timelineEditStart || timelineEditEnd)
+        ? `\nRequested Timeline: ${timelineEditStart ? formatDate(timelineEditStart) : "(same)"} - ${timelineEditEnd ? formatDate(timelineEditEnd) : "(same)"}`
+        : "";
+      const fullNotes = (timelineEditNotes || `GM requesting timeline review for project ${project.projectName}`) + requestedDateInfo;
+
       await createTimelineEditRequest({
         projectId: project.projectId,
         projectName: project.projectName,
-        notes: timelineEditNotes || `GM requesting timeline review for project ${project.projectName}`,
+        notes: fullNotes,
         currentStartDate: project.estimatedStartDate,
         currentEndDate: project.estimatedEndDate,
+      });
+      await createHireRequest({
+        projectId: project.projectId,
+        projectName: project.projectName,
+        roleNeeded: "GM Notification",
+        quantity: 1,
+        startDate: project.estimatedStartDate,
+        endDate: project.estimatedEndDate,
+        notes: `[GM ACTION] Timeline edit requested for ${project.projectName}`,
       });
       setTimelineEditOpen(false);
       setTimelineEditRequested(true);
       setTimelineEditNotes("");
+      setTimelineEditStart("");
+      setTimelineEditEnd("");
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to send timeline edit request");
     } finally {
@@ -380,11 +427,11 @@ export default function ProjectDetailsPage() {
       <div className="flex-1 overflow-auto min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
         <AppHeader title="Project Details" role="GM" />
 
-        <main className="flex-1 p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 pb-12">
+        <main className="flex-1 p-5 lg:p-7 max-w-[1360px] mx-auto space-y-6 pb-10">
 
           {/* 1. Project Summary Banner */}
-          <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-8 pb-6 flex flex-col md:flex-row items-start justify-between gap-6">
+          <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden shadow-sm">
+            <div className="p-6 pb-5 flex flex-col md:flex-row items-start justify-between gap-4">
               <div className="space-y-3 flex-1">
                 <div className="flex items-center gap-3">
                   <span className="px-3 py-1 bg-[#2B7FFC]/10 text-[#2B7FFC] text-[11px] font-bold uppercase tracking-widest rounded-md">
@@ -394,11 +441,11 @@ export default function ProjectDetailsPage() {
                     {statusInfo.label}
                   </span>
                 </div>
-                <h1 className="text-3xl font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
+                <h1 className="text-[34px] font-bold text-[var(--dash-text-heading)] tracking-tight">{project.projectName}</h1>
                 <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed max-w-4xl">{project.projectDescription}</p>
               </div>
 
-              {project.projectStatus !== 0 && (
+              {project.projectStatus !== 0 && project.projectStatus !== 3 && (
                 <div className="flex gap-3 shrink-0">
                   <button
                     onClick={() => setIsEditMode(!isEditMode)}
@@ -415,7 +462,7 @@ export default function ProjectDetailsPage() {
 
             {/* Combined Stats Bar */}
             <div className="grid grid-cols-2 lg:grid-cols-5 border-t border-[var(--dash-border)] bg-[var(--dash-bg-input)]">
-              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
                 <div className="p-2 bg-blue-500/10 rounded-lg"><Calendar size={18} className="text-blue-400" /></div>
                 <div>
                   <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Timeline</p>
@@ -424,14 +471,14 @@ export default function ProjectDetailsPage() {
                   </p>
                 </div>
               </div>
-              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
                 <div className="p-2 bg-amber-500/10 rounded-lg"><TrendingUp size={18} className="text-amber-400" /></div>
                 <div>
                   <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Duration</p>
                   <p className="text-[13px] font-semibold text-[var(--dash-text-primary)] mt-0.5">{project.estimatedDuration} weeks</p>
                 </div>
               </div>
-              <div className="p-5 flex items-center gap-3 border-r border-[var(--dash-border)]">
+              <div className="p-4 flex items-center gap-3 border-r border-[var(--dash-border)]">
                 <div className="p-2 bg-purple-500/10 rounded-lg"><FileText size={18} className="text-purple-400" /></div>
                 <div>
                   <p className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Priority</p>
@@ -439,7 +486,7 @@ export default function ProjectDetailsPage() {
                 </div>
               </div>
               {/* Staffing Progress merged into stats */}
-              <div className="p-5 lg:col-span-2 flex flex-col justify-center gap-2">
+              <div className="p-4 lg:col-span-2 flex flex-col justify-center gap-2">
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider">Staffing Progress</span>
                   <span className="text-[12px] text-[var(--dash-text-primary)] font-semibold">{totalFilled} / {totalNeeded} roles</span>
@@ -455,7 +502,7 @@ export default function ProjectDetailsPage() {
 
             {/* Required Skills Row */}
             {(project.requiredSkills?.length ?? 0) > 0 && (
-              <div className="p-4 px-6 border-t border-[var(--dash-border)] flex flex-wrap items-center gap-3 bg-[var(--dash-bg-input)]">
+              <div className="p-3 px-5 border-t border-[var(--dash-border)] flex flex-wrap items-center gap-2.5 bg-[var(--dash-bg-input)]">
                 <LayoutGrid size={14} className="text-[var(--dash-text-faint)]" />
                 <span className="text-[12px] font-medium text-[var(--dash-text-muted)]">Required Skills:</span>
                 {project.requiredSkills.map(skill => (
@@ -492,7 +539,7 @@ export default function ProjectDetailsPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Calendar size={16} />
-                    {timelineEditRequested ? "Timeline Request Sent" : "Request Timeline Edit"}
+                    {timelineEditRequested ? "Already Requested" : "Request Timeline Edit"}
                   </button>
                   {project.projectStatus === 0 && (
                     <button
@@ -569,7 +616,7 @@ export default function ProjectDetailsPage() {
                                 onClick={() => openAssignModal(role.roleName)}
                                 className="px-3 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md text-[12px] font-bold flex items-center gap-1.5 transition-colors"
                               >
-                                <UserPlus size={14} /> Assign
+                                <UserPlus size={14} /> Assign ({membersInRole.length}/{role.requiredCount})
                               </button>
                             )}
                           </div>
@@ -604,7 +651,9 @@ export default function ProjectDetailsPage() {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-[13px] font-bold text-[var(--dash-text-primary)] truncate">{member.userName}</p>
-                                  <p className="text-[11px] text-[var(--dash-text-faint)] truncate">{member.startDate ? formatDate(member.startDate) : "TBD"} - {member.endDate ? formatDate(member.endDate) : "TBD"}</p>
+                                  <p className="text-[11px] text-[var(--dash-text-faint)] truncate">
+                                    {formatDate(member.startDate || project.estimatedStartDate)} - {formatDate(member.endDate || project.estimatedEndDate)}
+                                  </p>
                                 </div>
                               </div>
                               {isEditingTeam && (
@@ -627,73 +676,8 @@ export default function ProjectDetailsPage() {
             )}
           </section>
 
-          {/* 4. Assigned Team (for Active/Completed projects) */}
-          {project.projectStatus !== 0 && (
-            <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-8 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Assigned Team</h2>
-                <button
-                  onClick={() => openAssignModal()}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all cursor-pointer"
-                >
-                  <UserPlus size={16} />
-                  Assign Member
-                </button>
-              </div>
-              {(!project.members || project.members.length === 0) ? (
-                <div className="py-8 text-center border border-dashed border-[var(--dash-border)] rounded-xl">
-                  <p className="text-[var(--dash-text-faint)] text-[14px]">No team members assigned.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {project.members.map((member) => (
-                    <div key={member.userId} className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5 hover:border-[var(--dash-border-hover,#555)] transition-colors group">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-[#1e3a8a]/40 border border-blue-500/30 flex items-center justify-center text-[#60a5fa] font-bold text-[14px] flex-shrink-0">
-                            {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                          </div>
-                          <div>
-                            <h3 className="text-[14px] font-bold text-[var(--dash-text-heading)]">{member.userName}</h3>
-                            <p className="text-[12px] text-[var(--dash-text-secondary)]">{member.role} · {member.staffRole || 'Member'}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-green-500/10 text-green-400 border border-green-500/20">
-                            {member.status || "Assigned"}
-                          </span>
-                          {isEditingTeam && (
-                            <button
-                              onClick={() => handleRemoveMember(member.userId)}
-                              disabled={removingUserId === member.userId}
-                              className="p-1.5 rounded-lg text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer disabled:opacity-50"
-                              title="Remove from project"
-                            >
-                              {removingUserId === member.userId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Timeline bar */}
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between text-[11px] text-[var(--dash-text-faint)] mb-1">
-                          <span>{member.startDate ? formatDate(member.startDate) : formatDate(project.estimatedStartDate)}</span>
-                          <span>{member.endDate ? formatDate(member.endDate) : formatDate(project.estimatedEndDate)}</span>
-                        </div>
-                        <TimelineBar
-                          startDate={member.startDate}
-                          endDate={member.endDate}
-                          projectStart={project.estimatedStartDate}
-                          projectEnd={project.estimatedEndDate}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
+          {/* Footer filler */}
+          <div className="h-10" />
 
         </main>
       </div>
@@ -1004,9 +988,33 @@ export default function ProjectDetailsPage() {
               </div>
 
               <div>
-                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Proposed Timeline & Notes</label>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Requested Timeline</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-[var(--dash-text-faint)] mb-1 uppercase tracking-wider font-bold">Start Date</label>
+                    <input
+                      type="date"
+                      value={timelineEditStart}
+                      onChange={(e) => setTimelineEditStart(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[var(--dash-text-faint)] mb-1 uppercase tracking-wider font-bold">End Date</label>
+                    <input
+                      type="date"
+                      value={timelineEditEnd}
+                      onChange={(e) => setTimelineEditEnd(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Notes</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={timelineEditNotes}
                   onChange={(e) => setTimelineEditNotes(e.target.value)}
                   placeholder="e.g. Please delay the start date by 2 weeks due to resource constraints."

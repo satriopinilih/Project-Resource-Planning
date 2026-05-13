@@ -21,6 +21,7 @@ export type LoginResponse = {
 type BackendUserProject = {
   projectId: number;
   projectName: string;
+  clientOrganization?: string;
   roleInProject: string;
   startDate: string;
   endDate: string | null;
@@ -63,6 +64,9 @@ type BackendRequestHistoryItem = {
   employeeName: string;
   staffRole: string;
   extension: string;
+  projectName?: string;
+  reason?: string;
+  reviewNote?: string;
   requestedDate: string;
   status: string;
   reviewedDate: string | null;
@@ -172,7 +176,7 @@ const formatDate = (date: string) =>
 const mapProject = (project: BackendUserProject): Project => ({
   id: String(project.projectId),
   name: project.projectName,
-  client: 'Client',
+  client: project.clientOrganization || 'In-House',
   startDate: formatDate(project.startDate),
   endDate: project.endDate ? formatDate(project.endDate) : 'Ongoing',
   status: 'Active'
@@ -348,6 +352,12 @@ export async function updateProject(id: number, projectData: any): Promise<Backe
   });
 }
 
+export async function deleteProject(id: number): Promise<void> {
+  await fetchJson(`/api/projects/${id}`, {
+    method: 'DELETE'
+  });
+}
+
 export type AssignMemberPayload = {
   userId: string;
   roleInProject: string;
@@ -387,6 +397,14 @@ export async function getRawEmployees(): Promise<BackendEmployee[]> {
 
 export async function getEmployeeFormOptions(): Promise<EmployeeFormOptions> {
   return fetchJson<EmployeeFormOptions>('/api/employees/form-options');
+}
+
+export async function getNextEmployeeUserId(staffRoleId?: number): Promise<string> {
+  const query = typeof staffRoleId === 'number' && staffRoleId > 0
+    ? `?staffRoleId=${staffRoleId}`
+    : '';
+  const data = await fetchJson<{ userId: string }>(`/api/employees/next-user-id${query}`);
+  return data.userId;
 }
 
 export async function createContractExtension(
@@ -457,6 +475,9 @@ export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryIte
     employeeName: item.employeeName,
     staffRole: item.staffRole,
     extension: item.extension,
+    projectName: item.projectName,
+    reason: item.reason || undefined,
+    reviewNote: item.reviewNote || undefined,
     requestedDate: formatDate(item.requestedDate),
     status: item.status,
     reviewedDate: item.reviewedDate ? formatDate(item.reviewedDate) : undefined

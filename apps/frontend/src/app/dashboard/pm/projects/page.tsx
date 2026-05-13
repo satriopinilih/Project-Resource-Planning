@@ -10,7 +10,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Active" | "Upcoming" | "Completed" | "On Hold";
+  status: "Running" | "Scheduled" | "Completed" | "On Hold";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -21,8 +21,8 @@ interface Project {
 const mapStatus = (backendStatus: number): Project["status"] => {
   switch (backendStatus) {
     case 0: return "On Hold";    // Pending in DB
-    case 1: return "Upcoming";   // Scheduled in DB
-    case 2: return "Active";     // Running in DB
+    case 1: return "Scheduled";   // Scheduled in DB
+    case 2: return "Running";     // Running in DB
     case 3: return "Completed";  // Completed in DB
     default: return "On Hold";
   }
@@ -35,7 +35,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Active", "Upcoming", "Completed"];
+const tabs = ["All", "Running", "Scheduled", "Completed"];
 
 function PMProjectsContent() {
   const router = useRouter();
@@ -217,14 +217,13 @@ function PMProjectsContent() {
                 <th className="font-semibold py-4 px-4">Status</th>
                 <th className="font-semibold py-4 px-4">Timeline</th>
                 <th className="font-semibold py-4 px-4 text-center">PM</th>
-                <th className="font-semibold py-4 px-4">Team</th>
-                <th className="font-semibold py-4 pr-6 pl-4">Budget</th>
+                <th className="font-semibold py-4 pr-6 pl-4">Team</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                  <td colSpan={6} className="py-8 text-center text-[var(--dash-text-muted)]">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <Loader2 className="w-6 h-6 animate-spin text-[#3b82f6]" />
                       <span className="text-[13px]">Loading projects...</span>
@@ -233,7 +232,7 @@ function PMProjectsContent() {
                 </tr>
               ) : filteredProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[var(--dash-text-muted)]">
+                  <td colSpan={6} className="py-8 text-center text-[var(--dash-text-muted)]">
                     No projects found.
                   </td>
                 </tr>
@@ -262,9 +261,9 @@ function PMProjectsContent() {
                     </td>
                     <td className="py-4 px-4">
                       <span
-                        className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${project.status === "Upcoming"
+                        className={`inline-block px-3 py-1 text-[11px] font-bold rounded-lg border ${project.status === "Scheduled"
                           ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                          : project.status === "Active"
+                          : project.status === "Running"
                             ? "bg-green-500/10 text-green-400 border-green-500/20"
                             : project.status === "Completed"
                               ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
@@ -288,11 +287,8 @@ function PMProjectsContent() {
                         {project.team}
                       </div>
                     </td>
-                    <td className="py-4 pr-6 pl-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[13px] font-medium text-[var(--dash-text-primary)]">{project.budget}</span>
-                        <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
-                      </div>
+                    <td className="py-4 pr-6 pl-4 text-right">
+                      <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
                     </td>
                   </tr>
                 ))

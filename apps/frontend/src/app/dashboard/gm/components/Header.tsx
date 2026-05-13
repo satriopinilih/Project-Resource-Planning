@@ -16,6 +16,8 @@ interface NotificationItem {
   status: string;
   reviewedDate?: string;
   requestedDate: string;
+  reason?: string;
+  declineReason?: string;
 }
 
 export default function Header({ title }: HeaderProps) {
@@ -156,6 +158,16 @@ export default function Header({ title }: HeaderProps) {
                               <p className="text-[13px] text-gray-300 leading-snug">
                                 <span className="font-bold text-white">{notif.employeeName}</span>{"'s"} contract extension request was <span className={`font-bold ${isApproved ? 'text-emerald-400' : 'text-red-400'}`}>{notif.status.toLowerCase()}</span> by HR.
                               </p>
+                              {!isApproved && notif.declineReason && (
+                                <p className="text-[11px] text-red-400/80 mt-1 leading-snug bg-red-500/5 px-2 py-1 rounded border border-red-500/10">
+                                  <span className="font-bold">Reason:</span> {notif.declineReason}
+                                </p>
+                              )}
+                              {notif.reason && (
+                                <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                                  <span className="font-semibold">Request reason:</span> {notif.reason}
+                                </p>
+                              )}
                               <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1.5">
                                 {notif.reviewedDate || notif.requestedDate}
                                 {isUnread && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 ml-auto mr-1" />}

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Users, AlertTriangle, Hourglass, UserPlus2, CheckCircle2 } from 'lucide-react';
 import StatCard from '@/components/StatCard';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
@@ -16,6 +18,7 @@ import {
   getEmployeeFormOptions,
   getHireRequests,
   getRawEmployees,
+  getNextEmployeeUserId,
   getRequestHistory,
   startHireRequest,
   EmployeeFormOptions,
@@ -24,6 +27,7 @@ import {
 import { ContractExtensionRequest, RequestHistoryItem } from '@/lib/types';
 
 export default function HRDashboard() {
+  const router = useRouter();
   const [employees, setEmployees] = useState<BackendEmployee[]>([]);
   const [contractExtensionRequests, setContractExtensionRequests] = useState<ContractExtensionRequest[]>([]);
   const [hireRequests, setHireRequests] = useState<HireRequest[]>([]);
@@ -35,6 +39,12 @@ export default function HRDashboard() {
   const [selectedRequest, setSelectedRequest] = useState<ContractExtensionRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [hireEmployeeModalOpen, setHireEmployeeModalOpen] = useState(false);
+  const [hireBatchTotal, setHireBatchTotal] = useState(1);
+  const [hireBatchIndex, setHireBatchIndex] = useState(1);
+  const [hiredNames, setHiredNames] = useState<string[]>([]);
+  const [hireDeclineModalOpen, setHireDeclineModalOpen] = useState(false);
+  const [selectedHireDeclineId, setSelectedHireDeclineId] = useState<number | null>(null);
+  const [hireDeclineNote, setHireDeclineNote] = useState('');
   const [selectedHireRequestId, setSelectedHireRequestId] = useState<number | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [hireFormError, setHireFormError] = useState<string | null>(null);
@@ -123,7 +133,7 @@ export default function HRDashboard() {
   }, [employees, expiringEmployees, contractExtensionRequests, hireRequests, requestHistory]);
 
   const activeHireRequests = useMemo(
-    () => hireRequests.filter((r) => r.status !== 'Fulfilled'),
+    () => hireRequests.filter((r) => r.status !== 'Fulfilled' && r.status !== 'Declined' && r.roleNeeded !== 'Timeline Edit Request' && r.roleNeeded !== 'GM Notification'),
     [hireRequests]
   );
 
@@ -167,12 +177,40 @@ export default function HRDashboard() {
     await loadData();
   };
 
+  const closeHireEmployeeModal = () => {
+    setHireEmployeeModalOpen(false);
+    setSelectedHireRequestId(null);
+    setHireBatchTotal(1);
+    setHireBatchIndex(1);
+    setHiredNames([]);
+    setHireFormError(null);
+    setHireForm((prev) => ({ ...prev, name: '', email: '', skills: '', skillIds: [] }));
+  };
+
+  const openDeclineHireModal = (hireRequestId: number) => {
+    setSelectedHireDeclineId(hireRequestId);
+    setHireDeclineNote('');
+    setHireDeclineModalOpen(true);
+  };
+
+  const handleConfirmDeclineHire = async () => {
+    if (!selectedHireDeclineId || !hireDeclineNote.trim()) return;
+    await declineHireRequest(selectedHireDeclineId, hireDeclineNote.trim());
+    setHireDeclineModalOpen(false);
+    setSelectedHireDeclineId(null);
+    setHireDeclineNote('');
+    await loadData();
+  };
+
   const openAddEmployeeModal = (requestId: number) => {
     setSelectedHireRequestId(requestId);
     setHireEmployeeModalOpen(true);
 
     const selectedRequest = hireRequests.find((request) => request.hireRequestId === requestId);
     if (!selectedRequest) return;
+    setHireBatchTotal(Math.max(1, selectedRequest.quantity || 1));
+    setHireBatchIndex(1);
+    setHiredNames([]);
     const matchingStaffRole = employeeFormOptions.staffRoles.find((role) => role.name === selectedRequest.roleNeeded);
     if (matchingStaffRole) {
       setHireForm((prev) => ({ ...prev, staffRoleId: matchingStaffRole.id, role: matchingStaffRole.name }));
@@ -189,24 +227,27 @@ export default function HRDashboard() {
       return;
     }
 
-    const start = new Date(hireForm.contractStart);
-    const end = new Date(hireForm.contractEnd);
-    const minContractMs = 1000 * 60 * 60 * 24 * 30 * 6;
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() - start.getTime() < minContractMs) {
-      setHireFormError('Contract duration must be at least 6 months');
-      return;
+    if (hireForm.employmentType === 'Contract') {
+      const start = new Date(hireForm.contractStart);
+      const end = new Date(hireForm.contractEnd);
+      const minContractMs = 1000 * 60 * 60 * 24 * 30 * 6;
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() - start.getTime() < minContractMs) {
+        setHireFormError('Contract duration must be at least 6 months');
+        return;
+      }
     }
 
-    const existingNumericIds = employees
-      .map((e) => e.userId)
-      .filter((id) => /^EMP\d+$/.test(id))
-      .map((id) => Number(id.slice(3)));
-    const nextNumber = (existingNumericIds.length ? Math.max(...existingNumericIds) : 199) + 1;
-    const nextId = `EMP${String(nextNumber).padStart(3, '0')}`;
+    const nextId = await getNextEmployeeUserId(hireForm.staffRoleId);
 
     setIsAddingEmployee(true);
     setHireFormError(null);
     try {
+      const today = new Date();
+      const todayIso = today.toISOString().slice(0, 10);
+      const permanentEnd = new Date(today);
+      permanentEnd.setFullYear(permanentEnd.getFullYear() + 30);
+      const permanentEndIso = permanentEnd.toISOString().slice(0, 10);
+
       const created = await createEmployee({
         userId: nextId,
         userName: hireForm.name,
@@ -215,21 +256,31 @@ export default function HRDashboard() {
         departmentId: hireForm.departmentId,
         employeeType: hireForm.employmentType === 'Contract' ? 0 : 1,
         experienceYears: Number(hireForm.experienceLevel) || 0,
-        contractStart: hireForm.contractStart,
-        contractEnd: hireForm.contractEnd,
+        contractStart: hireForm.employmentType === 'Contract' ? hireForm.contractStart : todayIso,
+        contractEnd: hireForm.employmentType === 'Contract' ? hireForm.contractEnd : permanentEndIso,
         skillIds: hireForm.skillIds,
-        roleIds: [hireForm.roleId],
+        roleIds: [
+          employeeFormOptions.roles.find((r) => r.name === (hireForm.role === 'PM' ? 'PM' : 'Staff'))?.id ?? hireForm.roleId
+        ],
         staffRoleIds: hireForm.staffRoleId ? [hireForm.staffRoleId] : []
       });
 
       setShowTempPassword(created.temporaryPassword);
 
       if (selectedHireRequest) {
-        await handleFulfillHireRequest(selectedHireRequest.hireRequestId, hireForm.name);
+        const updatedNames = [...hiredNames, hireForm.name.trim()].filter(Boolean);
+
+        if (updatedNames.length >= hireBatchTotal) {
+          await handleFulfillHireRequest(selectedHireRequest.hireRequestId, updatedNames.join(', '));
+          closeHireEmployeeModal();
+        } else {
+          setHiredNames(updatedNames);
+          setHireBatchIndex(updatedNames.length + 1);
+          setHireForm((prev) => ({ ...prev, name: '', email: '', skills: '', skillIds: [] }));
+        }
+      } else {
+        closeHireEmployeeModal();
       }
-      setHireEmployeeModalOpen(false);
-      setSelectedHireRequestId(null);
-      setHireForm((prev) => ({ ...prev, name: '', email: '', skills: '', skillIds: [] }));
       await loadData();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to add employee';
@@ -242,8 +293,26 @@ export default function HRDashboard() {
 
   const openDirectHireModal = () => {
     setSelectedHireRequestId(null);
+    setHireBatchTotal(1);
+    setHireBatchIndex(1);
+    setHiredNames([]);
     setHireFormError(null);
     setHireEmployeeModalOpen(true);
+  };
+
+  const navigateToSection = (target: string) => {
+    if (target.startsWith('/')) {
+      router.push(target);
+      return;
+    }
+    if (typeof window !== 'undefined' && window.location.pathname === '/dashboard' && window.location.hash === `#${target}`) {
+      const el = document.getElementById(target);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      return;
+    }
+    router.push(`/dashboard#${target}`);
   };
 
   return (
@@ -265,12 +334,22 @@ export default function HRDashboard() {
             <p className="text-gray-600 dark:text-gray-400 mt-1">Manage employee contracts and extension requests</p>
           </div>
 
-          <div className="grid grid-cols-5 gap-4 mb-8">
-            <StatCard value={stats.totalEmployees} label="Total Employees" icon={<span className="text-2xl">👥</span>} />
-            <StatCard value={stats.contractsExpiring} label="Contracts Expiring" variant="warning" icon={<span className="text-2xl">⚠️</span>} />
-            <StatCard value={stats.pendingRequests} label="Pending Requests" variant="danger" icon={<span className="text-2xl">⏳</span>} />
-            <StatCard value={stats.openHireRequests} label="Open Hire Requests" icon={<span className="text-2xl">➕</span>} />
-            <StatCard value={stats.approvedThisMonth} label="Approved This Month" variant="success" icon={<span className="text-2xl">✅</span>} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+            <button type="button" onClick={() => navigateToSection('/team-members')} className="text-left cursor-pointer">
+              <StatCard value={stats.totalEmployees} label="Total Employees" icon={<Users size={22} />} />
+            </button>
+            <button type="button" onClick={() => navigateToSection('expiring-contracts-section')} className="text-left cursor-pointer">
+              <StatCard value={stats.contractsExpiring} label="Contracts Expiring" variant="warning" icon={<AlertTriangle size={22} />} />
+            </button>
+            <button type="button" onClick={() => navigateToSection('pending-contract-extension-section')} className="text-left cursor-pointer">
+              <StatCard value={stats.pendingRequests} label="Pending Requests" variant="danger" icon={<Hourglass size={22} />} />
+            </button>
+            <button type="button" onClick={() => navigateToSection('hire-requests-section')} className="text-left cursor-pointer">
+              <StatCard value={stats.openHireRequests} label="Open Hire Requests" icon={<UserPlus2 size={22} />} />
+            </button>
+            <button type="button" onClick={() => navigateToSection('request-history-section')} className="text-left cursor-pointer">
+              <StatCard value={stats.approvedThisMonth} label="Approved This Month" variant="success" icon={<CheckCircle2 size={22} />} />
+            </button>
           </div>
 
           <div id="hire-requests-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
@@ -329,19 +408,13 @@ export default function HRDashboard() {
                               {state === 'Open' && (
                                 <>
                                   <button onClick={() => handleStartHireRequest(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">Start</button>
-                                  <button onClick={async () => {
-                                    await declineHireRequest(item.hireRequestId, 'Declined by HR');
-                                    await loadData();
-                                  }} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
+                                  <button onClick={() => openDeclineHireModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
                                 </>
                               )}
                               {state === 'InProgress' && (
                                 <>
                                   <button onClick={() => openAddEmployeeModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-purple-600 text-white hover:bg-purple-700">Add Employee</button>
-                                  <button onClick={async () => {
-                                    await declineHireRequest(item.hireRequestId, 'Declined by HR');
-                                    await loadData();
-                                  }} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
+                                  <button onClick={() => openDeclineHireModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
                                 </>
                               )}
                             </div>
@@ -408,7 +481,7 @@ export default function HRDashboard() {
             ))}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <div id="expiring-contracts-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Employees with Expiring Contracts</h2>
             {expiringEmployees.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">No contracts expiring within 2 months</div>
@@ -438,7 +511,7 @@ export default function HRDashboard() {
 
           <EmployeeContractTable showExtensionAction={false} />
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
+          <div id="request-history-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Request History</h2>
             {requestHistory.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">No request history yet</div>
@@ -449,6 +522,8 @@ export default function HRDashboard() {
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Project</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reason</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Extension</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Requested Date</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
@@ -463,6 +538,8 @@ export default function HRDashboard() {
                           <div className="text-sm text-gray-900 dark:text-white">{item.employeeName}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">{item.staffRole}</div>
                         </td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.projectName ?? '-'}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white max-w-[320px] truncate" title={item.reason ?? '-'}>{item.reason ?? '-'}</td>
                         <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.extension}</td>
                         <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestedDate}</td>
                         <td className="py-3 px-4">
@@ -526,16 +603,54 @@ export default function HRDashboard() {
         </div>
       </Modal>
 
+      <Modal isOpen={hireDeclineModalOpen} onClose={() => setHireDeclineModalOpen(false)} title="Decline Hire Request">
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Note (Required)</p>
+            <textarea
+              value={hireDeclineNote}
+              onChange={(e) => setHireDeclineNote(e.target.value)}
+              placeholder="Why are you declining this hire request?"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm min-h-[100px]"
+            />
+          </div>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => {
+                setHireDeclineModalOpen(false);
+                setSelectedHireDeclineId(null);
+                setHireDeclineNote('');
+              }}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmDeclineHire}
+              disabled={!hireDeclineNote.trim()}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Confirm Decline
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {hireEmployeeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] text-[var(--dash-text-primary)] shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--dash-border)]">
               <h3 className="text-xl font-semibold text-[var(--dash-text-heading)]">{selectedHireRequest ? 'Add Employee from Hire Request' : 'Add New Employee'}</h3>
-              <button onClick={() => setHireEmployeeModalOpen(false)} className="text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]">×</button>
+              <button onClick={closeHireEmployeeModal} className="text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]">×</button>
             </div>
             <div className="max-h-[78vh] overflow-y-auto px-6 py-4 space-y-3">
               {selectedHireRequest && (
                 <>
+                  <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 py-2">
+                    <p className="text-sm font-semibold text-[var(--dash-text-heading)]">
+                      Employee {hireBatchIndex} out of {hireBatchTotal}
+                    </p>
+                  </div>
                   <div>
                     <p className="text-sm text-[var(--dash-text-muted)]">Role Needed</p>
                     <p className="text-2xl font-semibold">{selectedHireRequest.roleNeeded}</p>
@@ -572,7 +687,14 @@ export default function HRDashboard() {
                   onChange={(e) => {
                     const nextStaffRoleId = Number(e.target.value);
                     const selected = employeeFormOptions.staffRoles.find((r) => r.id === nextStaffRoleId);
-                    setHireForm((prev) => ({ ...prev, staffRoleId: nextStaffRoleId, role: selected?.name ?? prev.role }));
+                    const mappedRoleName = selected?.name === 'PM' ? 'PM' : 'Staff';
+                    const mappedRoleId = employeeFormOptions.roles.find((r) => r.name === mappedRoleName)?.id ?? hireForm.roleId;
+                    setHireForm((prev) => ({
+                      ...prev,
+                      staffRoleId: nextStaffRoleId,
+                      role: selected?.name ?? prev.role,
+                      roleId: mappedRoleId
+                    }));
                   }}
                   className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm"
                 >
@@ -590,19 +712,39 @@ export default function HRDashboard() {
               </div>
               <div>
                 <label className="text-sm text-[var(--dash-text-secondary)]">Employment Type</label>
-                <select value={hireForm.employmentType} onChange={(e) => setHireForm((prev) => ({ ...prev, employmentType: e.target.value as 'Contract' | 'Permanent' }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm">
-                  <option value="Contract">Contract</option>
-                  <option value="Permanent">Permanent</option>
-                </select>
+                <div className="mt-1 flex h-11 items-center justify-center gap-8 text-sm">
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="employmentType"
+                      checked={hireForm.employmentType === 'Contract'}
+                      onChange={() => setHireForm((prev) => ({ ...prev, employmentType: 'Contract' }))}
+                    />
+                    <span>Contract</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="employmentType"
+                      checked={hireForm.employmentType === 'Permanent'}
+                      onChange={() => setHireForm((prev) => ({ ...prev, employmentType: 'Permanent' }))}
+                    />
+                    <span>Permanent</span>
+                  </label>
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-[var(--dash-text-secondary)]">Contract Start Date</label>
-                <input type="date" value={hireForm.contractStart} onChange={(e) => setHireForm((prev) => ({ ...prev, contractStart: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" />
-              </div>
-              <div>
-                <label className="text-sm text-[var(--dash-text-secondary)]">Contract End Date</label>
-                <input type="date" value={hireForm.contractEnd} onChange={(e) => setHireForm((prev) => ({ ...prev, contractEnd: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" />
-              </div>
+              {hireForm.employmentType === 'Contract' && (
+                <>
+                  <div>
+                    <label className="text-sm text-[var(--dash-text-secondary)]">Contract Start Date</label>
+                    <input type="date" value={hireForm.contractStart} onChange={(e) => setHireForm((prev) => ({ ...prev, contractStart: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-[var(--dash-text-secondary)]">Contract End Date</label>
+                    <input type="date" value={hireForm.contractEnd} onChange={(e) => setHireForm((prev) => ({ ...prev, contractEnd: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm" />
+                  </div>
+                </>
+              )}
               <div>
                 <label className="text-sm text-[var(--dash-text-secondary)]">Skills</label>
                 <div className="mt-1 max-h-36 overflow-y-auto rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 py-2">
@@ -642,7 +784,7 @@ export default function HRDashboard() {
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-[var(--dash-border)]">
               {hireFormError && <p className="mr-auto self-center text-xs text-red-400">{hireFormError}</p>}
-              <button onClick={() => setHireEmployeeModalOpen(false)} className="h-10 rounded-lg border border-[var(--dash-border)] px-4 text-sm font-semibold">Cancel</button>
+              <button onClick={closeHireEmployeeModal} className="h-10 rounded-lg border border-[var(--dash-border)] px-4 text-sm font-semibold">Cancel</button>
               <button onClick={handleAddEmployee} disabled={isAddingEmployee} className="h-10 rounded-lg bg-[#00b84f] px-4 text-sm font-semibold text-black disabled:opacity-50 disabled:cursor-not-allowed">{isAddingEmployee ? 'Adding...' : 'Add Employee'}</button>
             </div>
           </div>

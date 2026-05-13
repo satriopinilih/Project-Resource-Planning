@@ -25,6 +25,7 @@ public class UserProjectDto
 {
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = string.Empty;
+    public string ClientOrganization { get; set; } = string.Empty;
     public string RoleInProject { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }

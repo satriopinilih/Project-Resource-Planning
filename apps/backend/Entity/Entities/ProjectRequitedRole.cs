@@ -19,6 +19,7 @@ public class ProjectRequiredRole
 
     public WorkingType WorkingType { get; set; }
 
+    [NotMapped]
     public string RequiredSkill { get; set; } = string.Empty;
 
     [ForeignKey(nameof(ProjectID))]

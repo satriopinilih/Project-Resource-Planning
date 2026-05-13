@@ -22,6 +22,7 @@ import {
 import {
   getProjectById,
   createHireRequest,
+  getHireRequests,
   BackendProject,
   updateProject,
   getEmployeeFormOptions,
@@ -40,7 +41,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
         today.setHours(0, 0, 0, 0);
         if (startDate > today) return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
       }
-      return { label: "Active", class: "bg-green-500/10 text-green-400 border-green-500/20" };
+      return { label: "Running", class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
     default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
@@ -64,7 +65,11 @@ const formatDate = (dateString: string) => {
 };
 
 export default function ProjectDetailsPage() {
+  const ALLOWED_STAFF_ROLES = ["PM", "Senior Dev", "Junior Dev", "Senior BA", "Junior BA", "Architect"];
+  const ALLOWED_WORKING_TYPES = ["Dedicated", "Non-Dedicated"];
+
   const params = useParams();
+  const router = useRouter();
   const idStr = Array.isArray(params.id) ? params.id[0] : params.id;
   const [project, setProject] = useState<BackendProject | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +90,12 @@ export default function ProjectDetailsPage() {
     requiredSkillIds: [] as number[],
   });
   const [formOptions, setFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
+  const [hasPendingRescheduleRequest, setHasPendingRescheduleRequest] = useState(false);
+  const [rescheduleRequestNote, setRescheduleRequestNote] = useState<string>("");
+  const allowedStaffRoles = useMemo(
+    () => formOptions.staffRoles.filter((r) => ALLOWED_STAFF_ROLES.includes(r.name)),
+    [formOptions.staffRoles]
+  );
 
   const numericId = useMemo(() => {
     if (!idStr) return null;
@@ -113,6 +124,24 @@ export default function ProjectDetailsPage() {
     getEmployeeFormOptions().then(setFormOptions).catch(console.error);
   }, [numericId]);
 
+  useEffect(() => {
+    const loadRescheduleStatus = async () => {
+      if (!numericId) return;
+      try {
+        const rows = await getHireRequests(undefined, numericId);
+        const timelineRows = rows.filter(
+          (r) => r.roleNeeded === "Timeline Edit Request" && (r.status === "Open" || r.status === "InProgress")
+        );
+        setHasPendingRescheduleRequest(timelineRows.length > 0);
+        setRescheduleRequestNote(timelineRows[0]?.notes || "");
+      } catch {
+        setHasPendingRescheduleRequest(false);
+        setRescheduleRequestNote("");
+      }
+    };
+    loadRescheduleStatus();
+  }, [numericId]);
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!project) return;
@@ -128,7 +157,7 @@ export default function ProjectDetailsPage() {
         estimatedEndDate: editForm.estimatedEndDate ? new Date(editForm.estimatedEndDate).toISOString() : project.estimatedEndDate,
         projectStatus: editForm.projectStatus,
         requiredRoles: editForm.requiredRoles.map(r => {
-          const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Part-time": 1, "Ad-hoc": 1 };
+          const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
           return {
             id: typeof r.id === 'string' && r.id.includes('.') ? 0 : Number(r.id),
             staffRoleId: r.staffRoleId || 0,
@@ -185,6 +214,22 @@ export default function ProjectDetailsPage() {
               </div>
             )}
 
+            {hasPendingRescheduleRequest && (
+              <div className="bg-amber-100 border border-amber-300 dark:bg-amber-500/10 dark:border-amber-400/30 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-lg">
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-amber-900 dark:text-amber-200">GM requested a project reschedule</p>
+                    <p className="text-[12px] text-amber-800 dark:text-amber-300 mt-1">
+                      {rescheduleRequestNote ? rescheduleRequestNote.replace("[TIMELINE EDIT REQUEST] ", "") : "Please review this request in the Marketing dashboard notifications."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ── 1. Project Summary Banner ── */}
             <section className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden shadow-sm">
               {/* Header */}
@@ -209,29 +254,31 @@ export default function ProjectDetailsPage() {
                     <span className={`px-4 py-2 rounded-full text-[13px] font-semibold ${statusInfo.class}`}>
                       {statusInfo.label}
                     </span>
-                    <button onClick={() => {
-                      setEditForm({
-                        projectName: project.projectName,
-                        clientOrganization: project.clientOrganization,
-                        projectDescription: project.projectDescription,
-                        estimatedDuration: project.estimatedDuration,
-                        priorityLevel: project.priorityLevel,
-                        estimatedStartDate: project.estimatedStartDate ? project.estimatedStartDate.split('T')[0] : '',
-                        estimatedEndDate: project.estimatedEndDate ? project.estimatedEndDate.split('T')[0] : '',
-                        projectStatus: project.projectStatus,
-                        requiredRoles: project.requiredRoles?.map(r => ({
-                          id: r.id || Math.random().toString(36).substring(2, 9),
-                          role: r.roleName,
-                          count: r.requiredCount,
-                          workingType: r.workingType || "Dedicated"
-                        })) || [],
-                        requiredSkillIds: project.requiredSkillIds || [],
-                      });
-                      setEditModalOpen(true);
-                    }}
-                      className="px-5 py-2 bg-[#2B7FFC] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all">
-                      Edit Project
-                    </button>
+                    {project.projectStatus !== 3 && (
+                      <button onClick={() => {
+                        setEditForm({
+                          projectName: project.projectName,
+                          clientOrganization: project.clientOrganization,
+                          projectDescription: project.projectDescription,
+                          estimatedDuration: project.estimatedDuration,
+                          priorityLevel: project.priorityLevel,
+                          estimatedStartDate: project.estimatedStartDate ? project.estimatedStartDate.split('T')[0] : '',
+                          estimatedEndDate: project.estimatedEndDate ? project.estimatedEndDate.split('T')[0] : '',
+                          projectStatus: project.projectStatus,
+                          requiredRoles: project.requiredRoles?.map(r => ({
+                            id: r.id || Math.random().toString(36).substring(2, 9),
+                            role: r.roleName,
+                            count: r.requiredCount,
+                            workingType: r.workingType || "Dedicated"
+                          })) || [],
+                          requiredSkillIds: project.requiredSkillIds || [],
+                        });
+                        setEditModalOpen(true);
+                      }}
+                        className="px-5 py-2 bg-[#2B7FFC] hover:bg-[#2563eb] text-white rounded-lg text-[13px] font-semibold transition-all">
+                        Edit Project
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -519,7 +566,7 @@ export default function ProjectDetailsPage() {
                         ...editForm,
                         requiredRoles: [...editForm.requiredRoles, {
                           id: Math.random().toString(36).substring(2, 9),
-                          role: 'Software Engineer',
+                          role: 'Senior Dev',
                           count: 1,
                           workingType: 'Dedicated'
                         }]
@@ -553,10 +600,12 @@ export default function ProjectDetailsPage() {
                                 setEditForm({ ...editForm, requiredRoles: newRoles });
                               }}
                             >
-                              <option value="Project Manager">Project Manager</option>
-                              <option value="Senior BA">Senior BA</option>
-                              <option value="Software Engineer">Software Engineer</option>
-                              <option value="QA Tester">QA Tester</option>
+                              {(allowedStaffRoles.length > 0
+                                ? allowedStaffRoles.map((r) => r.name)
+                                : ALLOWED_STAFF_ROLES
+                              ).map((role) => (
+                                <option key={role} value={role}>{role}</option>
+                              ))}
                             </select>
                           </div>
                           <div>
@@ -587,9 +636,9 @@ export default function ProjectDetailsPage() {
                                 setEditForm({ ...editForm, requiredRoles: newRoles });
                               }}
                             >
-                              <option value="Dedicated">Dedicated</option>
-                              <option value="Part-time">Part-time</option>
-                              <option value="Ad-hoc">Ad-hoc</option>
+                              {ALLOWED_WORKING_TYPES.map((wt) => (
+                                <option key={wt} value={wt}>{wt}</option>
+                              ))}
                             </select>
                           </div>
                         </div>
