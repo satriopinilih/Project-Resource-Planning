@@ -287,7 +287,16 @@ export default function TeamMembersPage() {
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Duration: 24 months
+                        Duration: {(() => {
+                          if (!selectedEmployee.contractStart || !selectedEmployee.contractEnd) return 'Unknown';
+                          const start = new Date(selectedEmployee.contractStart);
+                          const end = new Date(selectedEmployee.contractEnd);
+                          if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                            const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+                            return `${Math.max(0, months)} months`;
+                          }
+                          return 'Unknown';
+                        })()}
                       </div>
                     )}
 
