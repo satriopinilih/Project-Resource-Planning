@@ -350,6 +350,17 @@ public class ProjectsController : ControllerBase
         return Ok(ApiResponse<string>.SuccessResponse("Member removed from project"));
     }
 
+    [HttpPatch("{id}/roles/{roleId}/count")]
+    public async Task<IActionResult> UpdateRoleCount(int id, int roleId, [FromBody] UpdateRoleCountRequest request)
+    {
+        var (success, error, statusCode, data) = await _service.UpdateRoleCountAsync(id, roleId, request.NewCount);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<string>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<ProjectDto>.SuccessResponse(data!));
+    }
+
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectRequest request)
     {

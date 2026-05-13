@@ -368,6 +368,13 @@ export async function unassignMemberFromProject(projectId: number, userId: strin
   });
 }
 
+export async function updateRoleCount(projectId: number, roleId: number, newCount: number): Promise<BackendProject> {
+  return fetchJson<BackendProject>(`/api/projects/${projectId}/roles/${roleId}/count`, {
+    method: 'PATCH',
+    body: JSON.stringify({ newCount })
+  });
+}
+
 export async function markProjectAsRead(projectId: number): Promise<void> {
   await fetchJson(`/api/projects/mark-read/${projectId}`, {
     method: 'POST'

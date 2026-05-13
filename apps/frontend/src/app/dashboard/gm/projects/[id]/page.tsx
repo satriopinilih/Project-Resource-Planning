@@ -18,6 +18,8 @@ import {
   FileText,
   ShieldAlert,
   LayoutGrid,
+  Minus,
+  Plus,
 } from "lucide-react";
 import {
   getProjectById,
@@ -29,6 +31,7 @@ import {
   getRawEmployees,
   assignMemberToProject,
   unassignMemberFromProject,
+  updateRoleCount,
   AssignMemberPayload,
   getHireRequests,
 } from "../../../../../lib/api";
@@ -124,6 +127,9 @@ export default function ProjectDetailsPage() {
 
   // Remove member state
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+
+  // Update role count state
+  const [updatingRoleId, setUpdatingRoleId] = useState<number | null>(null);
 
   // Hire Request state
   const [hireSubmitting, setHireSubmitting] = useState(false);
@@ -336,6 +342,21 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  const handleUpdateRoleCount = async (roleId: number, currentCount: number, delta: number) => {
+    if (!project) return;
+    const newCount = currentCount + delta;
+    if (newCount < 1) return;
+    setUpdatingRoleId(roleId);
+    try {
+      const updated = await updateRoleCount(project.projectId, roleId, newCount);
+      setProject(updated);
+    } catch (err: any) {
+      alert(err?.message || "Failed to update role count.");
+    } finally {
+      setUpdatingRoleId(null);
+    }
+  };
+
   if (loading || !project) {
     return (
       <div className="flex flex-col min-h-screen bg-[var(--dash-bg-page)]">
@@ -481,7 +502,7 @@ export default function ProjectDetailsPage() {
                       className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-[13px] font-bold transition-all disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed shadow-lg shadow-green-500/20 disabled:shadow-none"
                     >
                       {startingProject ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                      {startingProject ? "Starting..." : "Start Project"}
+                      {startingProject ? "Starting..." : "Submit Project"}
                     </button>
                   )}
                 </div>
@@ -518,14 +539,40 @@ export default function ProjectDetailsPage() {
                               {role.workingType}
                             </span>
                           </div>
-                          {!isFilled && isEditingTeam && (
-                            <button
-                              onClick={() => openAssignModal(role.roleName)}
-                              className="px-3 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md text-[12px] font-bold flex items-center gap-1.5 transition-colors"
-                            >
-                              <UserPlus size={14} /> Assign
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {/* +/- buttons for GM to adjust required count */}
+                            {isEditingTeam && (
+                              <div className="flex items-center gap-1 bg-[var(--dash-bg-page)] border border-[var(--dash-border)] rounded-lg px-1 py-0.5">
+                                <button
+                                  onClick={() => handleUpdateRoleCount(role.id, role.requiredCount ?? 1, -1)}
+                                  disabled={updatingRoleId === role.id || (role.requiredCount ?? 1) <= (membersInRole.length || 1)}
+                                  title="Decrease required count"
+                                  className="p-1 rounded text-[var(--dash-text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                  {updatingRoleId === role.id ? <Loader2 size={13} className="animate-spin" /> : <Minus size={13} />}
+                                </button>
+                                <span className="text-[12px] font-bold text-[var(--dash-text-primary)] w-5 text-center">
+                                  {role.requiredCount ?? 1}
+                                </span>
+                                <button
+                                  onClick={() => handleUpdateRoleCount(role.id, role.requiredCount ?? 1, +1)}
+                                  disabled={updatingRoleId === role.id}
+                                  title="Increase required count"
+                                  className="p-1 rounded text-[var(--dash-text-muted)] hover:text-green-400 hover:bg-green-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                  {updatingRoleId === role.id ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                                </button>
+                              </div>
+                            )}
+                            {!isFilled && isEditingTeam && (
+                              <button
+                                onClick={() => openAssignModal(role.roleName)}
+                                className="px-3 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md text-[12px] font-bold flex items-center gap-1.5 transition-colors"
+                              >
+                                <UserPlus size={14} /> Assign
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Progress */}
