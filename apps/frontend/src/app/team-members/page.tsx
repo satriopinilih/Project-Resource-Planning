@@ -118,7 +118,10 @@ export default function TeamMembersPage() {
   let selectedStatus = 'Active';
   let selectedStatusClasses = 'bg-[#064e3b]/30 text-[#34d399] border-[#064e3b]/50';
   if (selectedEmployee && selectedEmployee.employmentType !== 'Permanent' && selectedEmployee.daysRemaining !== undefined) {
-    if (selectedEmployee.daysRemaining < 15) {
+    if (selectedEmployee.daysRemaining < 0) {
+      selectedStatus = 'Expired';
+      selectedStatusClasses = 'bg-slate-800/30 text-slate-400 border-slate-800/50';
+    } else if (selectedEmployee.daysRemaining < 15) {
       selectedStatus = 'Urgent';
       selectedStatusClasses = 'bg-red-900/30 text-red-400 border-red-900/50';
     } else if (selectedEmployee.daysRemaining < 30) {
@@ -162,7 +165,10 @@ export default function TeamMembersPage() {
                   let badgeClasses = 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40';
                   
                   if (employee.employmentType !== 'Permanent' && employee.daysRemaining !== undefined) {
-                    if (employee.daysRemaining < 15) {
+                    if (employee.daysRemaining < 0) {
+                      badgeStatus = 'Expired';
+                      badgeClasses = 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700';
+                    } else if (employee.daysRemaining < 15) {
                       badgeStatus = 'Urgent';
                       badgeClasses = 'bg-red-100 text-red-800 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-400/40';
                     } else if (employee.daysRemaining < 30) {
@@ -194,7 +200,7 @@ export default function TeamMembersPage() {
                           {badgeStatus}
                         </span>
 
-                        {badgeStatus !== 'Active' && employee.daysRemaining !== undefined && (
+                        {badgeStatus !== 'Active' && badgeStatus !== 'Expired' && employee.daysRemaining !== undefined && (
                           <div className={`flex items-center gap-1 text-[11px] font-medium ${badgeStatus === 'Urgent' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-300'}`}>
                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
