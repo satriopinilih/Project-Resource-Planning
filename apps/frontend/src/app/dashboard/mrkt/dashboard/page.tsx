@@ -20,10 +20,11 @@ import {
   Trash2
 } from "lucide-react";
 import Link from "next/link";
-import { 
-  getProjects, 
-  BackendProject, 
-  getTimelineEditRequests, 
+import { useRouter } from "next/navigation";
+import {
+  getProjects,
+  BackendProject,
+  getTimelineEditRequests,
   TimelineEditRequest,
   updateProject,
   fulfillHireRequest,
@@ -34,6 +35,7 @@ import {
 
 
 export default function MarketingDashboard() {
+  const router = useRouter();
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -86,12 +88,12 @@ export default function MarketingDashboard() {
   };
 
   // Compute stats
-  const totalSubmitted = projects.length;
+  const totalProjects = projects.length;
   // Based on Backend enum: 0 = Pending, 1 = Scheduled, 2 = Running, 3 = Completed
-  const awaitingApproval = projects.filter(p => p.projectStatus === 0).length;
-  const scheduled = projects.filter(p => p.projectStatus === 1).length;
-  const running = projects.filter(p => p.projectStatus === 2).length;
-  const completed = projects.filter(p => p.projectStatus === 3).length;
+  const pendingCount = projects.filter(p => p.projectStatus === 0).length;
+  const scheduledCount = projects.filter(p => p.projectStatus === 1).length;
+  const runningCount = projects.filter(p => p.projectStatus === 2).length;
+  const completedCount = projects.filter(p => p.projectStatus === 3).length;
 
   const refreshData = () => {
     setIsLoading(true);
@@ -120,7 +122,7 @@ export default function MarketingDashboard() {
     try {
       // 1. Fetch current full project data to ensure we don't overwrite with nulls
       const currentProject = await getProjectById(selectedReq.projectId.toString());
-      
+
       // 2. Prepare full payload (Matching Backend DTO exactly)
       const fullPayload = {
         ProjectName: currentProject.projectName,
@@ -133,9 +135,9 @@ export default function MarketingDashboard() {
         ProjectStatus: currentProject.projectStatus,
         // Map to exact DTO field names: RoleName, Count, WorkingType
         RequiredRoles: (currentProject as any).requiredRoles.map((r: any) => ({
-           RoleName: r.roleName,
-           Count: r.requiredCount || r.count || 1,
-           WorkingType: r.workingType
+          RoleName: r.roleName,
+          Count: r.requiredCount || r.count || 1,
+          WorkingType: r.workingType
         })),
         RequiredSkillIds: currentProject.requiredSkillIds || []
       };
@@ -145,7 +147,7 @@ export default function MarketingDashboard() {
 
       // 4. Fulfill the Hire Request (Timeline Edit Req)
       await fulfillHireRequest(selectedReq.id, 'Timeline Updated by Marketing');
-      
+
       setReviewModalOpen(false);
       refreshData();
     } catch (e) {
@@ -215,44 +217,49 @@ export default function MarketingDashboard() {
       {/* Stats Grid */}
       <section className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <StatCardCustom
-          label="Total Submitted"
-          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : totalSubmitted}
+          label="Total Project"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : totalProjects}
           icon={LayoutDashboard}
           iconBg="bg-blue-100 dark:bg-[#2A314A]"
           iconColor="text-blue-600 dark:text-[#88a4e6]"
           valueColor="text-gray-900 dark:text-white"
+          onClick={() => router.push('/project?tab=All')}
         />
         <StatCardCustom
-          label="Awaiting Approval"
-          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-amber-500" /> : awaitingApproval}
+          label="Pending"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-amber-500" /> : pendingCount}
           icon={Clock}
           iconBg="bg-amber-100 dark:bg-[#3a3221]"
           iconColor="text-amber-600 dark:text-yellow-500"
           valueColor="text-amber-600 dark:text-yellow-500"
+          onClick={() => router.push('/project?tab=Pending')}
         />
         <StatCardCustom
           label="Scheduled"
-          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : scheduled}
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : scheduledCount}
           icon={TrendingUp}
           iconBg="bg-blue-100 dark:bg-[#262c4a]"
           iconColor="text-blue-600 dark:text-[#5c88f2]"
           valueColor="text-blue-600 dark:text-[#5c88f2]"
+          onClick={() => router.push('/project?tab=Scheduled')}
         />
         <StatCardCustom
           label="Running"
-          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-emerald-500" /> : running}
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-emerald-500" /> : runningCount}
           icon={TrendingUp}
           iconBg="bg-emerald-100 dark:bg-[#1f362e]"
           iconColor="text-emerald-600 dark:text-emerald-500"
           valueColor="text-emerald-600 dark:text-emerald-500"
+          onClick={() => router.push('/project?tab=Running')}
         />
         <StatCardCustom
           label="Completed"
-          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" /> : completed}
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" /> : completedCount}
           icon={CheckCircle2}
           iconBg="bg-gray-100 dark:bg-[#34353a]"
           iconColor="text-gray-600 dark:text-gray-400"
           valueColor="text-gray-900 dark:text-white"
+          onClick={() => router.push('/project?tab=Completed')}
         />
       </section>
 
@@ -325,7 +332,7 @@ export default function MarketingDashboard() {
         </section>
 
         {/* Notifications Card - Timeline Edit Requests */}
-        <section className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
+        <section id="timeline-edit-requests-section" className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300 scroll-mt-24">
           <div className="flex items-center gap-2 mb-5">
             <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             <h3 className="text-[17px] font-semibold text-gray-900 dark:text-white">Timeline Edit Requests</h3>
@@ -354,18 +361,18 @@ export default function MarketingDashboard() {
                       <p>Current: {new Date(req.currentStartDate).toLocaleDateString()} → {new Date(req.currentEndDate).toLocaleDateString()}</p>
                     </div>
                     <div className="mt-3 flex gap-2">
-                       <button 
-                         onClick={() => openReviewModal(req)}
-                         className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold rounded-lg transition-colors cursor-pointer"
-                       >
-                         Review & Approve
-                       </button>
-                       <button 
-                         onClick={() => { setSelectedReq(req); handleDecline(); }}
-                         className="px-4 py-2 bg-gray-200 dark:bg-white/5 hover:bg-red-500/10 hover:text-red-500 text-gray-600 dark:text-gray-400 text-[12px] font-bold rounded-lg transition-all cursor-pointer"
-                       >
-                         Decline
-                       </button>
+                      <button
+                        onClick={() => openReviewModal(req)}
+                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold rounded-lg transition-colors cursor-pointer"
+                      >
+                        Review & Approve
+                      </button>
+                      <button
+                        onClick={() => { setSelectedReq(req); handleDecline(); }}
+                        className="px-4 py-2 bg-gray-200 dark:bg-white/5 hover:bg-red-500/10 hover:text-red-500 text-gray-600 dark:text-gray-400 text-[12px] font-bold rounded-lg transition-all cursor-pointer"
+                      >
+                        Decline
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -398,11 +405,11 @@ export default function MarketingDashboard() {
                   <label className="text-[11px] font-bold text-[var(--dash-text-faint)] uppercase tracking-wider">New Start Date</label>
                   <div className="relative">
                     <CalendarIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]" />
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={editStartDate}
                       onChange={(e) => setEditStartDate(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl text-[13px] outline-none focus:border-blue-500/50 transition-colors" 
+                      className="w-full pl-9 pr-4 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl text-[13px] outline-none focus:border-blue-500/50 transition-colors"
                     />
                   </div>
                 </div>
@@ -411,11 +418,11 @@ export default function MarketingDashboard() {
                   <label className="text-[11px] font-bold text-[var(--dash-text-faint)] uppercase tracking-wider">New End Date</label>
                   <div className="relative">
                     <CalendarIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]" />
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={editEndDate}
                       onChange={(e) => setEditEndDate(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl text-[13px] outline-none focus:border-blue-500/50 transition-colors" 
+                      className="w-full pl-9 pr-4 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl text-[13px] outline-none focus:border-blue-500/50 transition-colors"
                     />
                   </div>
                 </div>
@@ -423,13 +430,13 @@ export default function MarketingDashboard() {
             </div>
 
             <div className="px-6 py-5 border-t border-[var(--dash-border)] flex justify-end gap-3 bg-[var(--dash-bg-input)]/30">
-              <button 
+              <button
                 onClick={() => setReviewModalOpen(false)}
                 className="px-5 py-2 text-[13px] font-semibold text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleApprove}
                 disabled={isSubmitting}
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
@@ -445,9 +452,12 @@ export default function MarketingDashboard() {
   );
 }
 
-function StatCardCustom({ label, value, icon: Icon, iconBg, iconColor, valueColor }: any) {
+function StatCardCustom({ label, value, icon: Icon, iconBg, iconColor, valueColor, onClick }: any) {
   return (
-    <div className="bg-white dark:bg-[#242427] p-5 rounded-2xl flex flex-col justify-between h-[115px] border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
+    <div
+      onClick={onClick}
+      className={`bg-white dark:bg-[#242427] p-5 rounded-2xl flex flex-col justify-between h-[115px] border border-gray-200 dark:border-white/5 shadow-sm transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-blue-500/50 hover:shadow-md hover:scale-[1.02]' : ''}`}
+    >
       <div className="flex justify-between items-start w-full">
         <span className="text-gray-500 dark:text-gray-400 text-[13px] font-medium">{label}</span>
         <div className={`p-1.5 rounded-lg ${iconBg} ${iconColor} transition-colors duration-300`}>
@@ -471,7 +481,7 @@ function SubmissionItem({ title, client, date, status, statusColor, canDelete, o
       </div>
       <div className="flex items-center gap-3">
         {canDelete && (
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white hover:bg-red-600 rounded-lg transition-all shadow-md shadow-red-500/20"
             title="Cancel Submission"
