@@ -304,6 +304,48 @@ public class ProjectService
     }
 
     /// <summary>
+    /// Updates the required headcount (RequiredCount) for a specific role on a project.
+    /// The new count must be at least equal to the number of already-filled members in that role.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, ProjectDto? Data)> UpdateRoleCountAsync(
+        int projectId, int roleId, int newCount)
+    {
+        var role = await _db.ProjectRequiredRoles
+            .Include(pr => pr.StaffRole)
+            .FirstOrDefaultAsync(pr => pr.Id == roleId && pr.ProjectID == projectId);
+
+        if (role is null)
+            return (false, "Role not found on this project", 404, null);
+
+        if (newCount < 1)
+            return (false, "Required count must be at least 1", 400, null);
+
+        // Don't allow reducing below the number already filled
+        var filledCount = await _db.UserProjects
+            .CountAsync(up => up.ProjectId == projectId &&
+                              up.RoleInProject.ToLower() == role.StaffRole.RoleName.ToLower());
+
+        if (newCount < filledCount)
+            return (false, $"Cannot reduce below the {filledCount} member(s) already assigned to this role.", 400, null);
+
+        role.RequiredCount = newCount;
+        await _db.SaveChangesAsync();
+
+        // Re-fetch for response
+        var updated = await _db.Projects
+            .AsNoTracking()
+            .Include(p => p.UserProjects).ThenInclude(up => up.User)
+                .ThenInclude(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
+            .Include(p => p.UserProjects).ThenInclude(up => up.User)
+                .ThenInclude(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(p => p.ProjectRequiredRoles).ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills).ThenInclude(ps => ps.Skill)
+            .FirstAsync(p => p.ProjectID == projectId);
+
+        return (true, null, 200, MapToDto(updated));
+    }
+
+    /// <summary>
     /// Updates an existing project's details, required roles, and required skills.
     /// Uses AddRange/RemoveRange for batch operations instead of looped .Add()/.Remove().
     /// </summary>
