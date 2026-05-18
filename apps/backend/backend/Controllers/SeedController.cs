@@ -145,7 +145,10 @@ END $$;");
                 new User { UserId = "MKT001", UserName = "Market Manager", Email = "mrkt@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 15, ContractStart = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
 
                 new User { UserId = "EMP001", UserName = "Sarah Johnson", Email = "sarah.johnson@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 8, ContractStart = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 14, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP002", UserName = "Michael Chen", Email = "michael.chen@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceYears = 3, ContractStart = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
+                new User { UserId = "EMP002", UserName = "Michael Chen", Email = "michael.chen@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceYears = 3, ContractStart = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP-URGENT", UserName = "John Urgent", Email = "urgent@accelist.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceYears = 2, ContractStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = now.AddDays(10), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP-EXPIRING", UserName = "Jane Expiring", Email = "expiring@accelist.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceYears = 3, ContractStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = now.AddDays(25), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP-ACTIVE", UserName = "Bob Active", Email = "active@accelist.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Contract, ExperienceYears = 1, ContractStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = now.AddDays(60), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
             };
             _db.Users.AddRange(users);
             await _db.SaveChangesAsync();
@@ -164,14 +167,20 @@ END $$;");
                 new UserRole { UserId = "PM001", RoleId = rolePm.RoleId },
                 new UserRole { UserId = "MKT001", RoleId = roleMrkt.RoleId },
                 new UserRole { UserId = "EMP001", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP002", RoleId = roleStaff.RoleId }
+                new UserRole { UserId = "EMP002", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP-URGENT", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP-EXPIRING", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP-ACTIVE", RoleId = roleStaff.RoleId }
             );
 
             // Staff roles (display)
             _db.UserStaffRoles.AddRange(
                 new UserStaffRole { UserId = "EMP001", StaffRoleId = srSeniorBA.StaffRoleId },
                 new UserStaffRole { UserId = "EMP002", StaffRoleId = srJuniorBA.StaffRoleId },
-                new UserStaffRole { UserId = "PM001", StaffRoleId = srPm.StaffRoleId }
+                new UserStaffRole { UserId = "PM001", StaffRoleId = srPm.StaffRoleId },
+                new UserStaffRole { UserId = "EMP-URGENT", StaffRoleId = srJuniorBA.StaffRoleId },
+                new UserStaffRole { UserId = "EMP-EXPIRING", StaffRoleId = srSeniorBA.StaffRoleId },
+                new UserStaffRole { UserId = "EMP-ACTIVE", StaffRoleId = srJuniorDev.StaffRoleId }
             );
 
             // Skill mapping — collect all items then AddRange for batch efficiency
@@ -187,6 +196,9 @@ END $$;");
             AddSkills("EMP001", "Business Analysis", "Requirements Gathering", "Stakeholder Management");
             AddSkills("EMP002", "Business Analysis", "Documentation", "Testing");
             AddSkills("PM001", "Agile", "Scrum", "Product Management");
+            AddSkills("EMP-URGENT", "Business Analysis", "Testing");
+            AddSkills("EMP-EXPIRING", "Requirements Gathering", "Documentation");
+            AddSkills("EMP-ACTIVE", "React", "TypeScript");
 
             // Use AddRange for skill batch insert
             _db.UserSkills.AddRange(allUserSkills);
