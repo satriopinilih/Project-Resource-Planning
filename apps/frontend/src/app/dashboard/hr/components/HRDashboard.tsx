@@ -26,6 +26,13 @@ import {
 } from '@/lib/api';
 import { ContractExtensionRequest, RequestHistoryItem } from '@/lib/types';
 
+const getTodayISO = () => new Date().toISOString().split('T')[0];
+const getSixMonthsISO = () => {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toISOString().split('T')[0];
+};
+
 export default function HRDashboard() {
   const router = useRouter();
   const [employees, setEmployees] = useState<BackendEmployee[]>([]);
@@ -56,8 +63,8 @@ export default function HRDashboard() {
     staffRoleId: 0,
     experienceLevel: '5',
     employmentType: 'Contract' as 'Contract' | 'Permanent',
-    contractStart: '2026-04-10',
-    contractEnd: '2026-06-25',
+    contractStart: getTodayISO(),
+    contractEnd: getSixMonthsISO(),
     skills: '',
     skillIds: [] as number[],
     email: '',
@@ -108,12 +115,17 @@ export default function HRDashboard() {
   }, []);
 
   const expiringEmployees = useMemo(
-    () => employees.filter((e) => e.daysRemaining !== undefined && e.daysRemaining <= 60),
+    () => employees.filter((e) => e.daysRemaining !== undefined && e.daysRemaining <= 30),
     [employees]
   );
 
+  const activeHireRequests = useMemo(
+    () => hireRequests.filter((r) => r.status !== 'Fulfilled' && r.status !== 'Declined' && r.roleNeeded !== 'Timeline Edit Request' && r.roleNeeded !== 'GM Notification'),
+    [hireRequests]
+  );
+
   const stats = useMemo(() => {
-    const openHire = hireRequests.filter((r) => r.status === 'Open' || r.status === 'InProgress').length;
+    const openHire = activeHireRequests.length;
     const pending = contractExtensionRequests.filter((r) => r.status === 'Pending').length;
     const now = new Date();
     const approvedThisMonth = requestHistory.filter((r) => {
@@ -130,12 +142,7 @@ export default function HRDashboard() {
       openHireRequests: openHire,
       approvedThisMonth
     };
-  }, [employees, expiringEmployees, contractExtensionRequests, hireRequests, requestHistory]);
-
-  const activeHireRequests = useMemo(
-    () => hireRequests.filter((r) => r.status !== 'Fulfilled' && r.status !== 'Declined' && r.roleNeeded !== 'Timeline Edit Request' && r.roleNeeded !== 'GM Notification'),
-    [hireRequests]
-  );
+  }, [employees, expiringEmployees, contractExtensionRequests, activeHireRequests, requestHistory]);
 
   const handleApprove = async () => {
     if (!selectedRequest) return;
@@ -184,7 +191,20 @@ export default function HRDashboard() {
     setHireBatchIndex(1);
     setHiredNames([]);
     setHireFormError(null);
-    setHireForm((prev) => ({ ...prev, name: '', email: '', skills: '', skillIds: [] }));
+    setHireForm({
+      name: '',
+      role: 'Senior Dev',
+      staffRoleId: 0,
+      experienceLevel: '5',
+      employmentType: 'Contract',
+      contractStart: getTodayISO(),
+      contractEnd: getSixMonthsISO(),
+      skills: '',
+      skillIds: [],
+      email: '',
+      departmentId: 0,
+      roleId: 0
+    });
   };
 
   const openDeclineHireModal = (hireRequestId: number) => {
@@ -352,6 +372,94 @@ export default function HRDashboard() {
             </button>
           </div>
 
+          <div id="expiring-contracts-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Employees with Expiring Contracts</h2>
+            {expiringEmployees.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No contracts expiring within 30 days</div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Department</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Contract End</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expiringEmployees.map((employee) => {
+                    let status: 'Active' | 'Expiring Soon' | 'Urgent' = 'Active';
+                    if (employee.daysRemaining !== undefined) {
+                      if (employee.daysRemaining < 15) status = 'Urgent';
+                      else if (employee.daysRemaining < 30) status = 'Expiring Soon';
+                    }
+                    return (
+                      <tr key={employee.userId} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.userName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.departmentName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.contractEnd}</td>
+                        <td className="py-3 px-4"><StatusBadge status={status} size="sm" /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div id="pending-contract-extension-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pending Contract Extension Requests</h2>
+            {contractExtensionRequests.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending extension requests</div>
+            ) : contractExtensionRequests.map((request) => (
+              <div key={request.id} className="border-2 border-amber-300 dark:border-yellow-600 rounded-lg p-6 bg-amber-50/70 dark:bg-yellow-900/10 mb-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{request.employeeName}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{employees.find((e) => e.userId === request.employeeId)?.role || request.role}</p>
+                  </div>
+                  <StatusBadge status="Pending" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Current End Date</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {formatDateLabel(employees.find((e) => e.userId === request.employeeId)?.contractEnd) || request.currentEndDate}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Extension Duration</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.extensionDuration}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Requested New End Date</p>
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{request.requestedNewEndDate}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Requested On</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.requestedOn}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4 rounded-md bg-gray-100 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600/40 px-3 py-2">
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">Reason:</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-100">{request.reason}</p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button onClick={() => { setSelectedRequest(request); setIsApprovalModalOpen(true); }} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Approve</button>
+                  <button onClick={() => { setSelectedRequest(request); setIsDeclineModalOpen(true); }} className="px-4 py-2 bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 border border-red-600 dark:border-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium">Decline</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div id="hire-requests-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Hire Requests</h2>
@@ -425,87 +533,6 @@ export default function HRDashboard() {
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-
-          <div id="pending-contract-extension-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pending Contract Extension Requests</h2>
-            {contractExtensionRequests.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending extension requests</div>
-            ) : contractExtensionRequests.map((request) => (
-              <div key={request.id} className="border-2 border-amber-300 dark:border-yellow-600 rounded-lg p-6 bg-amber-50/70 dark:bg-yellow-900/10 mb-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{request.employeeName}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{employees.find((e) => e.userId === request.employeeId)?.role || request.role}</p>
-                  </div>
-                  <StatusBadge status="Pending" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Current End Date</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {formatDateLabel(employees.find((e) => e.userId === request.employeeId)?.contractEnd) || request.currentEndDate}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Extension Duration</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.extensionDuration}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Requested New End Date</p>
-                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{request.requestedNewEndDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Requested On</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.requestedOn}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-4 rounded-md bg-gray-100 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600/40 px-3 py-2">
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">Reason:</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-100">{request.reason}</p>
-                </div>
-
-                <div className="flex gap-3">
-                  <button onClick={() => { setSelectedRequest(request); setIsApprovalModalOpen(true); }} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Approve</button>
-                  <button onClick={() => { setSelectedRequest(request); setIsDeclineModalOpen(true); }} className="px-4 py-2 bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 border border-red-600 dark:border-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium">Decline</button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div id="expiring-contracts-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Employees with Expiring Contracts</h2>
-            {expiringEmployees.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No contracts expiring within 2 months</div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Department</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Contract End</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expiringEmployees.map((employee) => (
-                    <tr key={employee.userId} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.userName}</td>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.departmentName}</td>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.contractEnd}</td>
-                      <td className="py-3 px-4"><StatusBadge status="Expiring Soon" size="sm" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             )}
           </div>
 

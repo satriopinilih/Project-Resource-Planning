@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface StatusBadgeProps {
-  status: 'Active' | 'Expiring Soon' | 'Pending' | 'Approved' | 'Declined' | 'Permanent' | 'Contract';
+  status: 'Active' | 'Expiring Soon' | 'Pending' | 'Approved' | 'Declined' | 'Permanent' | 'Contract' | 'Urgent' | 'Expired';
   size?: 'sm' | 'md';
 }
 
@@ -13,7 +13,9 @@ export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
     'Approved': 'bg-green-50 text-green-700 border-green-200',
     'Declined': 'bg-red-50 text-red-700 border-red-200',
     'Permanent': 'bg-blue-50 text-blue-700 border-blue-200',
-    'Contract': 'bg-gray-50 text-gray-700 border-gray-200'
+    'Contract': 'bg-gray-50 text-gray-700 border-gray-200',
+    'Urgent': 'bg-red-50 text-red-700 border-red-200',
+    'Expired': 'bg-gray-100 text-gray-800 border-gray-300'
   };
 
   const sizeClasses = {
