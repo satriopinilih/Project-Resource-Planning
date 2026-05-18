@@ -15,7 +15,9 @@ import {
   AlertCircle,
   Star,
   Briefcase,
-  Award
+  Award,
+  ArrowRight,
+  CalendarCheck
 } from "lucide-react";
 import {
   getProjectRecommendations,
@@ -68,19 +70,20 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
           {candidate.staffRole} · {candidate.experienceYears}yr experience · For: <span className="text-blue-400">{candidate.targetRole}</span>
         </p>
 
-        {/* Skills */}
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {candidate.matchedSkills.map((skill) => (
-            <span key={skill} className="px-2 py-0.5 bg-blue-500/15 text-blue-400 text-[10px] font-semibold rounded-md border border-blue-500/20">
-              {skill}
-            </span>
-          ))}
-          {candidate.skills.filter(s => !candidate.matchedSkills.includes(s)).slice(0, 3).map((skill) => (
-            <span key={skill} className="px-2 py-0.5 bg-gray-800 text-gray-500 text-[10px] font-medium rounded-md">
-              {skill}
-            </span>
-          ))}
-        </div>
+        {/* Past Projects */}
+        {candidate.pastProjects && candidate.pastProjects.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider self-center mr-0.5">Projects:</span>
+            {candidate.pastProjects.map((proj) => (
+              <span key={proj.projectName} className="px-2 py-0.5 bg-purple-500/10 text-purple-300 text-[10px] font-semibold rounded-md border border-purple-500/20" title={`Role: ${proj.roleInProject} · Skills: ${proj.projectSkills.join(", ") || "—"}`}>
+                {proj.projectName}
+              </span>
+            ))}
+          </div>
+        )}
+        {(!candidate.pastProjects || candidate.pastProjects.length === 0) && (
+          <p className="text-[10px] text-gray-600 italic mb-2">No prior project experience</p>
+        )}
 
         {/* Availability Note */}
         {!candidate.isAvailable && (
@@ -107,12 +110,106 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
   );
 };
 
+// ── Adjust Dates Confirmation Modal ──
+const AdjustDatesModal: React.FC<{
+  option: OptionType;
+  originalStartDate: string;
+  originalEndDate: string;
+  isProcessing: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}> = ({ option, originalStartDate, originalEndDate, isProcessing, onConfirm, onClose }) => {
+  const fmt = (d: string) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-[#0d1117] border border-[#8b5cf6]/30 rounded-3xl w-full max-w-lg shadow-[0_25px_60px_rgba(0,0,0,0.6)] overflow-hidden">
+        {/* Header */}
+        <div className="px-7 pt-7 pb-5 border-b border-gray-800/60">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <CalendarCheck size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-[17px] font-bold text-white">Adjust Project Dates</h3>
+              <p className="text-[12px] text-gray-500 mt-0.5">Reschedule to make all workers available</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-7 py-6 space-y-5">
+          {/* Date comparison */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/15">
+              <p className="text-[10px] font-bold text-red-400/70 uppercase tracking-wider mb-2">Original Dates</p>
+              <p className="text-[12px] font-semibold text-gray-300">{fmt(originalStartDate)}</p>
+              <div className="flex items-center gap-1.5 my-1">
+                <div className="flex-1 h-px bg-red-500/20" />
+                <ArrowRight size={10} className="text-red-400/50" />
+                <div className="flex-1 h-px bg-red-500/20" />
+              </div>
+              <p className="text-[12px] font-semibold text-gray-300">{fmt(originalEndDate)}</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20">
+              <p className="text-[10px] font-bold text-purple-400/80 uppercase tracking-wider mb-2">New Dates</p>
+              <p className="text-[12px] font-semibold text-purple-200">{fmt(option.startDate)}</p>
+              <div className="flex items-center gap-1.5 my-1">
+                <div className="flex-1 h-px bg-purple-500/20" />
+                <ArrowRight size={10} className="text-purple-400/50" />
+                <div className="flex-1 h-px bg-purple-500/20" />
+              </div>
+              <p className="text-[12px] font-semibold text-purple-200">{fmt(option.endDate)}</p>
+            </div>
+          </div>
+
+          {/* Detail note */}
+          {option.rescheduleDetail && (
+            <div className="p-3.5 rounded-xl bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 flex items-start gap-2.5">
+              <Clock size={13} className="text-purple-400 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-purple-300/90 leading-snug">{option.rescheduleDetail}</p>
+            </div>
+          )}
+
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            The project's estimated start and end dates will be updated in the system. All team members in this plan will be assigned and the project will begin immediately.
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="px-7 pb-7 flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isProcessing}
+            className="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-[13px] transition-all disabled:opacity-50 cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isProcessing}
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-60 cursor-pointer"
+          >
+            {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <CalendarCheck size={14} />}
+            {isProcessing ? "Applying..." : "Confirm & Start"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Option Card ──
 const OptionCard: React.FC<{
   option: OptionType;
   isRecommended: boolean;
   label: string;
-}> = ({ option, isRecommended, label }) => {
+  originalStartDate?: string;
+  originalEndDate?: string;
+}> = ({ option, isRecommended, label, originalStartDate, originalEndDate }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -217,13 +314,23 @@ const OptionCard: React.FC<{
 
       {/* Option Actions */}
       <div className="mt-6 flex gap-3">
-        <button
-          disabled={option.requiresHiring || option.requiresReschedule}
-          onClick={() => window.dispatchEvent(new CustomEvent('startProject', { detail: option }))}
-          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
-        >
-          {option.requiresHiring || option.requiresReschedule ? "Unavailable to Start" : "Start Project"}
-        </button>
+        {option.requiresReschedule && !option.requiresHiring ? (
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('adjustDatesAndStart', { detail: { option, originalStartDate, originalEndDate } }))}
+            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+          >
+            <CalendarCheck size={14} />
+            Adjust Dates &amp; Start
+          </button>
+        ) : (
+          <button
+            disabled={option.requiresHiring || option.requiresReschedule}
+            onClick={() => window.dispatchEvent(new CustomEvent('startProject', { detail: option }))}
+            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
+          >
+            {option.requiresHiring ? "Unavailable to Start" : "Start Project"}
+          </button>
+        )}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('customizeOption', { detail: option }))}
           className="px-5 py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 font-bold text-[13px] rounded-xl border border-gray-700/50 transition-all cursor-pointer"
@@ -462,15 +569,16 @@ const CustomizeModal: React.FC<{
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-500 mt-0.5">{selectedEmp.role}{selectedEmp.department ? ` · ${selectedEmp.department}` : ""}</p>
-                      {selectedEmp.skills && selectedEmp.skills.length > 0 && (
+                      {selectedEmp.projects && selectedEmp.projects.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {selectedEmp.skills.slice(0, 5).map(s => (
-                            <span key={s} className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 text-[9px] font-semibold rounded border border-blue-500/15">
-                              {s}
+                          <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider self-center mr-0.5">Proj:</span>
+                          {selectedEmp.projects.slice(0, 4).map((p: any) => (
+                            <span key={p.id || p.name} className="px-1.5 py-0.5 bg-purple-500/10 text-purple-300 text-[9px] font-semibold rounded border border-purple-500/15">
+                              {p.name}
                             </span>
                           ))}
-                          {selectedEmp.skills.length > 5 && (
-                            <span className="text-[9px] text-gray-600 font-semibold self-center">+{selectedEmp.skills.length - 5} more</span>
+                          {selectedEmp.projects.length > 4 && (
+                            <span className="text-[9px] text-gray-600 font-semibold self-center">+{selectedEmp.projects.length - 4} more</span>
                           )}
                         </div>
                       )}
@@ -562,24 +670,24 @@ const CustomizeModal: React.FC<{
                                   </span>
                                 </div>
                               </div>
-                              {/* Skills row */}
-                              {emp.skills && emp.skills.length > 0 && (
+                              {/* Projects row */}
+                              {emp.projects && emp.projects.length > 0 && (
                                 <div className="flex flex-wrap gap-1 pl-[37px]">
-                                  {emp.skills.slice(0, 4).map(s => (
+                                  {emp.projects.slice(0, 3).map((p: any) => (
                                     <span
-                                      key={s}
+                                      key={p.id || p.name}
                                       className={`px-1.5 py-0.5 text-[9px] font-semibold rounded border ${!isFree
                                         ? "bg-gray-800/50 text-gray-600 border-gray-700/30"
                                         : isSelected
-                                          ? "bg-blue-500/15 text-blue-300 border-blue-500/20"
+                                          ? "bg-purple-500/15 text-purple-300 border-purple-500/20"
                                           : "bg-gray-800 text-gray-400 border-gray-700/50"
                                         }`}
                                     >
-                                      {s}
+                                      {p.name}
                                     </span>
                                   ))}
-                                  {emp.skills.length > 4 && (
-                                    <span className="text-[9px] text-gray-600 self-center">+{emp.skills.length - 4}</span>
+                                  {emp.projects.length > 3 && (
+                                    <span className="text-[9px] text-gray-600 self-center">+{emp.projects.length - 3}</span>
                                   )}
                                 </div>
                               )}
@@ -686,6 +794,7 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
   // Customization and Batch actions state
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [customizingOption, setCustomizingOption] = useState<OptionType | null>(null);
+  const [adjustingOption, setAdjustingOption] = useState<{ option: OptionType; originalStartDate: string; originalEndDate: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState("");
 
@@ -716,12 +825,17 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
     const handleCustomize = (e: any) => {
       setCustomizingOption(e.detail);
     };
+    const handleAdjustDates = (e: any) => {
+      setAdjustingOption(e.detail);
+    };
 
     window.addEventListener('startProject', handleStart);
     window.addEventListener('customizeOption', handleCustomize);
+    window.addEventListener('adjustDatesAndStart', handleAdjustDates);
     return () => {
       window.removeEventListener('startProject', handleStart);
       window.removeEventListener('customizeOption', handleCustomize);
+      window.removeEventListener('adjustDatesAndStart', handleAdjustDates);
     };
   }, [projectId]);
 
@@ -743,6 +857,35 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
       alert("Failed to start project.");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const processAdjustAndStart = async () => {
+    if (!adjustingOption) return;
+    const { option } = adjustingOption;
+    setIsProcessing(true);
+    try {
+      setProcessStatus("Updating project dates...");
+      await updateProject(projectId, {
+        estimatedStartDate: option.startDate,
+        estimatedEndDate: option.endDate,
+      });
+      setProcessStatus("Assigning members...");
+      for (const c of option.candidates) {
+        await assignMemberToProject(projectId, {
+          userId: c.userId,
+          roleInProject: c.targetRole
+        });
+      }
+      setProcessStatus("Starting project...");
+      await updateProject(projectId, { projectStatus: 1 });
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to adjust dates and start project.");
+    } finally {
+      setIsProcessing(false);
+      setAdjustingOption(null);
     }
   };
 
@@ -843,11 +986,15 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
             option={data.optionA}
             isRecommended={data.bestOption === "A"}
             label="A"
+            originalStartDate={data.estimatedStartDate}
+            originalEndDate={data.estimatedEndDate}
           />
           <OptionCard
             option={data.optionB}
             isRecommended={data.bestOption === "B"}
             label="B"
+            originalStartDate={data.estimatedStartDate}
+            originalEndDate={data.estimatedEndDate}
           />
         </div>
       </div>
@@ -864,6 +1011,17 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
           onClose={() => setCustomizingOption(null)}
           onSave={processStartProject}
           isProcessing={isProcessing}
+        />
+      )}
+
+      {adjustingOption && (
+        <AdjustDatesModal
+          option={adjustingOption.option}
+          originalStartDate={adjustingOption.originalStartDate}
+          originalEndDate={adjustingOption.originalEndDate}
+          isProcessing={isProcessing}
+          onConfirm={processAdjustAndStart}
+          onClose={() => setAdjustingOption(null)}
         />
       )}
     </div>
