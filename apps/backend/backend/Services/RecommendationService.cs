@@ -42,6 +42,8 @@ public class RecommendationService
             .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
             .Include(u => u.UserSkills).ThenInclude(us => us.Skill)
             .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+                .ThenInclude(p => p.ProjectRequiredSkills)
+                    .ThenInclude(ps => ps.Skill)
             .Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == RoleName.Staff))
             .ToListAsync();
 
@@ -162,17 +164,44 @@ public class RecommendationService
             }
         }
 
-        // 2. Get user skills
+        // 2. Build past project experience list with each project's required skills
+        var pastProjects = new List<PastProjectExperience>();
+        var allProjectSkillsFromHistory = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var up in user.UserProjects.Where(up => up.Project != null))
+        {
+            var projSkills = up.Project.ProjectRequiredSkills?
+                .Select(ps => ps.Skill?.SkillName)
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList() ?? new List<string?>();
+
+            var cleanSkills = projSkills.Where(s => s != null).Select(s => s!).ToList();
+
+            pastProjects.Add(new PastProjectExperience
+            {
+                ProjectName = up.Project.ProjectName,
+                RoleInProject = up.RoleInProject ?? userStaffRoles.FirstOrDefault() ?? "Staff",
+                ProjectSkills = cleanSkills
+            });
+
+            foreach (var s in cleanSkills)
+                allProjectSkillsFromHistory.Add(s);
+        }
+
+        // 3. Get user's personal skills (kept for reference)
         var userSkills = user.UserSkills.Select(us => us.Skill.SkillName).ToList();
 
-        // 3. Determine relevant skills for scoring
-        // Use project-level skills if defined, otherwise fall back to hardcoded role map
+        // 4. Determine target project's required skills for matching
         var skillsToMatch = projectSkills.Count > 0
             ? projectSkills
             : GetSkillsForRole(requiredRole.RoleName);
-        var matchedSkills = userSkills.Intersect(skillsToMatch, StringComparer.OrdinalIgnoreCase).ToList();
 
-        // 4. Calculate skill match percentage
+        // 5. Match skills from past project experience against target project skills
+        var matchedSkills = allProjectSkillsFromHistory
+            .Intersect(skillsToMatch, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // 6. Calculate skill match percentage based on project experience
         double skillMatchPercent = skillsToMatch.Count > 0
             ? (double)matchedSkills.Count / skillsToMatch.Count * 100
             : (hasMatchingRole ? 75 : 0);
@@ -188,7 +217,7 @@ public class RecommendationService
             skillMatchPercent = 0;
         }
 
-        // 5. Check availability based on WorkingType
+        // 7. Check availability based on WorkingType
         var activeProjects = user.UserProjects
             .Where(up => up.Status == UserProjectStatus.Assigned && up.Project != null)
             .ToList();
@@ -232,7 +261,7 @@ public class RecommendationService
             availabilityNote = $"Available from {latestOverlapEnd.Value:MMM dd, yyyy}";
         }
 
-        // 6. Get experience years
+        // 8. Get experience years
         int experienceYears = user.ExperienceYears;
 
         return new CandidateDto
@@ -247,7 +276,8 @@ public class RecommendationService
             SkillMatchPercent = Math.Round(skillMatchPercent, 1),
             IsAvailable = isAvailable,
             AvailabilityNote = availabilityNote,
-            CurrentProjects = currentProjectNames
+            CurrentProjects = currentProjectNames,
+            PastProjects = pastProjects
         };
     }
 
@@ -325,22 +355,61 @@ public class RecommendationService
 
         var unavailableCandidates = selectedCandidates.Where(c => !c.IsAvailable).ToList();
 
-        foreach (var c in unavailableCandidates)
+        if (prioritizeAvailability && unavailableCandidates.Count > 0)
         {
-            var parts = c.AvailabilityNote.Replace("Available from ", "");
-            if (DateTime.TryParse(parts, out var d))
-            {
-                var daysDelay = (d.Date - projectStart.Date).TotalDays;
+            // Option B: shift the timeline forward so ALL selected workers are available
+            DateTime latestAvailDate = projectStart;
 
-                if (daysDelay > 7)
+            foreach (var c in unavailableCandidates)
+            {
+                var parts = c.AvailabilityNote.Replace("Available from ", "");
+                if (DateTime.TryParse(parts, out var d) && d > latestAvailDate)
                 {
-                    requiresHiring = true;
-                    hiringDetails.Add($"{c.TargetRole} is unavailable for {(int)daysDelay} days (needs new hire/replacement)");
+                    latestAvailDate = d;
                 }
-                else if (daysDelay > 0)
+            }
+
+            if (latestAvailDate > projectStart)
+            {
+                var originalDuration = projectEnd - projectStart;
+                optStart = latestAvailDate;
+                optEnd = latestAvailDate + originalDuration;
+
+                requiresReschedule = true;
+                var daysDelay = (int)(latestAvailDate.Date - projectStart.Date).TotalDays;
+                rescheduleDetails.Add(
+                    $"Delay start by {daysDelay} days (to {optStart:MMM dd, yyyy}) so all {unavailableCandidates.Count} busy member(s) become available"
+                );
+
+                // Mark all candidates as available under the shifted timeline
+                foreach (var c in unavailableCandidates)
                 {
-                    requiresReschedule = true;
-                    rescheduleDetails.Add($"{c.TargetRole} available in {(int)daysDelay} days (needs minor reschedule)");
+                    c.IsAvailable = true;
+                    c.AvailabilityNote = "Available (after date adjustment)";
+                }
+                totalAvailableNow = selectedCandidates.Count;
+            }
+        }
+        else
+        {
+            // Option A (or Option B with no unavailable candidates): original logic
+            foreach (var c in unavailableCandidates)
+            {
+                var parts = c.AvailabilityNote.Replace("Available from ", "");
+                if (DateTime.TryParse(parts, out var d))
+                {
+                    var daysDelay = (d.Date - projectStart.Date).TotalDays;
+
+                    if (daysDelay > 7)
+                    {
+                        requiresHiring = true;
+                        hiringDetails.Add($"{c.TargetRole} is unavailable for {(int)daysDelay} days (needs new hire/replacement)");
+                    }
+                    else if (daysDelay > 0)
+                    {
+                        requiresReschedule = true;
+                        rescheduleDetails.Add($"{c.TargetRole} available in {(int)daysDelay} days (needs minor reschedule)");
+                    }
                 }
             }
         }

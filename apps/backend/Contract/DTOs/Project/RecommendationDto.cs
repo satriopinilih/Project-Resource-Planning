@@ -42,6 +42,13 @@ public class RecommendationOption
     public List<CandidateDto> Candidates { get; set; } = new();
 }
 
+public class PastProjectExperience
+{
+    public string ProjectName { get; set; } = string.Empty;
+    public string RoleInProject { get; set; } = string.Empty;
+    public List<string> ProjectSkills { get; set; } = new(); // Required skills of that past project
+}
+
 public class CandidateDto
 {
     public string UserId { get; set; } = string.Empty;
@@ -50,9 +57,10 @@ public class CandidateDto
     public string TargetRole { get; set; } = string.Empty; // The role they'd fill
     public int ExperienceYears { get; set; }
     public List<string> Skills { get; set; } = new();
-    public List<string> MatchedSkills { get; set; } = new(); // Skills that overlap with project needs
+    public List<string> MatchedSkills { get; set; } = new(); // Skills from past projects that match target project
     public double SkillMatchPercent { get; set; } // 0-100
     public bool IsAvailable { get; set; }
     public string AvailabilityNote { get; set; } = string.Empty; // e.g., "Available from May 28"
     public List<string> CurrentProjects { get; set; } = new();
+    public List<PastProjectExperience> PastProjects { get; set; } = new(); // Projects they've worked on
 }

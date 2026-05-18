@@ -810,18 +810,20 @@ export default function ProjectDetailsPage() {
                             </div>
                           </div>
 
-                          {/* Skills */}
-                          {avail.available && emp.skills && emp.skills.length > 0 && (
+                          {/* Projects */}
+                          {avail.available && emp.projects && emp.projects.length > 0 && (
                             <div className="pl-[60px] flex flex-wrap gap-1.5">
-                              {emp.skills.map((skill) => (
+                              <span className="text-[9px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider self-center mr-0.5">Projects:</span>
+                              {emp.projects.map((proj: any) => (
                                 <span
-                                  key={skill}
+                                  key={proj.projectId ?? proj.projectName}
                                   className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border ${isSelected
-                                    ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                                    ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
                                     : "bg-[var(--dash-bg-page)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                                     }`}
+                                  title={`Role: ${proj.roleInProject || "—"}`}
                                 >
-                                  {skill}
+                                  {proj.projectName}
                                 </span>
                               ))}
                             </div>

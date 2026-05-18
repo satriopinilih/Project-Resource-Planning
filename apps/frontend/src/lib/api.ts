@@ -623,6 +623,12 @@ export async function getTimelineEditRequests(): Promise<TimelineEditRequest[]> 
 
 // ── Smart Recommendation Panel Types ──
 
+export type PastProjectExperience = {
+  projectName: string;
+  roleInProject: string;
+  projectSkills: string[];
+};
+
 export type RecommendationCandidate = {
   userId: string;
   userName: string;
@@ -635,6 +641,7 @@ export type RecommendationCandidate = {
   isAvailable: boolean;
   availabilityNote: string;
   currentProjects: string[];
+  pastProjects: PastProjectExperience[];
 };
 
 export type RecommendationOption = {
