@@ -579,8 +579,8 @@ export default function AddProjectPage() {
                     </div>
                     {/* Role counter badge */}
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-colors ${isTechRoleLimitReached
-                        ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
-                        : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/25'
+                      ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                      : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/25'
                       }`}>
                       {technicalRolesCount}/{MAX_TECHNICAL_ROLES} Technical Roles
                     </span>
@@ -593,8 +593,8 @@ export default function AddProjectPage() {
                       onClick={() => handleAddRole('Non-Dedicated')}
                       disabled={isTechRoleLimitReached || availableRolesForNew.length === 0}
                       className={`flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl border transition-all ${isTechRoleLimitReached || availableRolesForNew.length === 0
-                          ? 'text-gray-400 dark:text-gray-600 border-gray-200 dark:border-white/5 cursor-not-allowed opacity-50'
-                          : 'text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-500/20 hover:bg-violet-50 dark:hover:bg-violet-500/10'
+                        ? 'text-gray-400 dark:text-gray-600 border-gray-200 dark:border-white/5 cursor-not-allowed opacity-50'
+                        : 'text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-500/20 hover:bg-violet-50 dark:hover:bg-violet-500/10'
                         }`}
                     >
                       <Plus size={15} /> Non-Dedicated
@@ -604,8 +604,8 @@ export default function AddProjectPage() {
                       onClick={() => handleAddRole('Dedicated')}
                       disabled={isTechRoleLimitReached || availableRolesForNew.length === 0}
                       className={`flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl border transition-all ${isTechRoleLimitReached || availableRolesForNew.length === 0
-                          ? 'text-gray-400 dark:text-gray-600 border-gray-200 dark:border-white/5 cursor-not-allowed opacity-50'
-                          : 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                        ? 'text-gray-400 dark:text-gray-600 border-gray-200 dark:border-white/5 cursor-not-allowed opacity-50'
+                        : 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20 hover:bg-blue-50 dark:hover:bg-blue-500/10'
                         }`}
                     >
                       <Plus size={15} /> Add Role
@@ -627,10 +627,10 @@ export default function AddProjectPage() {
                   <div
                     key={roleItem.id}
                     className={`grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-4 rounded-2xl border transition-all ${index === 0
-                        ? 'bg-blue-50/50 dark:bg-blue-500/5 border-blue-100 dark:border-blue-500/10'
-                        : roleItem.workingType === 'Non-Dedicated'
-                          ? 'bg-violet-50/50 dark:bg-violet-500/5 border-violet-100 dark:border-violet-500/10'
-                          : 'bg-gray-50 dark:bg-[#1b202e] border-gray-200 dark:border-white/5'
+                      ? 'bg-blue-50/50 dark:bg-blue-500/5 border-blue-100 dark:border-blue-500/10'
+                      : roleItem.workingType === 'Non-Dedicated'
+                        ? 'bg-violet-50/50 dark:bg-violet-500/5 border-violet-100 dark:border-violet-500/10'
+                        : 'bg-gray-50/50 dark:bg-gray-500/5 border-gray-100 dark:border-gray-500/10'
                       }`}
                   >
                     <div className="md:col-span-5">
@@ -790,10 +790,10 @@ export default function AddProjectPage() {
                 <div className="text-[12px] font-bold text-gray-400 uppercase tracking-widest pt-1">Priority</div>
                 <div>
                   <span className={`px-4 py-1 rounded-full text-[12px] font-bold border ${priorityLevel === 'High'
-                      ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
-                      : priorityLevel === 'Medium'
-                        ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
-                        : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                    ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
+                    : priorityLevel === 'Medium'
+                      ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                      : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
                     }`}>
                     {priorityLevel}
                   </span>

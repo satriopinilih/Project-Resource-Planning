@@ -311,6 +311,7 @@ export default function MarketingDashboard() {
                   statusColor={statusColor}
                   canDelete={project.projectStatus === 0}
                   onDelete={() => handleCancelProject(project.projectId, project.projectName)}
+                  onClick={() => router.push(`/project/${project.projectId}`)}
                 />
               );
             })
@@ -403,13 +404,16 @@ function StatCardCustom({ label, value, icon: Icon, iconBg, iconColor, valueColo
   );
 }
 
-function SubmissionItem({ title, client, date, status, statusColor, canDelete, onDelete }: any) {
+function SubmissionItem({ title, client, date, status, statusColor, canDelete, onDelete, onClick }: any) {
   return (
-    <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-white/[0.02] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-all cursor-pointer duration-300 group">
+    <div
+      onClick={onClick}
+      className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-white/[0.02] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-all cursor-pointer duration-300 group"
+    >
       <div className="flex flex-col gap-1">
         <h4 className="font-medium text-[15px] text-gray-900 dark:text-white transition-colors duration-300">{title}</h4>
         <div className="text-[13px] text-gray-500 dark:text-[#717b96] transition-colors duration-300">{client}</div>
-        <div className="text-[13px] text-gray-400 dark:text-[#55607a] transition-colors duration-300">{date}</div>
+        <div className="text-[13px] text-gray-400 text-gray-400 transition-colors duration-300">{date}</div>
       </div>
       <div className="flex items-center gap-3">
         {canDelete && (
