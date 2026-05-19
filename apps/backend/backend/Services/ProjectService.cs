@@ -128,8 +128,34 @@ public class ProjectService
     /// Creates a new project with required roles and skills.
     /// Uses AddRange for batch inserts instead of looping .Add().
     /// </summary>
+    private const int MaxTechnicalRoles = 5;
+
     public async Task<(bool Success, string? Error, int StatusCode, ProjectDto? Data)> CreateAsync(CreateProjectRequest request)
     {
+        // --- Validate role constraints ---
+        if (request.RequiredRoles != null && request.RequiredRoles.Any())
+        {
+            // 1. Max technical roles (excluding PM)
+            var technicalRoles = request.RequiredRoles
+                .Where(r => !string.Equals(NormalizeStaffRole(r.RoleName), "PM", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (technicalRoles.Count > MaxTechnicalRoles)
+            {
+                return (false, $"Maximum {MaxTechnicalRoles} technical roles allowed (excluding PM). You submitted {technicalRoles.Count}.", 400, null);
+            }
+
+            // 2. Prevent duplicate technical roles
+            var duplicateRoles = technicalRoles
+                .GroupBy(r => NormalizeStaffRole(r.RoleName), StringComparer.OrdinalIgnoreCase)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+            if (duplicateRoles.Any())
+            {
+                return (false, $"Duplicate roles detected: {string.Join(", ", duplicateRoles)}. Each role must be unique.", 400, null);
+            }
+        }
+
         // Pre-validate Role Names
         var roleMappings = new List<(CreateProjectRoleDto Dto, int StaffRoleId)>();
         if (request.RequiredRoles != null && request.RequiredRoles.Any())
@@ -566,6 +592,7 @@ public class ProjectService
             EstimatedEndDate = p.EstimatedEndDate,
             ProjectStatus = p.ProjectStatus,
             IsUnread = currentUserId != null && p.UserProjects.Any(up => up.UserId == currentUserId && !up.IsNotificationRead),
+            CreatedAt = p.CreatedAt,
             RequiredRoles = requiredRoles,
             RequiredSkills = requiredSkills,
             RequiredSkillIds = requiredSkillIds,

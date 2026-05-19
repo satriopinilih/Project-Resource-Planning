@@ -14,6 +14,7 @@ public class ProjectDto
     public DateTime EstimatedEndDate { get; set; }
     public ProjectStatus ProjectStatus { get; set; }
     public bool IsUnread { get; set; }
+    public DateTime CreatedAt { get; set; }
     public List<ProjectMemberDto> Members { get; set; } = new();
     public List<ProjectRequiredRoleDto> RequiredRoles { get; set; } = new();
     public List<string> RequiredSkills { get; set; } = new(); // Project-level skill requirements
