@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Plus,
   Calendar as CalendarIcon,
@@ -8,7 +8,12 @@ import {
   Trash2,
   Check,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Users,
+  ShieldAlert,
+  Search,
+  Sparkles,
+  X
 } from "lucide-react";
 import {
   getHolidays,
@@ -16,6 +21,8 @@ import {
   createProject,
   getEmployeeFormOptions,
   EmployeeFormOptions,
+  getProjects,
+  BackendProject,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
@@ -26,6 +33,8 @@ interface SkillOption {
 
 export default function AddProjectPage() {
   const ALLOWED_STAFF_ROLES = ["PM", "Senior Dev", "Junior Dev", "Senior BA", "Junior BA", "Architect"];
+  const TECHNICAL_ROLES = ["Senior Dev", "Junior Dev", "Senior BA", "Junior BA", "Architect"];
+  const MAX_TECHNICAL_ROLES = 5;
   const ALLOWED_WORKING_TYPES = ["Dedicated", "Non-Dedicated"];
 
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
@@ -49,38 +58,93 @@ export default function AddProjectPage() {
   const [formOptions, setFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
   const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([]);
 
+  const [historicalProjects, setHistoricalProjects] = useState<BackendProject[]>([]);
+  const [selectedHistoryProjectId, setSelectedHistoryProjectId] = useState<string>("");
+  const [searchHistoryQuery, setSearchHistoryQuery] = useState("");
+  const [isHistoryDropdownOpen, setIsHistoryDropdownOpen] = useState(false);
+
   const router = useRouter();
 
   const [teamRoles, setTeamRoles] = useState([
     { id: '1', role: 'PM', count: 1, workingType: 'Dedicated' }
   ]);
 
-  const handleAddRole = () => {
-    setTeamRoles([...teamRoles, {
-      id: Math.random().toString(36).substring(2, 9),
-      role: 'Senior BA',
-      count: 1,
-      workingType: 'Dedicated'
-    }]);
-  };
-
-  const handleRemoveRole = (idToRemove: string) => {
-    setTeamRoles(teamRoles.filter(r => r.id !== idToRemove));
-  };
-
-  const updateRole = (id: string, field: string, value: any) => {
-    setTeamRoles(teamRoles.map(r => r.id === id ? { ...r, [field]: value } : r));
-  };
-
   useEffect(() => {
     getHolidays().then(setHolidays).catch(console.error);
     getEmployeeFormOptions().then(setFormOptions).catch(console.error);
+    getProjects()
+      .then((allProjects) => {
+        const filtered = allProjects.filter(
+          (p) => p.projectStatus === 1 || p.projectStatus === 2 || p.projectStatus === 3
+        );
+        setHistoricalProjects(filtered);
+      })
+      .catch(console.error);
   }, []);
+
+  const filteredHistoryProjects = useMemo(() => {
+    if (!searchHistoryQuery.trim()) return historicalProjects;
+    const query = searchHistoryQuery.toLowerCase();
+    return historicalProjects.filter(
+      (p) =>
+        p.projectName.toLowerCase().includes(query) ||
+        (p.clientOrganization && p.clientOrganization.toLowerCase().includes(query))
+    );
+  }, [historicalProjects, searchHistoryQuery]);
 
   const allowedStaffRoles = useMemo(
     () => formOptions.staffRoles.filter((r) => ALLOWED_STAFF_ROLES.includes(r.name)),
     [formOptions.staffRoles]
   );
+
+  // --- Derived state for role management ---
+  const technicalRolesCount = useMemo(
+    () => teamRoles.filter(r => r.role !== 'PM').length,
+    [teamRoles]
+  );
+  const isTechRoleLimitReached = technicalRolesCount >= MAX_TECHNICAL_ROLES;
+
+  const selectedTechnicalRoles = useMemo(
+    () => teamRoles.filter(r => r.role !== 'PM').map(r => r.role),
+    [teamRoles]
+  );
+
+  const availableRolesForNew = useMemo(() => {
+    const sourceRoles = allowedStaffRoles.length > 0
+      ? allowedStaffRoles.map(r => r.name)
+      : TECHNICAL_ROLES;
+    return sourceRoles.filter(r => r !== 'PM' && !selectedTechnicalRoles.includes(r));
+  }, [allowedStaffRoles, selectedTechnicalRoles]);
+
+  const getAvailableRolesForRow = useCallback(
+    (currentRole: string) => {
+      const sourceRoles = allowedStaffRoles.length > 0
+        ? allowedStaffRoles.map(r => r.name)
+        : TECHNICAL_ROLES;
+      return sourceRoles.filter(
+        r => r !== 'PM' && (r === currentRole || !selectedTechnicalRoles.includes(r))
+      );
+    },
+    [allowedStaffRoles, selectedTechnicalRoles]
+  );
+
+  const handleAddRole = (workingType: 'Dedicated' | 'Non-Dedicated' = 'Dedicated') => {
+    if (isTechRoleLimitReached || availableRolesForNew.length === 0) return;
+    setTeamRoles(prev => [...prev, {
+      id: Math.random().toString(36).substring(2, 9),
+      role: availableRolesForNew[0],
+      count: 1,
+      workingType
+    }]);
+  };
+
+  const handleRemoveRole = (idToRemove: string) => {
+    setTeamRoles(prev => prev.filter(r => r.id !== idToRemove));
+  };
+
+  const updateRole = (id: string, field: string, value: any) => {
+    setTeamRoles(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
 
   const missingRoles = useMemo(() => {
     const roles = teamRoles.map(r => r.role.toLowerCase());
@@ -160,6 +224,19 @@ export default function AddProjectPage() {
     }
     if (teamRoles.length === 0) {
       setError("At least one team role is required.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    // Validate uniqueness of technical roles
+    const techRoleNames = teamRoles.filter(r => r.role !== 'PM').map(r => r.role);
+    const uniqueRoles = new Set(techRoleNames);
+    if (uniqueRoles.size !== techRoleNames.length) {
+      setError("Duplicate technical roles detected. Each role must be unique.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (techRoleNames.length > MAX_TECHNICAL_ROLES) {
+      setError(`Maximum ${MAX_TECHNICAL_ROLES} technical roles allowed (excluding PM).`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -340,6 +417,124 @@ export default function AddProjectPage() {
               </div>
             )}
 
+            {/* Have experience on Project A - Smart Auto-populate Skills selection */}
+            <div className="space-y-4 pt-2">
+              <label className={labelClasses}>
+                <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold text-[14px]">
+                  <Sparkles size={16} className="animate-pulse" />
+                  Smart Recommendation: Have experience on a past project?
+                </span>
+              </label>
+
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search size={18} className="text-gray-400 dark:text-gray-500" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Type to search past or ongoing projects..."
+                  value={searchHistoryQuery}
+                  onChange={(e) => {
+                    setSearchHistoryQuery(e.target.value);
+                    setIsHistoryDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsHistoryDropdownOpen(true)}
+                  className={`${inputClasses} pl-11 pr-10`}
+                />
+                {searchHistoryQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchHistoryQuery("");
+                      setSelectedHistoryProjectId("");
+                      setIsHistoryDropdownOpen(false);
+                    }}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+
+                {isHistoryDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsHistoryDropdownOpen(false)}
+                    />
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                      {filteredHistoryProjects.length === 0 ? (
+                        <div className="p-4 text-[13px] text-gray-500 dark:text-gray-400 text-center">
+                          No matching projects found.
+                        </div>
+                      ) : (
+                        filteredHistoryProjects.map((p) => {
+                          const statusText = p.projectStatus === 1 ? "Scheduled" : p.projectStatus === 2 ? "Running" : "Completed";
+                          const statusColor = p.projectStatus === 3
+                            ? "bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400 border-gray-500/20"
+                            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-500/20";
+                          return (
+                            <button
+                              key={p.projectId}
+                              type="button"
+                              onClick={() => {
+                                setSelectedSkillIds(p.requiredSkillIds || []);
+                                setSelectedHistoryProjectId(String(p.projectId));
+                                setSearchHistoryQuery(p.projectName);
+                                setIsHistoryDropdownOpen(false);
+                              }}
+                              className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/[0.05] last:border-b-0 flex justify-between items-center transition-colors duration-150"
+                            >
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[13px] font-bold text-gray-900 dark:text-white">{p.projectName}</span>
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400">{p.clientOrganization || "In-House"}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${statusColor}`}>
+                                  {statusText}
+                                </span>
+                                <span className="text-[11px] bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded font-medium">
+                                  {(p.requiredSkillIds || []).length} skills
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {selectedHistoryProjectId && (
+                <div className="bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/15 p-4 rounded-2xl flex justify-between items-center gap-4 transition-all duration-300">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400">
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-gray-900 dark:text-white">
+                        Loaded tech stack from <span className="font-bold">"{searchHistoryQuery}"</span>
+                      </p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Auto-populated {selectedSkillIds.length} skill(s) as a template. You can still modify individual checkboxes below!
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedHistoryProjectId("");
+                      setSearchHistoryQuery("");
+                      setSelectedSkillIds([]);
+                    }}
+                    className="text-[12px] font-bold text-red-500 hover:text-red-600 dark:hover:text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  >
+                    Clear Template
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-4">
               <label className={labelClasses}>Project-Level Required Skills</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -371,22 +566,83 @@ export default function AddProjectPage() {
             </div>
 
             <div className="space-y-4 pt-4">
-              <div className="flex justify-between items-center">
-                <label className="text-[15px] font-bold text-gray-900 dark:text-white">Required Team Roles</label>
-                <button
-                  type="button"
-                  onClick={handleAddRole}
-                  className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline text-[13px] font-semibold"
-                >
-                  <Plus size={16} /> Add Another Role
-                </button>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
+                        <Users size={16} className="text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <label className="text-[15px] font-bold text-gray-900 dark:text-white">
+                        Required Team Roles <span className="text-red-500">*</span>
+                      </label>
+                    </div>
+                    {/* Role counter badge */}
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-colors ${isTechRoleLimitReached
+                        ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                        : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/25'
+                      }`}>
+                      {technicalRolesCount}/{MAX_TECHNICAL_ROLES} Technical Roles
+                    </span>
+                  </div>
+
+                  {/* Action buttons row */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAddRole('Non-Dedicated')}
+                      disabled={isTechRoleLimitReached || availableRolesForNew.length === 0}
+                      className={`flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl border transition-all ${isTechRoleLimitReached || availableRolesForNew.length === 0
+                          ? 'text-gray-400 dark:text-gray-600 border-gray-200 dark:border-white/5 cursor-not-allowed opacity-50'
+                          : 'text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-500/20 hover:bg-violet-50 dark:hover:bg-violet-500/10'
+                        }`}
+                    >
+                      <Plus size={15} /> Non-Dedicated
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddRole('Dedicated')}
+                      disabled={isTechRoleLimitReached || availableRolesForNew.length === 0}
+                      className={`flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl border transition-all ${isTechRoleLimitReached || availableRolesForNew.length === 0
+                          ? 'text-gray-400 dark:text-gray-600 border-gray-200 dark:border-white/5 cursor-not-allowed opacity-50'
+                          : 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                        }`}
+                    >
+                      <Plus size={15} /> Add Role
+                    </button>
+                  </div>
+                </div>
+
+                {/* Limit reached warning */}
+                {isTechRoleLimitReached && (
+                  <div className="flex items-center gap-2 text-[12px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 px-3 py-2 rounded-xl">
+                    <ShieldAlert size={14} />
+                    Maximum {MAX_TECHNICAL_ROLES} technical roles reached. Remove an existing role to add a new one.
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
                 {teamRoles.map((roleItem, index) => (
-                  <div key={roleItem.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-4 bg-gray-50 dark:bg-[#1b202e] rounded-2xl border border-gray-200 dark:border-white/5">
+                  <div
+                    key={roleItem.id}
+                    className={`grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-4 rounded-2xl border transition-all ${index === 0
+                        ? 'bg-blue-50/50 dark:bg-blue-500/5 border-blue-100 dark:border-blue-500/10'
+                        : roleItem.workingType === 'Non-Dedicated'
+                          ? 'bg-violet-50/50 dark:bg-violet-500/5 border-violet-100 dark:border-violet-500/10'
+                          : 'bg-gray-50 dark:bg-[#1b202e] border-gray-200 dark:border-white/5'
+                      }`}
+                  >
                     <div className="md:col-span-5">
-                      <label className="text-[11px] text-gray-400 font-bold uppercase mb-1.5 block">Role</label>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <label className="text-[11px] text-gray-400 font-bold uppercase block">Role</label>
+                        {index === 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">FIXED</span>
+                        )}
+                        {roleItem.workingType === 'Non-Dedicated' && index !== 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400">SHARED</span>
+                        )}
+                      </div>
                       <select
                         className={inputClasses}
                         value={roleItem.role}
@@ -394,8 +650,7 @@ export default function AddProjectPage() {
                         disabled={index === 0}
                       >
                         {index === 0 ? <option value="PM">Project Manager</option> : (
-                          (allowedStaffRoles.length > 0 ? allowedStaffRoles.map(r => r.name) : ALLOWED_STAFF_ROLES)
-                            .filter(r => r !== "PM")
+                          getAvailableRolesForRow(roleItem.role)
                             .map(role => <option key={role} value={role}>{role}</option>)
                         )}
                       </select>
@@ -426,6 +681,7 @@ export default function AddProjectPage() {
                           type="button"
                           onClick={() => handleRemoveRole(roleItem.id)}
                           className="p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
+                          title="Remove this role"
                         >
                           <Trash2 size={20} />
                         </button>
@@ -484,7 +740,7 @@ export default function AddProjectPage() {
               </div>
               <h3 className="text-[26px] font-bold text-gray-900 dark:text-white leading-tight">Confirm Proposal</h3>
             </div>
-            
+
             <p className="text-[15px] text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
               Please double-check the project scope and team requirements before sending it for approval.
             </p>
@@ -533,13 +789,12 @@ export default function AddProjectPage() {
               <div className="flex items-start justify-between">
                 <div className="text-[12px] font-bold text-gray-400 uppercase tracking-widest pt-1">Priority</div>
                 <div>
-                  <span className={`px-4 py-1 rounded-full text-[12px] font-bold border ${
-                    priorityLevel === 'High' 
-                      ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' 
-                      : priorityLevel === 'Medium' 
-                      ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20' 
-                      : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
-                  }`}>
+                  <span className={`px-4 py-1 rounded-full text-[12px] font-bold border ${priorityLevel === 'High'
+                      ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
+                      : priorityLevel === 'Medium'
+                        ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                    }`}>
                     {priorityLevel}
                   </span>
                 </div>

@@ -106,6 +106,7 @@ export type BackendProject = {
   requiredSkills: string[]; // Project-level skill requirements
   requiredSkillIds: number[];
   isUnread: boolean;
+  createdAt?: string;
 };
 
 export type BackendHoliday = {
