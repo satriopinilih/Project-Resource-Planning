@@ -339,8 +339,8 @@ export default function ProjectDetailsPage() {
         projectId: project.projectId,
         projectName: project.projectName,
         notes: fullNotes,
-        currentStartDate: project.estimatedStartDate,
-        currentEndDate: project.estimatedEndDate,
+        currentStartDate: timelineEditStart || project.estimatedStartDate,
+        currentEndDate: timelineEditEnd || project.estimatedEndDate,
       });
       await createHireRequest({
         projectId: project.projectId,
@@ -449,9 +449,8 @@ export default function ProjectDetailsPage() {
                 <div className="flex gap-3 shrink-0">
                   <button
                     onClick={() => setIsEditMode(!isEditMode)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
-                      isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
-                    }`}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
+                      }`}
                   >
                     {isEditMode ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
                     {isEditMode ? "Done Editing" : "Edit Project"}
