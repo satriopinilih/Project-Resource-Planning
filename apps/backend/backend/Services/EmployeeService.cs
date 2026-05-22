@@ -358,7 +358,8 @@ public class EmployeeService
                 ClientOrganization = p.Project?.ClientOrganization ?? string.Empty,
                 RoleInProject = p.RoleInProject,
                 StartDate = p.StartDate ?? p.Project?.EstimatedStartDate ?? DateTime.MinValue,
-                EndDate = p.EndDate ?? p.Project?.EstimatedEndDate
+                EndDate = p.EndDate ?? p.Project?.EstimatedEndDate,
+                Status = p.Status
             }).ToList()
         };
     }
