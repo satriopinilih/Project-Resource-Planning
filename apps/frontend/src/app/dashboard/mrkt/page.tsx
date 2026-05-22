@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Folder,
@@ -14,7 +14,8 @@ import {
   Bell,
   X,
   Check,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  ArrowRight
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -162,13 +163,23 @@ export default function MarketingDashboard() {
   const runningCount = projects.filter((p) => p.projectStatus === 2).length;
   const completedCount = projects.filter((p) => p.projectStatus === 3).length;
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const recentSubmissions = projects.filter((p) => {
-    if (!p.estimatedStartDate) return false;
-    const projectDate = new Date(p.estimatedStartDate);
-    return projectDate.getMonth() === currentMonth && projectDate.getFullYear() === currentYear;
-  });
+  const recentSubmissions = useMemo(() => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    return projects
+      .filter((p) => {
+        const dateStr = p.createdAt || p.estimatedStartDate;
+        if (!dateStr) return false;
+        const projectDate = new Date(dateStr);
+        return projectDate.getMonth() === currentMonth && projectDate.getFullYear() === currentYear;
+      })
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : a.projectId;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : b.projectId;
+        return dateB - dateA;
+      });
+  }, [projects]);
 
   return (
     <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-8 font-sans transition-colors duration-300">
@@ -259,14 +270,23 @@ export default function MarketingDashboard() {
       </section>
 
       <section className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
-        <h3 className="text-[17px] font-semibold mb-5 text-gray-900 dark:text-white">Recent Submissions (This Month)</h3>
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-[17px] font-semibold text-gray-900 dark:text-white">Recent Submissions (This Month)</h3>
+          <Link
+            href="/project"
+            className="text-[13px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            View All Submissions
+            <ArrowRight size={14} />
+          </Link>
+        </div>
         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
           {isLoading ? (
             <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-gray-500" /></div>
           ) : recentSubmissions.length === 0 ? (
             <p className="text-gray-500 text-[14px]">No recent submissions found for this month.</p>
           ) : (
-            recentSubmissions.slice().reverse().map((project) => {
+            recentSubmissions.map((project) => {
               let statusLabel = "Pending";
               let statusColor = "bg-amber-100 text-amber-700 dark:bg-[#3a3221] dark:text-[#eab308]";
 
@@ -291,6 +311,7 @@ export default function MarketingDashboard() {
                   statusColor={statusColor}
                   canDelete={project.projectStatus === 0}
                   onDelete={() => handleCancelProject(project.projectId, project.projectName)}
+                  onClick={() => router.push(`/project/${project.projectId}`)}
                 />
               );
             })
@@ -383,13 +404,16 @@ function StatCardCustom({ label, value, icon: Icon, iconBg, iconColor, valueColo
   );
 }
 
-function SubmissionItem({ title, client, date, status, statusColor, canDelete, onDelete }: any) {
+function SubmissionItem({ title, client, date, status, statusColor, canDelete, onDelete, onClick }: any) {
   return (
-    <div className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-white/[0.02] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-all cursor-pointer duration-300 group">
+    <div
+      onClick={onClick}
+      className="bg-gray-50 dark:bg-[#1f2433] p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-white/[0.02] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-all cursor-pointer duration-300 group"
+    >
       <div className="flex flex-col gap-1">
         <h4 className="font-medium text-[15px] text-gray-900 dark:text-white transition-colors duration-300">{title}</h4>
         <div className="text-[13px] text-gray-500 dark:text-[#717b96] transition-colors duration-300">{client}</div>
-        <div className="text-[13px] text-gray-400 dark:text-[#55607a] transition-colors duration-300">{date}</div>
+        <div className="text-[13px] text-gray-400 text-gray-400 transition-colors duration-300">{date}</div>
       </div>
       <div className="flex items-center gap-3">
         {canDelete && (
