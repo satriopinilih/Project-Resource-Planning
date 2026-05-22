@@ -118,6 +118,25 @@ public class ProjectsController : ControllerBase
         return Ok(ApiResponse<ProjectDto>.SuccessResponse(data!));
     }
 
+    /// <summary>
+    /// POST /api/projects/{id}/roles
+    /// Allows the GM to add a new required role to an existing project.
+    /// Marketing sets roles during project creation; GM can add more here.
+    /// </summary>
+    [HttpPost("{id}/roles")]
+    public async Task<IActionResult> AddRequiredRole(int id, [FromBody] AddRequiredRoleRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var (success, error, statusCode, data) = await _service.AddRequiredRoleAsync(id, request);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<string>.ErrorResponse(error!));
+
+        return StatusCode(201, ApiResponse<ProjectDto>.SuccessResponse(data!, "Role added successfully"));
+    }
+
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectRequest request)
     {
@@ -159,5 +178,19 @@ public class ProjectsController : ControllerBase
         }
 
         return Ok(ApiResponse<string>.SuccessResponse("Project deleted successfully"));
+    }
+
+    [HttpPost("{id}/swap-member")]
+    public async Task<IActionResult> SwapMember(int id, [FromBody] SwapMemberRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var (success, error, statusCode, data) = await _service.SwapMemberAsync(id, request);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<string>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<ProjectDto>.SuccessResponse(data!));
     }
 }

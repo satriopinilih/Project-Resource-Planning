@@ -346,6 +346,71 @@ public class ProjectService
     }
 
     /// <summary>
+    /// Adds a new required role to an existing project.
+    /// GM can add roles that marketing did not set during project creation.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, ProjectDto? Data)> AddRequiredRoleAsync(
+        int projectId, AddRequiredRoleRequest request)
+    {
+        var project = await _db.Projects
+            .Include(p => p.ProjectRequiredRoles)
+                .ThenInclude(pr => pr.StaffRole)
+            .FirstOrDefaultAsync(p => p.ProjectID == projectId);
+
+        if (project is null)
+            return (false, "Project not found", 404, null);
+
+        // Normalize and validate role name
+        var normalizedRoleName = NormalizeStaffRole(request.RoleName);
+        if (!AllowedStaffRoles.Contains(normalizedRoleName))
+            return (false, $"Role '{request.RoleName}' is not allowed. Allowed roles: PM, Senior Dev, Junior Dev, Senior BA, Junior BA, Architect.", 400, null);
+
+        // Prevent duplicate roles on the same project
+        var duplicate = project.ProjectRequiredRoles
+            .Any(pr => string.Equals(pr.StaffRole?.RoleName, normalizedRoleName, StringComparison.OrdinalIgnoreCase));
+        if (duplicate)
+            return (false, $"Role '{normalizedRoleName}' already exists on this project. Use the +/- buttons to adjust the count.", 409, null);
+
+        // Find or create the StaffRole record
+        var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == normalizedRoleName);
+        if (staffRole is null)
+        {
+            staffRole = new StaffRole { RoleName = normalizedRoleName };
+            _db.StaffRoles.Add(staffRole);
+            await _db.SaveChangesAsync();
+        }
+
+        var newRole = new ProjectRequiredRole
+        {
+            ProjectID = projectId,
+            StaffRoleId = staffRole.StaffRoleId,
+            RequiredCount = request.Count > 0 ? request.Count : 1,
+            WorkingType = request.WorkingType
+        };
+        _db.ProjectRequiredRoles.Add(newRole);
+        await _db.SaveChangesAsync();
+
+        // Re-fetch with full includes for response
+        var updated = await _db.Projects
+            .AsNoTracking()
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+                    .ThenInclude(u => u.UserStaffRoles)
+                        .ThenInclude(usr => usr.StaffRole)
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+                    .ThenInclude(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role)
+            .Include(p => p.ProjectRequiredRoles)
+                .ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills)
+                .ThenInclude(ps => ps.Skill)
+            .FirstAsync(p => p.ProjectID == projectId);
+
+        return (true, null, 201, MapToDto(updated));
+    }
+
+    /// <summary>
     /// Updates an existing project's details, required roles, and required skills.
     /// Uses AddRange/RemoveRange for batch operations instead of looped .Add()/.Remove().
     /// </summary>
@@ -515,8 +580,89 @@ public class ProjectService
         return (true, null, 200);
     }
 
+    /// <summary>
+    /// Swaps an existing assigned member with a new member on the same project.
+    /// The old member is marked as Completed with an EndDate of now.
+    /// The new member is assigned with the same role and a StartDate of now.
+    /// Only allowed on Scheduled or Running projects.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, ProjectDto? Data)> SwapMemberAsync(
+        int projectId, SwapMemberRequest request)
+    {
+        var project = await _db.Projects.FindAsync(projectId);
+        if (project is null)
+            return (false, "Project not found", 404, null);
+
+        // Only allow swap on Scheduled or Running projects
+        if (project.ProjectStatus != ProjectStatus.Scheduled && project.ProjectStatus != ProjectStatus.Running)
+            return (false, "Member swap is only allowed on Scheduled or Running projects.", 400, null);
+
+        // Validate old user assignment
+        var oldAssignment = await _db.UserProjects
+            .FirstOrDefaultAsync(up => up.ProjectId == projectId && up.UserId == request.OldUserId && up.Status == UserProjectStatus.Assigned);
+
+        if (oldAssignment is null)
+            return (false, $"User '{request.OldUserId}' is not currently assigned to this project.", 404, null);
+
+        // Validate new user exists
+        var newUser = await _db.Users.FindAsync(request.NewUserId);
+        if (newUser is null)
+            return (false, $"User '{request.NewUserId}' not found.", 404, null);
+
+        // Check new user is not already assigned to this project
+        var existingNewAssignment = await _db.UserProjects
+            .FirstOrDefaultAsync(up => up.ProjectId == projectId && up.UserId == request.NewUserId && up.Status == UserProjectStatus.Assigned);
+
+        if (existingNewAssignment is not null)
+            return (false, $"User '{request.NewUserId}' is already assigned to this project.", 409, null);
+
+        // Mark old assignment as Completed
+        oldAssignment.Status = UserProjectStatus.Completed;
+        oldAssignment.EndDate = DateTime.UtcNow;
+        oldAssignment.SwapReason = request.Reason;
+        oldAssignment.ReplacedByUserId = request.NewUserId;
+
+        // Create new assignment with same role
+        var newAssignment = new UserProject
+        {
+            UserId = request.NewUserId,
+            ProjectId = projectId,
+            RoleInProject = oldAssignment.RoleInProject,
+            StartDate = DateTime.UtcNow,
+            EndDate = project.EstimatedEndDate,
+            Status = UserProjectStatus.Assigned
+        };
+        _db.UserProjects.Add(newAssignment);
+
+        await _db.SaveChangesAsync();
+
+        // Re-fetch with includes for response
+        var updated = await _db.Projects
+            .AsNoTracking()
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+                    .ThenInclude(u => u.UserStaffRoles)
+                        .ThenInclude(usr => usr.StaffRole)
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+                    .ThenInclude(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role)
+            .Include(p => p.ProjectRequiredRoles)
+                .ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills)
+                .ThenInclude(ps => ps.Skill)
+            .FirstAsync(p => p.ProjectID == projectId);
+
+        return (true, null, 200, MapToDto(updated));
+    }
+
     private static ProjectDto MapToDto(Project p, string? currentUserId = null)
     {
+        // Build a lookup so we can resolve ReplacedByUserName
+        var userNameLookup = p.UserProjects
+            .Where(up => up.User != null)
+            .ToDictionary(up => up.UserId, up => up.User!.UserName);
+
         var members = p.UserProjects.Select(up => new ProjectMemberDto
         {
             UserId = up.UserId,
@@ -527,7 +673,11 @@ public class ProjectService
                         ?? "Staff",
             StartDate = up.StartDate,
             EndDate = up.EndDate,
-            Status = up.Status.ToString()
+            Status = up.Status.ToString(),
+            SwapReason = up.SwapReason,
+            ReplacedByUserId = up.ReplacedByUserId,
+            ReplacedByUserName = up.ReplacedByUserId != null && userNameLookup.ContainsKey(up.ReplacedByUserId)
+                ? userNameLookup[up.ReplacedByUserId] : null
         }).ToList();
 
         var requiredRoles = p.ProjectRequiredRoles.Select(pr => new ProjectRequiredRoleDto
@@ -537,8 +687,10 @@ public class ProjectService
             RoleName = pr.StaffRole?.RoleName ?? "Unknown",
             RequiredCount = pr.RequiredCount,
             WorkingType = pr.WorkingType.ToString(),
+            // Only count Assigned members, not Completed/swapped ones
             FilledCount = members.Count(m =>
                 string.Equals(m.Role, pr.StaffRole?.RoleName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(m.Status, "Assigned", StringComparison.OrdinalIgnoreCase)
             )
         }).ToList();
 
@@ -569,19 +721,7 @@ public class ProjectService
             RequiredRoles = requiredRoles,
             RequiredSkills = requiredSkills,
             RequiredSkillIds = requiredSkillIds,
-            Members = p.UserProjects
-                .Select(up => new ProjectMemberDto
-                {
-                    UserId = up.UserId,
-                    UserName = up.User?.UserName ?? up.UserId,
-                    Role = up.RoleInProject,
-                    StaffRole = up.User?.UserStaffRoles.Select(s => s.StaffRole.RoleName).FirstOrDefault()
-                                ?? up.User?.UserRoles.Select(r => r.Role.RoleName.ToString()).FirstOrDefault()
-                                ?? "Staff",
-                    StartDate = up.StartDate,
-                    EndDate = up.EndDate,
-                    Status = up.Status.ToString()
-                }).ToList()
+            Members = members
         };
     }
 }

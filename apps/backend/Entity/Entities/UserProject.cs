@@ -25,6 +25,12 @@ public class UserProject
 
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+
+    [StringLength(500)]
+    public string? SwapReason { get; set; }
+
+    [StringLength(20)]
+    public string? ReplacedByUserId { get; set; }
     
     [ForeignKey(nameof(UserId))]
     public virtual User User { get; set; } = default!;

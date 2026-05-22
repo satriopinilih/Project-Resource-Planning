@@ -28,15 +28,21 @@ import {
   updateProject,
   BackendProject,
   BackendEmployee,
+  BackendProjectMember,
   getRawEmployees,
   assignMemberToProject,
   unassignMemberFromProject,
   updateRoleCount,
+  addRequiredRole,
+  AddRequiredRolePayload,
   AssignMemberPayload,
   getHireRequests,
+  swapMember,
+  SwapMemberPayload,
 } from "../../../../../lib/api";
 
 import SmartRecommendationPanel from "../../components/SmartRecommendationPanel";
+import ProjectGanttChart from "../../components/ProjectGanttChart";
 
 const mapStatus = (backendStatus: number, startDateStr?: string) => {
   switch (backendStatus) {
@@ -131,6 +137,16 @@ export default function ProjectDetailsPage() {
   // Update role count state
   const [updatingRoleId, setUpdatingRoleId] = useState<number | null>(null);
 
+  // Add Role modal state
+  const [addRoleOpen, setAddRoleOpen] = useState(false);
+  const [addRoleForm, setAddRoleForm] = useState<{ roleName: string; count: number; workingType: number }>({
+    roleName: "Junior Dev",
+    count: 1,
+    workingType: 0,
+  });
+  const [addRoleSubmitting, setAddRoleSubmitting] = useState(false);
+  const [addRoleError, setAddRoleError] = useState<string | null>(null);
+
   // Hire Request state
   const [hireSubmitting, setHireSubmitting] = useState(false);
   const [hireRequestOpen, setHireRequestOpen] = useState(false);
@@ -153,6 +169,15 @@ export default function ProjectDetailsPage() {
   // Start Project state
   const [startingProject, setStartingProject] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // Swap Member state
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
+  const [swapTarget, setSwapTarget] = useState<BackendProjectMember | null>(null);
+  const [swapReason, setSwapReason] = useState("");
+  const [swapSelectedEmp, setSwapSelectedEmp] = useState<BackendEmployee | null>(null);
+  const [swapSearch, setSwapSearch] = useState("");
+  const [swapping, setSwapping] = useState(false);
+  const [swapError, setSwapError] = useState<string | null>(null);
 
   const numericId = useMemo(() => {
     if (!idStr) return null;
@@ -404,6 +429,92 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  const handleAddRole = async () => {
+    if (!project) return;
+    setAddRoleSubmitting(true);
+    setAddRoleError(null);
+    try {
+      const payload: AddRequiredRolePayload = {
+        roleName: addRoleForm.roleName,
+        count: addRoleForm.count,
+        workingType: addRoleForm.workingType,
+      };
+      const updated = await addRequiredRole(project.projectId, payload);
+      setProject(updated);
+      setAddRoleOpen(false);
+      setAddRoleForm({ roleName: "Junior Dev", count: 1, workingType: 0 });
+    } catch (err: any) {
+      setAddRoleError(err?.message || "Failed to add role.");
+    } finally {
+      setAddRoleSubmitting(false);
+    }
+  };
+
+  // ── Swap Member handlers ──
+  const openSwapModal = async (member: BackendProjectMember) => {
+    setSwapTarget(member);
+    setSwapModalOpen(true);
+    setSwapError(null);
+    setSwapSelectedEmp(null);
+    setSwapReason("");
+    setSwapSearch("");
+
+    if (employees.length === 0) {
+      setEmployeesLoading(true);
+      try {
+        const data = await getRawEmployees();
+        setEmployees(data);
+      } catch {
+      } finally {
+        setEmployeesLoading(false);
+      }
+    }
+  };
+
+  const swapFilteredEmployees = useMemo(() => {
+    if (!swapTarget) return [];
+    const assignedIds = new Set(project?.members?.filter(m => m.status === "Assigned").map((m) => m.userId) ?? []);
+    const roleFilters = getRoleFilter(swapTarget.role);
+    return employees
+      .filter((emp) => {
+        if (assignedIds.has(emp.userId)) return false;
+        if (roleFilters.length > 0) {
+          const empRole = (emp.role || "").toLowerCase();
+          if (!roleFilters.some(rf => empRole.includes(rf))) return false;
+        }
+        if (!swapSearch) return true;
+        const q = swapSearch.toLowerCase();
+        return (emp.userName.toLowerCase().includes(q) || emp.role?.toLowerCase().includes(q) || emp.email.toLowerCase().includes(q));
+      })
+      .sort((a, b) => {
+        const aAvail = getEmployeeAvailability(a).available;
+        const bAvail = getEmployeeAvailability(b).available;
+        if (aAvail && !bAvail) return -1;
+        if (!aAvail && bAvail) return 1;
+        return a.userName.localeCompare(b.userName);
+      });
+  }, [employees, swapSearch, swapTarget, project]);
+
+  const handleSwapMember = async () => {
+    if (!swapTarget || !swapSelectedEmp || !project) return;
+    setSwapping(true);
+    setSwapError(null);
+    try {
+      const payload: SwapMemberPayload = {
+        oldUserId: swapTarget.userId,
+        newUserId: swapSelectedEmp.userId,
+        reason: swapReason || undefined,
+      };
+      const updated = await swapMember(project.projectId, payload);
+      setProject(updated);
+      setSwapModalOpen(false);
+    } catch (err: any) {
+      setSwapError(err?.message || "Failed to swap member.");
+    } finally {
+      setSwapping(false);
+    }
+  };
+
   if (loading || !project) {
     return (
       <div className="flex flex-col min-h-screen bg-[var(--dash-bg-page)]">
@@ -449,9 +560,8 @@ export default function ProjectDetailsPage() {
                 <div className="flex gap-3 shrink-0">
                   <button
                     onClick={() => setIsEditMode(!isEditMode)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
-                      isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
-                    }`}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
+                      }`}
                   >
                     {isEditMode ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
                     {isEditMode ? "Done Editing" : "Edit Project"}
@@ -526,6 +636,13 @@ export default function ProjectDetailsPage() {
               {isEditingTeam && (
                 <div className="flex items-center gap-3">
                   <button
+                    onClick={() => { setAddRoleOpen(true); setAddRoleError(null); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-lg text-[13px] font-semibold transition-all"
+                  >
+                    <Plus size={16} />
+                    Add Role
+                  </button>
+                  <button
                     onClick={() => setHireRequestOpen(true)}
                     disabled={hireAlreadyRequested}
                     className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -569,7 +686,7 @@ export default function ProjectDetailsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {project.requiredRoles.map((role) => {
-                  const membersInRole = project.members?.filter(m => m.role.toLowerCase() === role.roleName.toLowerCase()) || [];
+                  const membersInRole = project.members?.filter(m => m.role.toLowerCase() === role.roleName.toLowerCase() && m.status === "Assigned") || [];
                   const isFilled = membersInRole.length >= (role.requiredCount ?? 0);
 
                   return (
@@ -675,6 +792,15 @@ export default function ProjectDetailsPage() {
               </div>
             )}
           </section>
+
+          {/* 4. Team Timeline (Gantt Chart) — shown for non-Pending projects */}
+          {project.projectStatus !== 0 && (project.members || []).length > 0 && (
+            <ProjectGanttChart
+              project={project}
+              isEditMode={isEditingTeam}
+              onReplaceClick={openSwapModal}
+            />
+          )}
 
           {/* Footer filler */}
           <div className="h-10" />
@@ -1030,6 +1156,290 @@ export default function ProjectDetailsPage() {
               <button onClick={handleRequestTimelineEdit} disabled={timelineEditSubmitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-[13px] font-semibold text-white disabled:opacity-50">
                 {timelineEditSubmitting ? "Sending..." : "Submit Request"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Add Role Modal ── */}
+      {addRoleOpen && project && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setAddRoleOpen(false)}
+        >
+          <div
+            className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[var(--dash-text-primary)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--dash-border)]">
+              <div>
+                <h3 className="text-[17px] font-bold text-[var(--dash-text-heading)]">Add Required Role</h3>
+                <p className="text-[12px] text-purple-400 font-semibold mt-0.5">GM override — add role not set by marketing</p>
+              </div>
+              <button
+                onClick={() => setAddRoleOpen(false)}
+                className="p-1.5 rounded-lg text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Error */}
+              {addRoleError && (
+                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-[13px]">
+                  <AlertCircle size={16} />
+                  {addRoleError}
+                </div>
+              )}
+
+              {/* Role Name */}
+              <div>
+                <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Role</label>
+                <select
+                  value={addRoleForm.roleName}
+                  onChange={(e) => setAddRoleForm((p) => ({ ...p, roleName: e.target.value }))}
+                  className="w-full px-3 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-purple-500/50 transition-colors"
+                >
+                  <option>PM</option>
+                  <option>Architect</option>
+                  <option>Senior Dev</option>
+                  <option>Junior Dev</option>
+                  <option>Senior BA</option>
+                  <option>Junior BA</option>
+                </select>
+              </div>
+
+              {/* Working Type */}
+              <div>
+                <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Working Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[{ label: "Dedicated", value: 0 }, { label: "Non Dedicated", value: 1 }].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setAddRoleForm((p) => ({ ...p, workingType: opt.value }))}
+                      className={`px-3 py-2.5 rounded-lg text-[13px] font-semibold border transition-all ${addRoleForm.workingType === opt.value
+                          ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
+                          : "bg-[var(--dash-bg-input)] border-[var(--dash-border)] text-[var(--dash-text-muted)] hover:border-purple-500/30"
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Count */}
+              <div>
+                <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Required Count</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setAddRoleForm((p) => ({ ...p, count: Math.max(1, p.count - 1) }))}
+                    className="w-9 h-9 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] flex items-center justify-center text-[var(--dash-text-muted)] hover:text-red-400 hover:border-red-500/30 transition-colors"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="text-[22px] font-bold text-[var(--dash-text-heading)] w-8 text-center">{addRoleForm.count}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAddRoleForm((p) => ({ ...p, count: Math.min(20, p.count + 1) }))}
+                    className="w-9 h-9 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] flex items-center justify-center text-[var(--dash-text-muted)] hover:text-green-400 hover:border-green-500/30 transition-colors"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-xl">
+                <p className="text-[11px] text-purple-400 font-semibold uppercase tracking-wider mb-1">Preview</p>
+                <p className="text-[13px] text-[var(--dash-text-primary)]">
+                  Adding <span className="font-bold text-purple-300">{addRoleForm.count}×</span>{" "}
+                  <span className="font-bold text-[var(--dash-text-heading)]">{addRoleForm.roleName}</span>{" "}
+                  <span className="text-[var(--dash-text-muted)]">({addRoleForm.workingType === 0 ? "Dedicated" : "Shared"})</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--dash-border)]">
+              <button
+                onClick={() => setAddRoleOpen(false)}
+                className="px-4 py-2 bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)] font-semibold text-[13px] rounded-lg border border-[var(--dash-border)] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddRole}
+                disabled={addRoleSubmitting}
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold text-[13px] rounded-lg transition-all flex items-center gap-2 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {addRoleSubmitting && <Loader2 size={14} className="animate-spin" />}
+                {addRoleSubmitting ? "Adding..." : "Add Role"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Swap Member Modal ── */}
+      {swapModalOpen && project && swapTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setSwapModalOpen(false)}
+        >
+          <div
+            className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl text-[var(--dash-text-primary)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--dash-border)]">
+              <div>
+                <h3 className="text-[17px] font-bold text-[var(--dash-text-heading)]">Replace Team Member</h3>
+                <p className="text-[12px] text-amber-400 font-semibold mt-0.5">
+                  Replacing <span className="text-[var(--dash-text-heading)]">{swapTarget.userName}</span> as <span className="text-blue-400">{swapTarget.role}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setSwapModalOpen(false)}
+                className="p-1.5 rounded-lg text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4 max-h-[65vh] overflow-y-auto">
+              {/* Error */}
+              {swapError && (
+                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-[13px]">
+                  <AlertCircle size={16} />
+                  {swapError}
+                </div>
+              )}
+
+              {/* Current member info */}
+              <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+                <p className="text-[11px] text-amber-400 font-bold uppercase tracking-wider mb-1">Replacing</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[12px]">
+                    {swapTarget.userName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-bold text-[var(--dash-text-heading)]">{swapTarget.userName}</p>
+                    <p className="text-[11px] text-[var(--dash-text-muted)]">{swapTarget.role} · Will be marked as completed</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search replacement */}
+              <div className="relative">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]" />
+                <input
+                  type="text"
+                  placeholder="Search replacement employee..."
+                  value={swapSearch}
+                  onChange={(e) => setSwapSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 placeholder:text-[var(--dash-text-faint)] transition-colors"
+                />
+              </div>
+
+              {/* Employee list */}
+              {employeesLoading ? (
+                <div className="flex items-center justify-center py-10 text-[var(--dash-text-faint)] gap-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-[13px]">Loading...</span>
+                </div>
+              ) : (
+                <div className="max-h-[260px] overflow-y-auto space-y-2 pr-2">
+                  {swapFilteredEmployees.length === 0 ? (
+                    <p className="text-center py-8 text-[var(--dash-text-faint)] text-[13px]">No available employees found for this role.</p>
+                  ) : (
+                    swapFilteredEmployees.map((emp) => {
+                      const isSelected = swapSelectedEmp?.userId === emp.userId;
+                      const avail = getEmployeeAvailability(emp);
+                      return (
+                        <button
+                          key={emp.userId}
+                          onClick={() => { if (avail.available) setSwapSelectedEmp(emp); }}
+                          disabled={!avail.available}
+                          className={`w-full text-left p-3 rounded-xl border transition-all flex items-center gap-3 ${!avail.available
+                            ? "border-[var(--dash-border)] bg-[var(--dash-bg-input)] opacity-50 cursor-not-allowed"
+                            : isSelected
+                              ? "border-[#22c55e] bg-[#22c55e]/10 cursor-pointer shadow-sm"
+                              : "border-[var(--dash-border)] bg-[var(--dash-bg-input)] hover:border-[#22c55e]/40 cursor-pointer"
+                          }`}
+                        >
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[12px] shrink-0 ${
+                            !avail.available ? "bg-[var(--dash-bg-page)] text-[var(--dash-text-faint)]" : "bg-[#22c55e]/20 text-[#22c55e]"
+                          }`}>
+                            {emp.userName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-[13px] font-bold text-[var(--dash-text-heading)] truncate">{emp.userName}</p>
+                              {avail.available ? (
+                                <span className="text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded">Available</span>
+                              ) : (
+                                <span className="text-[9px] font-bold bg-red-500/15 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded">Busy</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[var(--dash-text-muted)] truncate">
+                              {emp.role}{emp.departmentName ? ` · ${emp.departmentName}` : ''}
+                              {emp.experienceYears !== undefined ? ` · ${emp.experienceYears}yr exp` : ''}
+                            </p>
+                          </div>
+                          {isSelected && avail.available && (
+                            <div className="w-5 h-5 rounded-full bg-[#22c55e] flex items-center justify-center shrink-0">
+                              <Check size={12} className="text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* Reason (optional) */}
+              <div>
+                <label className="block text-[11px] text-[var(--dash-text-faint)] font-semibold mb-1.5 uppercase tracking-wider">Reason for Replacement (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={swapReason}
+                  onChange={(e) => setSwapReason(e.target.value)}
+                  placeholder="e.g. Performance issue, leave of absence, skill mismatch..."
+                  className="w-full px-3 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] outline-none focus:border-amber-500/50 placeholder:text-[var(--dash-text-faint)] transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--dash-border)]">
+              <div className="text-[12px] text-[var(--dash-text-muted)]">
+                {swapSelectedEmp ? (
+                  <span>Replace with: <span className="text-[#22c55e] font-semibold">{swapSelectedEmp.userName}</span></span>
+                ) : (
+                  <span className="italic">Select a replacement</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSwapModalOpen(false)}
+                  className="px-4 py-2 bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)] font-semibold text-[13px] rounded-lg border border-[var(--dash-border)] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSwapMember}
+                  disabled={swapping || !swapSelectedEmp}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold text-[13px] rounded-lg transition-all flex items-center gap-2 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {swapping && <Loader2 size={14} className="animate-spin" />}
+                  {swapping ? "Swapping..." : "Confirm Swap"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

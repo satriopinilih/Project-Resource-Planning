@@ -29,7 +29,11 @@ public class ProjectMemberDto
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string Status { get; set; } = "Assigned";
+    public string? SwapReason { get; set; }
+    public string? ReplacedByUserId { get; set; }
+    public string? ReplacedByUserName { get; set; }
 }
+
 
 public class ProjectRequiredRoleDto
 {
