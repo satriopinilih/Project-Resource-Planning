@@ -376,14 +376,13 @@ public class ProjectService
         if (staffRole is null)
         {
             staffRole = new StaffRole { RoleName = normalizedRoleName };
-            _db.StaffRoles.Add(staffRole);
-            await _db.SaveChangesAsync();
+            _db.StaffRoles.Add(staffRole); // akan di-save bersama di bawah
         }
 
         var newRole = new ProjectRequiredRole
         {
             ProjectID = projectId,
-            StaffRoleId = staffRole.StaffRoleId,
+            StaffRole = staffRole, // EF Core akan resolve StaffRoleId secara otomatis saat SaveChanges
             RequiredCount = request.Count > 0 ? request.Count : 1,
             WorkingType = request.WorkingType
         };
@@ -468,8 +467,8 @@ public class ProjectService
         if (request.ProjectDescription != null) project.ProjectDescription = request.ProjectDescription;
         if (request.EstimatedDuration.HasValue) project.EstimatedDuration = request.EstimatedDuration.Value;
         if (request.PriorityLevel.HasValue) project.PriorityLevel = request.PriorityLevel.Value;
-        if (request.EstimatedStartDate.HasValue) project.EstimatedStartDate = request.EstimatedStartDate.Value;
-        if (request.EstimatedEndDate.HasValue) project.EstimatedEndDate = request.EstimatedEndDate.Value;
+        if (request.EstimatedStartDate.HasValue) project.EstimatedStartDate = DateTime.SpecifyKind(request.EstimatedStartDate.Value, DateTimeKind.Utc);
+        if (request.EstimatedEndDate.HasValue) project.EstimatedEndDate = DateTime.SpecifyKind(request.EstimatedEndDate.Value, DateTimeKind.Utc);
         if (request.ProjectStatus.HasValue) project.ProjectStatus = request.ProjectStatus.Value;
         project.UpdatedAt = DateTime.UtcNow;
         project.UpdatedBy = currentUserId ?? "SystemUser";

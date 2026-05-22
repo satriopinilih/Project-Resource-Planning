@@ -626,7 +626,10 @@ export default function ProjectDetailsPage() {
 
           {/* 2. Smart Recommendations */}
           {project.projectStatus === 0 && numericId && (
-            <SmartRecommendationPanel projectId={numericId} />
+            <SmartRecommendationPanel 
+              projectId={numericId} 
+              refreshTrigger={project.requiredRoles?.length} 
+            />
           )}
 
           {/* 3. Role Management & Team */}
