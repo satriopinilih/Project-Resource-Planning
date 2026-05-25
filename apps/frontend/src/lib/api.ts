@@ -25,6 +25,7 @@ type BackendUserProject = {
   roleInProject: string;
   startDate: string;
   endDate: string | null;
+  status: number; // 0=Assigned, 1=Completed
 };
 
 type BackendUser = {
@@ -80,6 +81,9 @@ export type BackendProjectMember = {
   startDate: string | null;
   endDate: string | null;
   status: string;
+  swapReason?: string | null;
+  replacedByUserId?: string | null;
+  replacedByUserName?: string | null;
 };
 
 export type BackendRequiredRole = {
@@ -383,6 +387,32 @@ export async function updateRoleCount(projectId: number, roleId: number, newCoun
   return fetchJson<BackendProject>(`/api/projects/${projectId}/roles/${roleId}/count`, {
     method: 'PATCH',
     body: JSON.stringify({ newCount })
+  });
+}
+
+export type AddRequiredRolePayload = {
+  roleName: string;
+  count: number;
+  workingType: number; // 0 = Dedicated, 1 = Shared
+};
+
+export async function addRequiredRole(projectId: number, payload: AddRequiredRolePayload): Promise<BackendProject> {
+  return fetchJson<BackendProject>(`/api/projects/${projectId}/roles`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export type SwapMemberPayload = {
+  oldUserId: string;
+  newUserId: string;
+  reason?: string;
+};
+
+export async function swapMember(projectId: number, payload: SwapMemberPayload): Promise<BackendProject> {
+  return fetchJson<BackendProject>(`/api/projects/${projectId}/swap-member`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 }
 

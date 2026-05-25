@@ -29,4 +29,5 @@ public class UserProjectDto
     public string RoleInProject { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public UserProjectStatus Status { get; set; }
 }

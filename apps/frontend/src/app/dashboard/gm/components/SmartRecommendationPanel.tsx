@@ -32,6 +32,7 @@ import { Employee } from "@/lib/types";
 
 interface SmartRecommendationPanelProps {
   projectId: number;
+  refreshTrigger?: any;
 }
 
 // ── Candidate Card ──
@@ -786,7 +787,7 @@ const CustomizeModal: React.FC<{
 };
 
 // ── Main Panel ──
-export default function SmartRecommendationPanel({ projectId }: SmartRecommendationPanelProps) {
+export default function SmartRecommendationPanel({ projectId, refreshTrigger }: SmartRecommendationPanelProps) {
   const [data, setData] = useState<RecommendationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -815,7 +816,7 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
         setError(err.message || "Failed to load recommendations");
       })
       .finally(() => setLoading(false));
-  }, [projectId]);
+  }, [projectId, refreshTrigger]);
 
   useEffect(() => {
     const handleStart = async (e: any) => {
@@ -850,7 +851,7 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
         });
       }
       setProcessStatus("Starting project...");
-      await updateProject(projectId, { projectStatus: 1 }); // 1 = Running
+      await updateProject(projectId, { projectStatus: 2 }); // 2 = Running
       window.location.reload();
     } catch (err) {
       console.error(err);
@@ -865,10 +866,12 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
     const { option } = adjustingOption;
     setIsProcessing(true);
     try {
-      setProcessStatus("Updating project dates...");
+      setProcessStatus("Updating project dates and starting...");
+      // Combine date update + status change into ONE request to avoid race conditions
       await updateProject(projectId, {
         estimatedStartDate: option.startDate,
         estimatedEndDate: option.endDate,
+        projectStatus: 2, // 2 = Running
       });
       setProcessStatus("Assigning members...");
       for (const c of option.candidates) {
@@ -877,8 +880,6 @@ export default function SmartRecommendationPanel({ projectId }: SmartRecommendat
           roleInProject: c.targetRole
         });
       }
-      setProcessStatus("Starting project...");
-      await updateProject(projectId, { projectStatus: 1 });
       window.location.reload();
     } catch (err) {
       console.error(err);
