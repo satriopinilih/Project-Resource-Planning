@@ -38,6 +38,10 @@ export default function AddProjectPage() {
   const ALLOWED_WORKING_TYPES = ["Dedicated", "Non-Dedicated"];
 
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
+  const [customHolidays, setCustomHolidays] = useState<BackendHoliday[]>([]);
+  const [newHolidayName, setNewHolidayName] = useState("");
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+
   const [durationWeeks, setDurationWeeks] = useState<number>(1);
   const [startDate, setStartDate] = useState<string>("");
   const [endDateDetails, setEndDateDetails] = useState<{
@@ -45,6 +49,43 @@ export default function AddProjectPage() {
     skippedHolidays: BackendHoliday[];
     totalWorkingDays: number;
   }>({ date: null, skippedHolidays: [], totalWorkingDays: 0 });
+
+  const handleAddCustomHoliday = () => {
+    if (!newHolidayName.trim()) {
+      setError("Please provide a name for the custom holiday.");
+      return;
+    }
+    if (!newHolidayDate) {
+      setError("Please select a date for the custom holiday.");
+      return;
+    }
+
+    const dateString = new Date(newHolidayDate).toISOString().split('T')[0];
+
+    // Check if duplicate date
+    const isDbHoliday = holidays.some(h => new Date(h.date).toISOString().split('T')[0] === dateString);
+    const isCustomHoliday = customHolidays.some(h => new Date(h.date).toISOString().split('T')[0] === dateString);
+
+    if (isDbHoliday || isCustomHoliday) {
+      setError("A holiday on this date already exists.");
+      return;
+    }
+
+    const newHoliday: BackendHoliday = {
+      id: -Math.floor(Math.random() * 1000000) - 1,
+      name: `${newHolidayName.trim()} (Custom)`,
+      date: newHolidayDate
+    };
+
+    setCustomHolidays(prev => [...prev, newHoliday]);
+    setNewHolidayName("");
+    setNewHolidayDate("");
+    setError(null);
+  };
+
+  const handleRemoveCustomHoliday = (idToRemove: number) => {
+    setCustomHolidays(prev => prev.filter(h => h.id !== idToRemove));
+  };
 
   const [projectName, setProjectName] = useState("");
   const [clientOrganization, setClientOrganization] = useState("");
@@ -181,6 +222,9 @@ export default function AddProjectPage() {
       const holidayFound = holidays.find(h => {
         const hDate = new Date(h.date).toISOString().split('T')[0];
         return hDate === dateString;
+      }) || customHolidays.find(h => {
+        const hDate = new Date(h.date).toISOString().split('T')[0];
+        return hDate === dateString;
       });
 
       if (!isWeekend && !holidayFound) {
@@ -202,7 +246,7 @@ export default function AddProjectPage() {
       totalWorkingDays: totalTargetWorkingDays
     });
 
-  }, [startDate, durationWeeks, holidays]);
+  }, [startDate, durationWeeks, holidays, customHolidays]);
 
   const handleFormSubmitRequest = (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,10 +298,19 @@ export default function AddProjectPage() {
     const priorityMap: Record<string, number> = { "Low": 0, "Medium": 1, "High": 2 };
     const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
 
+    // Format custom holidays list to append to project description/notes
+    let finalDescription = projectDescription;
+    if (customHolidays.length > 0) {
+      const customHolidayList = customHolidays
+        .map(h => `- ${h.name.replace(" (Custom)", "")} (${new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`)
+        .join("\n");
+      finalDescription += `\n\n[Custom Project Holidays]\n${customHolidayList}`;
+    }
+
     const payload = {
       projectName,
       clientOrganization,
-      projectDescription: projectDescription + (additionalNotes ? "\n\nNotes: " + additionalNotes : ""),
+      projectDescription: finalDescription + (additionalNotes ? "\n\nNotes: " + additionalNotes : ""),
       estimatedDuration: durationWeeks,
       priorityLevel: priorityMap[priorityLevel] ?? 1,
       estimatedStartDate: new Date(startDate).toISOString(),
@@ -383,6 +436,71 @@ export default function AddProjectPage() {
                   <CalendarIcon size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
               </div>
+            </div>
+
+            {/* Custom Project Holidays Widget */}
+            <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-6 space-y-4 transition-colors">
+              <div>
+                <label className="text-[14px] font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <CalendarIcon size={18} className="text-blue-500" />
+                  Custom Project Holidays
+                </label>
+                <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
+                  Add local holidays for this project proposal only (will not be added to the global database).
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Holiday Name (e.g., Company Outing)"
+                    value={newHolidayName}
+                    onChange={(e) => setNewHolidayName(e.target.value)}
+                    className="w-full bg-white dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  />
+                </div>
+                <div className="w-full sm:w-48 relative">
+                  <input
+                    type="date"
+                    value={newHolidayDate}
+                    onChange={(e) => setNewHolidayDate(e.target.value)}
+                    className="w-full bg-white dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 pr-10 text-[14px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors [&::-webkit-calendar-picker-indicator]:opacity-0"
+                  />
+                  <CalendarIcon size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddCustomHoliday}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[14px] px-5 py-3 rounded-xl transition-all shadow-md shadow-blue-500/10 flex items-center justify-center gap-2 h-[46px]"
+                >
+                  <Plus size={16} />
+                  Add
+                </button>
+              </div>
+
+              {customHolidays.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {customHolidays.map((ch) => (
+                    <span
+                      key={ch.id}
+                      className="inline-flex items-center gap-1.5 text-[12px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-500/20"
+                    >
+                      <span>
+                        {ch.name.replace(" (Custom)", "")} ({new Date(ch.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCustomHoliday(ch.id)}
+                        className="text-blue-400 hover:text-blue-600 dark:hover:text-white transition-colors"
+                        title="Remove custom holiday"
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {endDateDetails.date && (
