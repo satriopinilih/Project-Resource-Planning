@@ -403,6 +403,12 @@ export async function addRequiredRole(projectId: number, payload: AddRequiredRol
   });
 }
 
+export async function deleteRequiredRole(projectId: number, roleId: number): Promise<BackendProject> {
+  return fetchJson<BackendProject>(`/api/projects/${projectId}/roles/${roleId}`, {
+    method: 'DELETE'
+  });
+}
+
 export type SwapMemberPayload = {
   oldUserId: string;
   newUserId: string;
@@ -665,6 +671,7 @@ export type RecommendationCandidate = {
   userName: string;
   staffRole: string;
   targetRole: string;
+  targetWorkingType: string;
   experienceYears: number;
   skills: string[];
   matchedSkills: string[];
