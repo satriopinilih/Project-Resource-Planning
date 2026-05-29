@@ -35,6 +35,7 @@ import {
   updateRoleCount,
   addRequiredRole,
   AddRequiredRolePayload,
+  deleteRequiredRole,
   AssignMemberPayload,
   getHireRequests,
   swapMember,
@@ -136,6 +137,9 @@ export default function ProjectDetailsPage() {
 
   // Update role count state
   const [updatingRoleId, setUpdatingRoleId] = useState<number | null>(null);
+
+  // Delete role state
+  const [deletingRoleId, setDeletingRoleId] = useState<number | null>(null);
 
   // Add Role modal state
   const [addRoleOpen, setAddRoleOpen] = useState(false);
@@ -429,6 +433,19 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  const handleDeleteRole = async (roleId: number) => {
+    if (!project) return;
+    setDeletingRoleId(roleId);
+    try {
+      const updated = await deleteRequiredRole(project.projectId, roleId);
+      setProject(updated);
+    } catch (err: any) {
+      alert(err?.message || "Failed to delete role.");
+    } finally {
+      setDeletingRoleId(null);
+    }
+  };
+
   const handleAddRole = async () => {
     if (!project) return;
     setAddRoleSubmitting(true);
@@ -707,7 +724,18 @@ export default function ProjectDetailsPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            {/* +/- buttons for GM to adjust required count */}
+                            {/* Delete role button — hidden for PM (Marketing default) */}
+                            {isEditingTeam && role.roleName.toLowerCase() !== "pm" && (
+                              <button
+                                onClick={() => handleDeleteRole(role.id)}
+                                disabled={deletingRoleId === role.id}
+                                title={`Delete ${role.roleName} role`}
+                                className="p-1.5 rounded-md text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                {deletingRoleId === role.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                              </button>
+                            )}
+                        {/* +/- buttons for GM to adjust required count */}
                             {isEditingTeam && (
                               <div className="flex items-center gap-1 bg-[var(--dash-bg-page)] border border-[var(--dash-border)] rounded-lg px-1 py-0.5">
                                 <button

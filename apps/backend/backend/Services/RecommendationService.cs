@@ -270,6 +270,7 @@ public class RecommendationService
             UserName = user.UserName,
             StaffRole = userStaffRoles.FirstOrDefault() ?? "Staff",
             TargetRole = requiredRole.RoleName,
+            TargetWorkingType = requiredRole.WorkingType,
             ExperienceYears = experienceYears,
             Skills = userSkills,
             MatchedSkills = matchedSkills,
@@ -298,7 +299,9 @@ public class RecommendationService
         foreach (var req in requiredRoles)
         {
             var roleCandidates = allCandidates
-                .Where(c => c.targetRole == req.RoleName && !usedUserIds.Contains(c.candidate.UserId))
+                .Where(c => c.targetRole == req.RoleName 
+                         && c.candidate.TargetWorkingType == req.WorkingType 
+                         && !usedUserIds.Contains(c.candidate.UserId))
                 .Select(c => c.candidate)
                 .ToList();
 
@@ -328,7 +331,25 @@ public class RecommendationService
 
                 if (candidate.SkillMatchPercent > 0 || candidate.StaffRole == req.RoleName)
                 {
-                    selectedCandidates.Add(candidate);
+                    // Clone the candidate so mutations (like Option B date adjustment) don't affect Option A
+                    var clonedCandidate = new CandidateDto
+                    {
+                        UserId = candidate.UserId,
+                        UserName = candidate.UserName,
+                        StaffRole = candidate.StaffRole,
+                        TargetRole = candidate.TargetRole,
+                        TargetWorkingType = candidate.TargetWorkingType,
+                        ExperienceYears = candidate.ExperienceYears,
+                        Skills = candidate.Skills?.ToList() ?? new List<string>(),
+                        MatchedSkills = candidate.MatchedSkills?.ToList() ?? new List<string>(),
+                        SkillMatchPercent = candidate.SkillMatchPercent,
+                        IsAvailable = candidate.IsAvailable,
+                        AvailabilityNote = candidate.AvailabilityNote,
+                        CurrentProjects = candidate.CurrentProjects?.ToList() ?? new List<string>(),
+                        PastProjects = candidate.PastProjects?.ToList() ?? new List<PastProjectExperience>()
+                    };
+
+                    selectedCandidates.Add(clonedCandidate);
                     usedUserIds.Add(candidate.UserId);
                     filled++;
 

@@ -55,6 +55,7 @@ public class CandidateDto
     public string UserName { get; set; } = string.Empty;
     public string StaffRole { get; set; } = string.Empty;
     public string TargetRole { get; set; } = string.Empty; // The role they'd fill
+    public string TargetWorkingType { get; set; } = string.Empty; // e.g. "Dedicated" or "NonDedicated"
     public int ExperienceYears { get; set; }
     public List<string> Skills { get; set; } = new();
     public List<string> MatchedSkills { get; set; } = new(); // Skills from past projects that match target project
