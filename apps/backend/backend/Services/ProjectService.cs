@@ -391,11 +391,13 @@ public class ProjectService
         if (!AllowedStaffRoles.Contains(normalizedRoleName))
             return (false, $"Role '{request.RoleName}' is not allowed. Allowed roles: PM, Senior Dev, Junior Dev, Senior BA, Junior BA, Architect.", 400, null);
 
-        // Prevent duplicate roles on the same project
+        // Prevent duplicate roles with the same WorkingType on the same project.
+        // The same role name with a DIFFERENT WorkingType is allowed (e.g. Junior Dev Dedicated + Junior Dev NonDedicated).
         var duplicate = project.ProjectRequiredRoles
-            .Any(pr => string.Equals(pr.StaffRole?.RoleName, normalizedRoleName, StringComparison.OrdinalIgnoreCase));
+            .Any(pr => string.Equals(pr.StaffRole?.RoleName, normalizedRoleName, StringComparison.OrdinalIgnoreCase)
+                       && pr.WorkingType == request.WorkingType);
         if (duplicate)
-            return (false, $"Role '{normalizedRoleName}' already exists on this project. Use the +/- buttons to adjust the count.", 409, null);
+            return (false, $"Role '{normalizedRoleName}' ({request.WorkingType}) already exists on this project. Change the Working Type or use the +/- buttons to adjust the count.", 409, null);
 
         // Find or create the StaffRole record
         var staffRole = await _db.StaffRoles.FirstOrDefaultAsync(sr => sr.RoleName == normalizedRoleName);
@@ -433,6 +435,57 @@ public class ProjectService
             .FirstAsync(p => p.ProjectID == projectId);
 
         return (true, null, 201, MapToDto(updated));
+    }
+
+    /// <summary>
+    /// Deletes a required role from an existing project.
+    /// GM can delete any role EXCEPT PM, which is the default role set by Marketing.
+    /// Cannot delete if there are members already assigned to that role.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, ProjectDto? Data)> DeleteRequiredRoleAsync(
+        int projectId, int roleId)
+    {
+        var role = await _db.ProjectRequiredRoles
+            .Include(pr => pr.StaffRole)
+            .FirstOrDefaultAsync(pr => pr.Id == roleId && pr.ProjectID == projectId);
+
+        if (role is null)
+            return (false, "Role not found on this project", 404, null);
+
+        // PM is the default role set by Marketing — it cannot be deleted by GM
+        if (string.Equals(role.StaffRole?.RoleName, "PM", StringComparison.OrdinalIgnoreCase))
+            return (false, "The PM role is a default Marketing role and cannot be deleted.", 403, null);
+
+        // Cannot delete if there are members assigned to this role
+        var filledCount = await _db.UserProjects
+            .CountAsync(up => up.ProjectId == projectId &&
+                              up.RoleInProject.ToLower() == role.StaffRole!.RoleName.ToLower() &&
+                              up.Status == UserProjectStatus.Assigned);
+
+        if (filledCount > 0)
+            return (false, $"Cannot delete role '{role.StaffRole!.RoleName}' — {filledCount} member(s) are currently assigned. Unassign them first.", 400, null);
+
+        _db.ProjectRequiredRoles.Remove(role);
+        await _db.SaveChangesAsync();
+
+        // Re-fetch with full includes for response
+        var updated = await _db.Projects
+            .AsNoTracking()
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+                    .ThenInclude(u => u.UserStaffRoles)
+                        .ThenInclude(usr => usr.StaffRole)
+            .Include(p => p.UserProjects)
+                .ThenInclude(up => up.User)
+                    .ThenInclude(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role)
+            .Include(p => p.ProjectRequiredRoles)
+                .ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills)
+                .ThenInclude(ps => ps.Skill)
+            .FirstAsync(p => p.ProjectID == projectId);
+
+        return (true, null, 200, MapToDto(updated));
     }
 
     /// <summary>

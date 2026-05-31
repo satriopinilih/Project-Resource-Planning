@@ -68,7 +68,7 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
           )}
         </div>
         <p className="text-[11px] text-[var(--dash-text-faint)] mb-2">
-          {candidate.staffRole} · {candidate.experienceYears}yr experience · For: <span className="text-blue-400">{candidate.targetRole}</span>
+          {candidate.staffRole} · {candidate.experienceYears}yr experience · For: <span className="text-blue-400">{candidate.targetRole} <span className="text-blue-400/60 font-semibold text-[10px]">({candidate.targetWorkingType})</span></span>
         </p>
 
         {/* Past Projects */}
@@ -355,15 +355,16 @@ const CustomizeModal: React.FC<{
 }> = ({ option, requiredRoles, employees, allCandidates, onClose, onSave, isProcessing }) => {
 
   // Transform needed roles into a flat list of slots
-  const initialAssignments: { id: string; role: string; userId: string; originalUserId: string }[] = [];
+  const initialAssignments: { id: string; role: string; workingType: string; userId: string; originalUserId: string }[] = [];
   let slotIdx = 0;
 
   requiredRoles.forEach(rr => {
     for (let i = 0; i < rr.requiredCount; i++) {
-      const existingRec = option.candidates.filter(c => c.targetRole === rr.roleName)[i];
+      const existingRec = option.candidates.filter(c => c.targetRole === rr.roleName && c.targetWorkingType === rr.workingType)[i];
       initialAssignments.push({
         id: `slot_${slotIdx++}`,
         role: rr.roleName,
+        workingType: rr.workingType,
         userId: existingRec ? existingRec.userId : "",
         originalUserId: existingRec ? existingRec.userId : ""
       });
@@ -522,7 +523,7 @@ const CustomizeModal: React.FC<{
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[14px] font-bold text-white">{slot.role}</span>
+                      <span className="text-[14px] font-bold text-white">{slot.role} <span className="text-[12px] font-medium text-[var(--dash-text-faint)]">({slot.workingType})</span></span>
                       {isModified && (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider">
                           ✎ Modified
@@ -729,7 +730,7 @@ const CustomizeModal: React.FC<{
                     }`}
                 >
                   {empIsBusy && <span className="text-red-400 font-bold">⚠</span>}
-                  <span className="text-gray-500 not-italic">{slot.role}:</span>
+                  <span className="text-gray-500 not-italic">{slot.role} <span className="text-[9px] uppercase font-bold text-gray-600">({slot.workingType})</span>:</span>
                   <span className="font-semibold">{emp ? emp.name : "Unassigned"}</span>
                   {empIsBusy && <span className="text-[8px] text-red-400/70 font-normal">busy</span>}
                 </div>
@@ -952,7 +953,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
           <div className="mb-6 flex flex-wrap gap-2">
             <span className="text-[11px] text-[var(--dash-text-faint)] uppercase font-bold tracking-wider self-center mr-2">Required:</span>
             {data.requiredRoles.map((role) => (
-              <span key={role.staffRoleId} className="px-3 py-1.5 bg-[#1a1f2e] border border-[var(--dash-border)] rounded-lg text-[11px] font-semibold text-gray-300">
+              <span key={`${role.staffRoleId}-${role.workingType}`} className="px-3 py-1.5 bg-[#1a1f2e] border border-[var(--dash-border)] rounded-lg text-[11px] font-semibold text-gray-300">
                 {role.requiredCount}× {role.roleName}
                 <span className="text-[var(--dash-text-faint)] ml-1">({role.workingType})</span>
               </span>
