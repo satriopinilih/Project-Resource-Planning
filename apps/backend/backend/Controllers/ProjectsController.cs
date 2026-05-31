@@ -137,6 +137,23 @@ public class ProjectsController : ControllerBase
         return StatusCode(201, ApiResponse<ProjectDto>.SuccessResponse(data!, "Role added successfully"));
     }
 
+    /// <summary>
+    /// DELETE /api/projects/{id}/roles/{roleId}
+    /// Allows the GM to delete a required role from a project.
+    /// The PM role cannot be deleted (it is set by Marketing as default).
+    /// Roles with assigned members cannot be deleted — unassign first.
+    /// </summary>
+    [HttpDelete("{id}/roles/{roleId}")]
+    public async Task<IActionResult> DeleteRequiredRole(int id, int roleId)
+    {
+        var (success, error, statusCode, data) = await _service.DeleteRequiredRoleAsync(id, roleId);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<string>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<ProjectDto>.SuccessResponse(data!, "Role deleted successfully"));
+    }
+
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectRequest request)
     {
