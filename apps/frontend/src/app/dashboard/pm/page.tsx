@@ -65,13 +65,12 @@ export default function PMDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,2fr)_repeat(3,1fr)] gap-8">
         <PMStatCard title="Total Projects" value={stats.total} icon={<FolderKanban />} variant="premium" onClick={() => router.push("/project?filter=All")} />
-        <PMStatCard title="Scheduled" value={stats.scheduled} icon={<CalendarClock />} variant="sky" onClick={() => router.push("/project?filter=Upcoming")} />
-        <PMStatCard title="Running" value={stats.running} icon={<Users />} variant="blue" onClick={() => router.push("/project?filter=Running")} />
+        <PMStatCard title="Scheduled" value={stats.scheduled} icon={<CalendarClock />} variant="scheduled" onClick={() => router.push("/project?filter=Scheduled")} />
+        <PMStatCard title="Running" value={stats.running} icon={<Users />} variant="running" onClick={() => router.push("/project?filter=Running")} />
         <PMStatCard title="Completed" value={stats.completed} icon={<CheckCircle2 />} variant="green" onClick={() => router.push("/project?filter=Completed")} />
       </div>
 
       <div className="mt-12">
-        <h2 className="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Project Timeline</h2>
         {loading ? (
           <div className="flex flex-col items-center justify-center h-80 bg-white/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 animate-pulse">
             <p className="text-gray-500 dark:text-gray-400 italic">Connecting to database...</p>

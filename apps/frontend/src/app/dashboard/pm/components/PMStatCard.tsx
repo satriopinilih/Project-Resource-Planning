@@ -5,40 +5,31 @@ interface PMStatCardProps {
   title: string;
   value: string | number;
   icon: ReactNode;
-  variant: "blue" | "sky" | "green" | "gray" | "amber" | "premium";
+  variant: "running" | "scheduled" | "green"  | "premium";
   onClick?: () => void;
 }
 
 const PMStatCard: React.FC<PMStatCardProps> = ({ title, value, icon, variant, onClick }) => {
   const styles = {
-    blue: {
-      iconBg: "bg-blue-600/20 text-blue-500",
-      textValue: "text-[var(--dash-text-heading)]",
-      cardBg: "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-blue-500/50 hover:shadow-lg hover:-translate-y-1",
+    running: {
+      iconBg: "bg-green-500/10 text-green-400",
+      textValue: "text-green-400",
+      cardBg:
+        "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover: border-green-500/20 hover:shadow-lg hover:-translate-y-1",
       titleColor: "text-[var(--dash-text-muted)]",
     },
-    sky: {
-      iconBg: "bg-sky-600/20 text-sky-500",
-      textValue: "text-sky-500",
-      cardBg: "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-sky-500/50 hover:shadow-lg hover:-translate-y-1",
+    scheduled: {
+      iconBg: "bg-purple-500/10 text-purple-400",
+      textValue: "text-purple-400",
+      cardBg:
+        "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-purple-500/20 hover:shadow-lg hover:-translate-y-1",
       titleColor: "text-[var(--dash-text-muted)]",
     },
     green: {
-      iconBg: "bg-emerald-600/20 text-emerald-500",
-      textValue: "text-emerald-500",
-      cardBg: "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-emerald-500/50 hover:shadow-lg hover:-translate-y-1",
-      titleColor: "text-[var(--dash-text-muted)]",
-    },
-    gray: {
-      iconBg: "bg-slate-700/30 text-[var(--dash-text-muted)]",
-      textValue: "text-[var(--dash-text-heading)]",
-      cardBg: "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-slate-500/50 hover:shadow-lg hover:-translate-y-1",
-      titleColor: "text-[var(--dash-text-muted)]",
-    },
-    amber: {
-      iconBg: "bg-amber-600/20 text-amber-500",
-      textValue: "text-amber-500",
-      cardBg: "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-amber-500/50 hover:shadow-lg hover:-translate-y-1",
+      iconBg: "bg-gray-500/10 text-gray-400",
+      textValue: "text-gray-400",
+      cardBg:
+        "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-gray-500/20 hover:shadow-lg hover:-translate-y-1",
       titleColor: "text-[var(--dash-text-muted)]",
     },
     premium: {

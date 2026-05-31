@@ -364,8 +364,8 @@ export default function ProjectDetailsPage() {
         projectId: project.projectId,
         projectName: project.projectName,
         notes: fullNotes,
-        currentStartDate: project.estimatedStartDate,
-        currentEndDate: project.estimatedEndDate,
+        currentStartDate: timelineEditStart || project.estimatedStartDate,
+        currentEndDate: timelineEditEnd || project.estimatedEndDate,
       });
       await createHireRequest({
         projectId: project.projectId,

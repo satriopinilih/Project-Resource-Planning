@@ -596,6 +596,7 @@ export interface TimelineItem {
     startDate: string;
     endDate: string;
     projectId?: number;
+    projectStatus?: string;
   }[];
 }
 export interface TimelineEditRequest {
