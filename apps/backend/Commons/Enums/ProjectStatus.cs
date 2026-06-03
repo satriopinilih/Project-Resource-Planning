@@ -9,6 +9,7 @@ namespace Commons.Enums
         Pending,
         Scheduled,
         Running,
-        Completed
+        Completed,
+        Deleted
     }
 }

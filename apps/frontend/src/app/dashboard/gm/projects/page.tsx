@@ -3,14 +3,14 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
-import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
-import { getProjects } from "../../../../lib/api";
+import { Search, Filter, Loader2, ArrowRight, Users, Trash2, RotateCcw } from "lucide-react";
+import { getProjects, deleteProject, restoreProject } from "../../../../lib/api";
 
 interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Running" | "Scheduled" | "Pending" | "Completed";
+  status: "Running" | "Scheduled" | "Pending" | "Completed" | "Deleted";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -20,7 +20,7 @@ interface Project {
 }
 
 const mapStatus = (backendStatus: number, startDateStr?: string): Project["status"] => {
-  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
+  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted
   switch (backendStatus) {
     case 0: return "Pending";    // Belum di-assign
     case 1: return "Scheduled";  // Sudah assign, belum mulai
@@ -35,6 +35,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string): Project["statu
       return "Running";
     }
     case 3: return "Completed";
+    case 4: return "Deleted";
     default: return "Pending";
   }
 };
@@ -46,7 +47,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Pending", "Scheduled", "Running", "Completed"];
+const tabs = ["All", "Pending", "Scheduled", "Running", "Completed", "Deleted"];
 
 function GMProjectsContent() {
   const router = useRouter();
@@ -61,6 +62,35 @@ function GMProjectsContent() {
   const [clientFilter, setClientFilter] = useState("All Clients");
   const [sortBy, setSortBy] = useState("name-asc");
 
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getProjects();
+      const mappedData: Project[] = data.map((p) => {
+        const pmMember = p.members?.find((m) =>
+          m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase().includes("lead")
+        );
+        return {
+          id: `proj${String(p.projectId).padStart(3, "0")}`,
+          name: p.projectName,
+          client: p.clientOrganization || "Internal",
+          status: mapStatus(p.projectStatus, p.estimatedStartDate),
+          timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
+          startDateRaw: p.estimatedStartDate,
+          pm: pmMember ? pmMember.userName : "TBD",
+          team: p.members?.length || 0,
+          budget: "N/A",
+          budgetValue: 0,
+        };
+      });
+      setProjectsData(mappedData);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Jika URL berubah, update tab-nya secara dinamis
   useEffect(() => {
     if (tabQuery && tabs.includes(tabQuery)) {
@@ -69,36 +99,34 @@ function GMProjectsContent() {
   }, [tabQuery]);
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const data = await getProjects();
-        const mappedData: Project[] = data.map((p) => {
-          const pmMember = p.members?.find((m) =>
-            m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase().includes("lead")
-          );
-          return {
-            id: `proj${String(p.projectId).padStart(3, "0")}`,
-            name: p.projectName,
-            client: p.clientOrganization || "Internal",
-            status: mapStatus(p.projectStatus, p.estimatedStartDate),
-            timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
-            startDateRaw: p.estimatedStartDate,
-            pm: pmMember ? pmMember.userName : "TBD",
-            team: p.members?.length || 0,
-            budget: "N/A",
-            budgetValue: 0,
-          };
-        });
-        setProjectsData(mappedData);
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchProjects();
   }, []);
+
+  const handleDelete = async (e: React.MouseEvent, projectId: string) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this project?")) return;
+    
+    try {
+      const numId = parseInt(projectId.replace("proj", ""), 10);
+      await deleteProject(numId);
+      await fetchProjects();
+    } catch (error: any) {
+      alert("Failed to delete project: " + error.message);
+    }
+  };
+
+  const handleRestore = async (e: React.MouseEvent, projectId: string) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to restore this project?")) return;
+    
+    try {
+      const numId = parseInt(projectId.replace("proj", ""), 10);
+      await restoreProject(numId);
+      await fetchProjects();
+    } catch (error: any) {
+      alert("Failed to restore project: " + error.message);
+    }
+  };
 
   const clients = ["All Clients", ...Array.from(new Set(projectsData.map((p) => p.client)))];
 
@@ -287,7 +315,9 @@ function GMProjectsContent() {
                                   ? "bg-green-500/10 text-green-400 border-green-500/20"
                                   : project.status === "Completed"
                                     ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                    : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                                    : project.status === "Deleted"
+                                      ? "bg-red-500/10 text-red-500 border-red-500/20"
+                                      : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                             }`}
                         >
                           {project.status}
@@ -306,7 +336,24 @@ function GMProjectsContent() {
                         </div>
                       </td>
                       <td className="py-4 pr-6 pl-4 text-right">
-                        <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
+                        {project.status === "Deleted" ? (
+                          <button
+                            onClick={(e) => handleRestore(e, project.id)}
+                            className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md transition-colors mr-2 opacity-0 group-hover:opacity-100"
+                            title="Restore Project"
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => handleDelete(e, project.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors mr-2 opacity-0 group-hover:opacity-100"
+                            title="Delete Project"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                        <ArrowRight size={14} className="inline-block text-gray-600 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all" />
                       </td>
                     </tr>
                   ))
