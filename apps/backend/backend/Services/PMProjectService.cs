@@ -26,23 +26,45 @@ public class PMProjectService
             query = query.Where(p => p.UserProjects.Any(up => up.UserId == currentUserId));
         }
 
-        var projectsData = await query.ToListAsync();
+        var projectsData = await query
+            .Include(p => p.UserProjects)
+            .ToListAsync();
 
-        return projectsData.Select(p => new
+        return projectsData.Select(p =>
         {
-            label = p.ProjectName,
-            subLabel = p.ClientOrganization,
-            bars = new[]
+            var userAssignment = p.UserProjects.FirstOrDefault(up => up.UserId == currentUserId);
+            
+            var isPmSwappedOut = isPM && userAssignment != null &&
+                                 userAssignment.RoleInProject.Equals("PM", StringComparison.OrdinalIgnoreCase) &&
+                                 userAssignment.Status == UserProjectStatus.Completed;
+
+            var statusStr = isPmSwappedOut ? "Completed" : p.ProjectStatus.ToString();
+            
+            var endDateStr = (isPmSwappedOut && userAssignment?.EndDate != null)
+                ? userAssignment.EndDate.Value.ToString("yyyy-MM-dd")
+                : p.EstimatedEndDate.ToString("yyyy-MM-dd");
+
+            var startDateStr = (isPM && userAssignment?.StartDate != null)
+                ? userAssignment.StartDate.Value.ToString("yyyy-MM-dd")
+                : p.EstimatedStartDate.ToString("yyyy-MM-dd");
+
+            return new
             {
-                new
+                label = p.ProjectName,
+                subLabel = p.ClientOrganization,
+                bars = new[]
                 {
-                    title = p.ProjectName,
-                    status = p.ProjectStatus.ToString(),
-                    startDate = p.EstimatedStartDate.ToString("yyyy-MM-dd"),
-                    endDate = p.EstimatedEndDate.ToString("yyyy-MM-dd")
+                    new
+                    {
+                        title = p.ProjectName,
+                        status = statusStr,
+                        startDate = startDateStr,
+                        endDate = endDateStr,
+                        projectStatus = p.ProjectStatus.ToString()
+                    }
                 }
-            }
-        });
+            };
+        }).ToList();
     }
 
     /// <summary>
@@ -86,13 +108,23 @@ public class PMProjectService
             subLabel = u.UserStaffRoles.Select(usr => usr.StaffRole.RoleName).FirstOrDefault() ?? u.ExperienceYears.ToString() + "yr",
             bars = u.UserProjects
                 .Where(up => !isPM || pmProjectIds.Contains(up.ProjectId))
-                .Select(up => new
-                {
-                    projectId = up.ProjectId,
-                    title = up.Project.ProjectName,
-                    status = up.Project.ProjectStatus.ToString(),
-                    startDate = up.Project.EstimatedStartDate.ToString("yyyy-MM-dd"),
-                    endDate = up.Project.EstimatedEndDate.ToString("yyyy-MM-dd")
+                .Select(up => {
+                    var statusStr = up.Status == UserProjectStatus.Completed
+                        ? "Completed"
+                        : (up.Project.ProjectStatus == ProjectStatus.Completed ? "Running" : up.Project.ProjectStatus.ToString());
+                    var endDateVal = up.Status == UserProjectStatus.Completed
+                        ? (up.EndDate ?? up.Project.EstimatedEndDate)
+                        : up.Project.EstimatedEndDate;
+
+                    return new
+                    {
+                        projectId = up.ProjectId,
+                        title = up.Project.ProjectName,
+                        status = statusStr,
+                        startDate = (up.StartDate ?? up.Project.EstimatedStartDate).ToString("yyyy-MM-dd"),
+                        endDate = endDateVal.ToString("yyyy-MM-dd"),
+                        projectStatus = up.Project.ProjectStatus.ToString()
+                    };
                 })
                 .ToList()
         });
@@ -114,10 +146,25 @@ public class PMProjectService
         var projects = await query.Include(p => p.UserProjects).ToListAsync();
 
         var total = projects.Count;
-        var onHold = projects.Count(p => p.ProjectStatus == ProjectStatus.Pending);
-        var scheduled = projects.Count(p => p.ProjectStatus == ProjectStatus.Scheduled);
-        var running = projects.Count(p => p.ProjectStatus == ProjectStatus.Running);
-        var completed = projects.Count(p => p.ProjectStatus == ProjectStatus.Completed);
+        var onHold = 0;
+        var scheduled = 0;
+        var running = 0;
+        var completed = 0;
+
+        foreach (var p in projects)
+        {
+            var userAssignment = p.UserProjects.FirstOrDefault(up => up.UserId == currentUserId);
+            var isPmSwapped = isPM && userAssignment != null &&
+                              userAssignment.RoleInProject.Equals("PM", StringComparison.OrdinalIgnoreCase) &&
+                              userAssignment.Status == UserProjectStatus.Completed;
+
+            var effectiveStatus = isPmSwapped ? ProjectStatus.Completed : p.ProjectStatus;
+
+            if (effectiveStatus == ProjectStatus.Pending) onHold++;
+            else if (effectiveStatus == ProjectStatus.Scheduled) scheduled++;
+            else if (effectiveStatus == ProjectStatus.Running) running++;
+            else if (effectiveStatus == ProjectStatus.Completed) completed++;
+        }
 
         return new { total, onHold, scheduled, running, completed };
     }
