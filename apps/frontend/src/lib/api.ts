@@ -119,6 +119,11 @@ export type BackendHoliday = {
   date: string;
 };
 
+export type SkillDto = {
+  skillID: number;
+  skillName: string;
+};
+
 export type BackendEmployee = {
   userId: string;
   userName: string;
@@ -622,6 +627,50 @@ export async function getResourceTimeline(): Promise<TimelineItem[]> {
 
 export async function getHolidays(): Promise<BackendHoliday[]> {
   return fetchJson<BackendHoliday[]>('/api/holidays');
+}
+
+export async function createHoliday(name: string, date: string): Promise<BackendHoliday> {
+  return fetchJson<BackendHoliday>('/api/holidays', {
+    method: 'POST',
+    body: JSON.stringify({ name, date })
+  });
+}
+
+export async function updateHoliday(id: number, name: string, date: string): Promise<BackendHoliday> {
+  return fetchJson<BackendHoliday>(`/api/holidays/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name, date })
+  });
+}
+
+export async function deleteHoliday(id: number): Promise<void> {
+  await fetchJson(`/api/holidays/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function getSkills(): Promise<SkillDto[]> {
+  return fetchJson<SkillDto[]>('/api/skills');
+}
+
+export async function createSkill(skillName: string): Promise<SkillDto> {
+  return fetchJson<SkillDto>('/api/skills', {
+    method: 'POST',
+    body: JSON.stringify({ skillName })
+  });
+}
+
+export async function updateSkill(id: number, skillName: string): Promise<SkillDto> {
+  return fetchJson<SkillDto>(`/api/skills/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ skillName })
+  });
+}
+
+export async function deleteSkill(id: number): Promise<void> {
+  await fetchJson(`/api/skills/${id}`, {
+    method: 'DELETE'
+  });
 }
 
 export async function getTimelineEditRequests(): Promise<TimelineEditRequest[]> {
