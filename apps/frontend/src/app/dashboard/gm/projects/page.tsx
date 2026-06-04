@@ -68,7 +68,7 @@ function GMProjectsContent() {
       const data = await getProjects();
       const mappedData: Project[] = data.map((p) => {
         const pmMember = p.members?.find((m) =>
-          m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase().includes("lead")
+          m.role?.toLowerCase().includes("manager") || m.role?.toLowerCase() === "pm"
         );
         return {
           id: `proj${String(p.projectId).padStart(3, "0")}`,
@@ -77,7 +77,7 @@ function GMProjectsContent() {
           status: mapStatus(p.projectStatus, p.estimatedStartDate),
           timeline: `${formatDate(p.estimatedStartDate)} — ${formatDate(p.estimatedEndDate)}`,
           startDateRaw: p.estimatedStartDate,
-          pm: pmMember ? pmMember.userName : "TBD",
+          pm: pmMember ? pmMember.userId : "TBD",
           team: p.members?.length || 0,
           budget: "N/A",
           budgetValue: 0,
