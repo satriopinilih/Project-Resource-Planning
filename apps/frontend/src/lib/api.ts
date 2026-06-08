@@ -104,7 +104,7 @@ export type BackendProject = {
   priorityLevel: number;
   estimatedStartDate: string;
   estimatedEndDate: string;
-  projectStatus: number; // 0=Pending,1=Running,2=Completed
+  projectStatus: number; // 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted
   members: BackendProjectMember[];
   requiredRoles: BackendRequiredRole[];
   requiredSkills: string[]; // Project-level skill requirements
@@ -360,6 +360,12 @@ export async function updateProject(id: number, projectData: any): Promise<Backe
 export async function deleteProject(id: number): Promise<void> {
   await fetchJson(`/api/projects/${id}`, {
     method: 'DELETE'
+  });
+}
+
+export async function restoreProject(id: number): Promise<void> {
+  await fetchJson(`/api/projects/${id}/restore`, {
+    method: 'POST'
   });
 }
 

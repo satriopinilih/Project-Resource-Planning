@@ -197,6 +197,21 @@ public class ProjectsController : ControllerBase
         return Ok(ApiResponse<string>.SuccessResponse("Project deleted successfully"));
     }
 
+    [HttpPost("{id}/restore")]
+    public async Task<IActionResult> RestoreProject(int id)
+    {
+        var (success, error, statusCode) = await _service.RestoreAsync(id);
+
+        if (!success)
+        {
+            if (statusCode == 404)
+                return NotFound(ApiResponse<ProjectDto>.ErrorResponse(error!));
+            return StatusCode(statusCode, ApiResponse<string>.ErrorResponse(error!));
+        }
+
+        return Ok(ApiResponse<string>.SuccessResponse("Project restored successfully"));
+    }
+
     [HttpPost("{id}/swap-member")]
     public async Task<IActionResult> SwapMember(int id, [FromBody] SwapMemberRequest request)
     {

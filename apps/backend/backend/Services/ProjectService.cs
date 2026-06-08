@@ -642,7 +642,7 @@ public class ProjectService
     }
 
     /// <summary>
-    /// Deletes a project (only Pending projects can be deleted).
+    /// Soft Deletes a project (Sets status to Deleted and saves previous status).
     /// </summary>
     public async Task<(bool Success, string? Error, int StatusCode)> DeleteAsync(int id)
     {
@@ -650,10 +650,27 @@ public class ProjectService
         if (project == null)
             return (false, "Project not found", 404);
 
-        if (project.ProjectStatus != 0)
-            return (false, "Only pending projects can be canceled.", 400);
+        project.PreviousProjectStatus = project.ProjectStatus;
+        project.ProjectStatus = Commons.Enums.ProjectStatus.Deleted;
+        project.UpdatedAt = DateTime.UtcNow;
+        
+        await _db.SaveChangesAsync();
+        return (true, null, 200);
+    }
 
-        _db.Projects.Remove(project);
+    /// <summary>
+    /// Restores a deleted project to its previous status.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode)> RestoreAsync(int id)
+    {
+        var project = await _db.Projects.FindAsync(id);
+        if (project == null)
+            return (false, "Project not found", 404);
+
+        project.ProjectStatus = project.PreviousProjectStatus ?? Commons.Enums.ProjectStatus.Pending;
+        project.PreviousProjectStatus = null;
+        project.UpdatedAt = DateTime.UtcNow;
+        
         await _db.SaveChangesAsync();
         return (true, null, 200);
     }
