@@ -643,34 +643,54 @@ public class ProjectService
 
     /// <summary>
     /// Soft Deletes a project (Sets status to Deleted and saves previous status).
+    /// Also marks all currently Assigned members' UserProject records as Deleted
+    /// so that employee history no longer shows this project as an active assignment.
     /// </summary>
     public async Task<(bool Success, string? Error, int StatusCode)> DeleteAsync(int id)
     {
-        var project = await _db.Projects.FindAsync(id);
+        var project = await _db.Projects
+            .Include(p => p.UserProjects)
+            .FirstOrDefaultAsync(p => p.ProjectID == id);
         if (project == null)
             return (false, "Project not found", 404);
 
         project.PreviousProjectStatus = project.ProjectStatus;
         project.ProjectStatus = Commons.Enums.ProjectStatus.Deleted;
         project.UpdatedAt = DateTime.UtcNow;
-        
+
+        // Update all currently Assigned members so employee history reflects the deletion
+        foreach (var up in project.UserProjects.Where(up => up.Status == UserProjectStatus.Assigned))
+        {
+            up.Status = UserProjectStatus.Deleted;
+        }
+
         await _db.SaveChangesAsync();
         return (true, null, 200);
     }
 
     /// <summary>
     /// Restores a deleted project to its previous status.
+    /// Also restores all UserProject records that were marked as Deleted during soft-delete
+    /// back to Assigned, so employee history reflects the restoration.
     /// </summary>
     public async Task<(bool Success, string? Error, int StatusCode)> RestoreAsync(int id)
     {
-        var project = await _db.Projects.FindAsync(id);
+        var project = await _db.Projects
+            .Include(p => p.UserProjects)
+            .FirstOrDefaultAsync(p => p.ProjectID == id);
         if (project == null)
             return (false, "Project not found", 404);
 
         project.ProjectStatus = project.PreviousProjectStatus ?? Commons.Enums.ProjectStatus.Pending;
         project.PreviousProjectStatus = null;
         project.UpdatedAt = DateTime.UtcNow;
-        
+
+        // Restore all members that were marked Deleted during soft-delete back to Assigned
+        foreach (var up in project.UserProjects.Where(up => up.Status == UserProjectStatus.Deleted))
+        {
+            up.Status = UserProjectStatus.Assigned;
+        }
+
         await _db.SaveChangesAsync();
         return (true, null, 200);
     }
