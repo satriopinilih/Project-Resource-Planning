@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getProjects, markProjectAsRead } from "@/lib/api";
 import { Bell, ArrowRight, CheckCircle2 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 
 interface PMNotification {
   projectId: number;
@@ -58,28 +59,20 @@ export default function PMNotificationsPage() {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full h-full overflow-y-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
-            <Bell className="text-[#2B7FFC]" />
-            Your Notifications
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 leading-relaxed">
-            All unread project assignments and important alerts.
-          </p>
-        </div>
-        
+    <>
+      <AppHeader title="Notifications" role="PM" />
+      <div className="p-8 max-w-4xl mx-auto w-full h-auto overflow-y-auto">
         {notifications.length > 0 && (
-          <button 
-            onClick={handleMarkAllAsRead}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-[#1e2532] dark:hover:bg-[#2a3041] text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
-          >
-            <CheckCircle2 size={16} />
-            Mark all as read
-          </button>
+          <div className="flex justify-end mb-6">
+            <button
+              onClick={handleMarkAllAsRead}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-[#1e2532] dark:hover:bg-[#2a3041] text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
+            >
+              <CheckCircle2 size={16} />
+              Mark all as read
+            </button>
+          </div>
         )}
-      </div>
 
       <div className="bg-white dark:bg-[#22252e] border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-sm overflow-hidden">
         {isLoading ? (
@@ -121,6 +114,7 @@ export default function PMNotificationsPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

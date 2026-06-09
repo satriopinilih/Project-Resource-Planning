@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import PMStatCard from "@/app/dashboard/pm/components/PMStatCard";
 import PMTimelineView from "@/app/dashboard/pm/components/PMGanttChart";
 import DashboardHeader from "@/app/dashboard/pm/components/PMDashboardHeader";
+import AppHeader from "@/components/AppHeader";
 import {
   FolderKanban,
   CalendarClock,
@@ -45,7 +46,8 @@ export default function PMDashboard() {
   }, []);
 
   return (
-    <div className="p-8 max-w-full mx-auto w-full h-full overflow-y-auto">
+    <>
+      <div className="p-8 max-w-full mx-auto w-full h-auto overflow-y-auto">
       <DashboardHeader />
       {error && (
         <div className="mb-8 flex items-center justify-between p-4 bg-red-50 border-l-4 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400 rounded-r-lg shadow-sm">
@@ -82,7 +84,8 @@ export default function PMDashboard() {
         ) : (
           <PMTimelineView />
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

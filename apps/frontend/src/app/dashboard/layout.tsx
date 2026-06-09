@@ -15,6 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const getTitle = () => {
     if (pathname === "/dashboard") return "Dashboard";
     if (pathname.includes("/dashboard/gm/")) return null;
+    if (pathname.startsWith("/dashboard/pm")) return null;
     if (pathname.includes("/projects/") ) return "Project Details";
     if (pathname.includes("/projects")) return "Projects";
     if (pathname.includes("/add-project")) return "Add New Project";
