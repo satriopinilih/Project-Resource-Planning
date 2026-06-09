@@ -70,6 +70,7 @@ builder.Services.AddScoped<ContractExtensionService>();
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<HireRequestService>();
 builder.Services.AddScoped<HolidayService>();
+builder.Services.AddScoped<SkillService>();
 builder.Services.AddScoped<PMProjectService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<RecommendationService>();

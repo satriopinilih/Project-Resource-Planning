@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 import { getProjects, BackendProject } from "@/lib/api";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ const formatFull = (d: Date) =>
   }).format(d);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type ProjectStatus = "pending" | "scheduled" | "running" | "completed";
+type ProjectStatus = "pending" | "scheduled" | "running" | "completed" | "deleted";
 
 interface TimelineProject {
   id: string;
@@ -42,11 +42,12 @@ interface TimelineProject {
   status: ProjectStatus;
 }
 
-// Backend ProjectStatus: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
+// Backend ProjectStatus: 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted
 function mapStatus(s: number): ProjectStatus {
   if (s === 1) return "scheduled";
   if (s === 2) return "running";
   if (s === 3) return "completed";
+  if (s === 4) return "deleted";
   return "pending";
 }
 
@@ -67,6 +68,7 @@ const statusBarColors: Record<ProjectStatus, string> = {
   scheduled: "bg-[#3b82f6]/90 hover:bg-[#3b82f6] border-[#3b82f6]/30",
   running: "bg-[#22c55e]/90 hover:bg-[#22c55e] border-[#22c55e]/30",
   completed: "bg-[#64748b]/90 hover:bg-[#64748b] border-[#64748b]/30",
+  deleted: "bg-red-500/90 hover:bg-red-500 border-red-500/30",
 };
 
 const filterConfig: {
@@ -75,31 +77,37 @@ const filterConfig: {
   activeClass: string;
   dotClass: string;
 }[] = [
-  {
-    status: "pending",
-    label: "Pending",
-    activeClass: "bg-amber-500/20 border-amber-500/60 text-amber-400",
-    dotClass: "bg-amber-500",
-  },
-  {
-    status: "scheduled",
-    label: "Scheduled",
-    activeClass: "bg-[#3b82f6]/20 border-[#3b82f6]/60 text-[#3b82f6]",
-    dotClass: "bg-[#3b82f6]",
-  },
-  {
-    status: "running",
-    label: "Running",
-    activeClass: "bg-[#22c55e]/20 border-[#22c55e]/60 text-[#22c55e]",
-    dotClass: "bg-[#22c55e]",
-  },
-  {
-    status: "completed",
-    label: "Completed",
-    activeClass: "bg-[#64748b]/20 border-[#64748b]/60 text-[#64748b]",
-    dotClass: "bg-[#64748b]",
-  },
-];
+    {
+      status: "pending",
+      label: "Pending",
+      activeClass: "bg-amber-500/20 border-amber-500/60 text-amber-400",
+      dotClass: "bg-amber-500",
+    },
+    {
+      status: "scheduled",
+      label: "Scheduled",
+      activeClass: "bg-[#3b82f6]/20 border-[#3b82f6]/60 text-[#3b82f6]",
+      dotClass: "bg-[#3b82f6]",
+    },
+    {
+      status: "running",
+      label: "Running",
+      activeClass: "bg-[#22c55e]/20 border-[#22c55e]/60 text-[#22c55e]",
+      dotClass: "bg-[#22c55e]",
+    },
+    {
+      status: "completed",
+      label: "Completed",
+      activeClass: "bg-[#64748b]/20 border-[#64748b]/60 text-[#64748b]",
+      dotClass: "bg-[#64748b]",
+    },
+    {
+      status: "deleted",
+      label: "Deleted",
+      activeClass: "bg-red-500/20 border-red-500/60 text-red-500",
+      dotClass: "bg-red-500",
+    },
+  ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function ProjectTimeline() {
@@ -111,6 +119,7 @@ export default function ProjectTimeline() {
   const [activeFilters, setActiveFilters] = useState<Set<ProjectStatus>>(
     new Set(["pending", "scheduled", "running"])
   );
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Default window: current week Monday
   const [windowStart, setWindowStart] = useState<Date>(() => toMonday(new Date()));
@@ -147,12 +156,13 @@ export default function ProjectTimeline() {
 
     const filtered = allProjects.filter((p) => {
       if (!activeFilters.has(p.status)) return false;
+      if (searchQuery.trim() !== "" && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       // Only show if overlaps with the current 12-week window
       return p.endDate >= windowStart && p.startDate <= windowEnd;
     });
 
     return { columns: cols, filteredProjects: filtered };
-  }, [allProjects, activeFilters, windowStart, windowEnd]);
+  }, [allProjects, activeFilters, searchQuery, windowStart, windowEnd]);
 
   return (
     <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300">
@@ -200,16 +210,14 @@ export default function ProjectTimeline() {
               key={status}
               type="button"
               onClick={() => toggleFilter(status)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border transition-all duration-150 ${
-                isActive
-                  ? activeClass
-                  : "border-[var(--dash-border)] text-[var(--dash-text-faint)] hover:border-[var(--dash-border-subtle)] hover:text-[var(--dash-text-muted)]"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border transition-all duration-150 ${isActive
+                ? activeClass
+                : "border-[var(--dash-border)] text-[var(--dash-text-faint)] hover:border-[var(--dash-border-subtle)] hover:text-[var(--dash-text-muted)]"
+                }`}
             >
               <span
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  isActive ? dotClass : "bg-[var(--dash-text-faint)]"
-                }`}
+                className={`w-2 h-2 rounded-full transition-colors ${isActive ? dotClass : "bg-[var(--dash-text-faint)]"
+                  }`}
               />
               {label}
               {isActive && (
@@ -218,6 +226,22 @@ export default function ProjectTimeline() {
             </button>
           );
         })}
+
+        {/* ── Search Bar ── */}
+        <div className="ml-auto relative w-80 ">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]"
+            strokeWidth={1.8}
+          />
+          <input
+            type="text"
+            placeholder="Search projects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-9 pl-9 pr-4 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
+          />
+        </div>
       </div>
 
       {/* ── Loading / Error ── */}

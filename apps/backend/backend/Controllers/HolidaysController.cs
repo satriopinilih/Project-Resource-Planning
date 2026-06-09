@@ -48,4 +48,41 @@ public class HolidaysController : ControllerBase
             return StatusCode(500, "An error occurred while creating the holiday.");
         }
     }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateHoliday(int id, [FromBody] UpdateHolidayRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var (success, error, data) = await _service.UpdateAsync(id, request);
+            if (!success)
+                return BadRequest(ApiResponse<HolidayDto>.ErrorResponse(error!));
+
+            return Ok(ApiResponse<HolidayDto>.SuccessResponse(data!));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An error occurred while updating the holiday.");
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteHoliday(int id)
+    {
+        try
+        {
+            var (success, error) = await _service.DeleteAsync(id);
+            if (!success)
+                return BadRequest(ApiResponse<string>.ErrorResponse(error!));
+
+            return Ok(ApiResponse<string>.SuccessResponse("Holiday deleted successfully"));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An error occurred while deleting the holiday.");
+        }
+    }
 }

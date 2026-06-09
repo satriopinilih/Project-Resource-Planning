@@ -26,6 +26,7 @@ public class Project
     public DateTime EstimatedEndDate { get; set; }
 
     public ProjectStatus ProjectStatus { get; set; }
+    public ProjectStatus? PreviousProjectStatus { get; set; }
 
     // Audit fields
     public DateTime CreatedAt { get; set; }
