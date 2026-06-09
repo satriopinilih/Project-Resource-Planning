@@ -9,5 +9,8 @@ public class CreateHolidayRequest
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    public DateTime Date { get; set; }
+    public DateTime StartDate { get; set; }
+
+    [Required]
+    public DateTime EndDate { get; set; }
 }

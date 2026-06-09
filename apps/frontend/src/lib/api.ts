@@ -629,10 +629,17 @@ export async function getHolidays(): Promise<BackendHoliday[]> {
   return fetchJson<BackendHoliday[]>('/api/holidays');
 }
 
-export async function createHoliday(name: string, date: string): Promise<BackendHoliday> {
-  return fetchJson<BackendHoliday>('/api/holidays', {
+export async function createHoliday(name: string, startDate: string, endDate: string): Promise<BackendHoliday[]> {
+  return fetchJson<BackendHoliday[]>('/api/holidays', {
     method: 'POST',
-    body: JSON.stringify({ name, date })
+    body: JSON.stringify({ name, startDate, endDate })
+  });
+}
+
+export async function bulkCreateHolidays(holidays: { name: string; date: string }[]): Promise<BackendHoliday[]> {
+  return fetchJson<BackendHoliday[]>('/api/holidays/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ holidays })
   });
 }
 
