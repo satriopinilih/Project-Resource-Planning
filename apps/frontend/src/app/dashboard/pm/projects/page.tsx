@@ -65,7 +65,11 @@ function PMProjectsContent() {
         const currentPmId = auth?.userId;
 
         const data = await getProjects();
-        const mappedData: Project[] = data.map((p) => {
+        const activeProjects = data.filter((p) => 
+          p.projectStatus !== 4 && 
+          String(p.projectStatus).toLowerCase() !== "deleted"
+        );
+        const mappedData: Project[] = activeProjects.map((p) => {
           // The PM who was swapped OUT (status = Completed)
           const swappedPmMember = p.members?.find(
             (m) =>
