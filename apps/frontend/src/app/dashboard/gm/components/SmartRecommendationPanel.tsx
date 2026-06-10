@@ -19,6 +19,7 @@ import {
   ArrowRight,
   CalendarCheck
 } from "lucide-react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   getProjectRecommendations,
   RecommendationResponse,
@@ -212,6 +213,7 @@ const OptionCard: React.FC<{
   originalEndDate?: string;
 }> = ({ option, isRecommended, label, originalStartDate, originalEndDate }) => {
   const [expanded, setExpanded] = useState(false);
+  const [startConfirmOpen, setStartConfirmOpen] = useState(false);
 
   return (
     <div className={`
@@ -324,13 +326,29 @@ const OptionCard: React.FC<{
             Adjust Dates &amp; Start
           </button>
         ) : (
-          <button
-            disabled={option.requiresHiring || option.requiresReschedule}
-            onClick={() => window.dispatchEvent(new CustomEvent('startProject', { detail: option }))}
-            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
-          >
-            {option.requiresHiring ? "Unavailable to Start" : "Start Project"}
-          </button>
+          <>
+            <button
+              disabled={option.requiresHiring || option.requiresReschedule}
+              onClick={() => !option.requiresHiring && !option.requiresReschedule && setStartConfirmOpen(true)}
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
+            >
+              {option.requiresHiring ? "Unavailable to Start" : "Start Project"}
+            </button>
+            <ConfirmModal
+              isOpen={startConfirmOpen}
+              onClose={() => setStartConfirmOpen(false)}
+              onConfirm={() => {
+                setStartConfirmOpen(false);
+                window.dispatchEvent(new CustomEvent('startProject', { detail: option }));
+              }}
+              icon={<CheckCircle2 size={28} className="text-white" />}
+              iconBg="bg-gradient-to-br from-blue-600 to-indigo-600"
+              title={`Start with ${option.title}`}
+              message={`Do you want to start the project using ${option.title}? This will assign ${option.teamSize} team member(s) and set the project to Running.`}
+              confirmText="Confirm"
+              confirmClass="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/20"
+            />
+          </>
         )}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('customizeOption', { detail: option }))}

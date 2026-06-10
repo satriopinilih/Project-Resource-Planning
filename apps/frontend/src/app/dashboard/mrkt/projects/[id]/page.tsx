@@ -44,7 +44,8 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
       return { label: "Running", class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
-    default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+    case 4: return { label: "Deleted", class: "bg-red-500/10 text-red-400 border-red-500/20" };
+    default: return { label: "Unknown", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
   }
 };
 
