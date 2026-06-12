@@ -22,7 +22,7 @@ export default function PMNotificationsPage() {
       const projects = await getProjects();
       
       const newNotifs: PMNotification[] = projects
-        .filter(p => p.isUnread && p.projectStatus !== 4 && p.projectStatus !== "Deleted" && String(p.projectStatus).toLowerCase() !== "deleted")
+        .filter(p => p.isUnread && p.projectStatus !== 4 && String(p.projectStatus).toLowerCase() !== "deleted")
         .map(p => ({ projectId: p.projectId, projectName: p.projectName }));
       
       setNotifications(newNotifs.reverse()); // Newest first
