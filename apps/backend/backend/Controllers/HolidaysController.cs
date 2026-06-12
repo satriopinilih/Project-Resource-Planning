@@ -39,9 +39,9 @@ public class HolidaysController : ControllerBase
         {
             var (success, error, data) = await _service.CreateAsync(request);
             if (!success)
-                return StatusCode(500, ApiResponse<HolidayDto>.ErrorResponse(error!));
+                return StatusCode(500, ApiResponse<List<HolidayDto>>.ErrorResponse(error!));
 
-            return Ok(ApiResponse<HolidayDto>.SuccessResponse(data!));
+            return Ok(ApiResponse<List<HolidayDto>>.SuccessResponse(data!));
         }
         catch (Exception)
         {
@@ -83,6 +83,26 @@ public class HolidaysController : ControllerBase
         catch (Exception)
         {
             return StatusCode(500, "An error occurred while deleting the holiday.");
+        }
+    }
+
+    [HttpPost("bulk")]
+    public async Task<IActionResult> BulkCreateHolidays([FromBody] BulkCreateHolidaysRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var (success, error, data) = await _service.BulkCreateAsync(request);
+            if (!success)
+                return StatusCode(500, ApiResponse<List<HolidayDto>>.ErrorResponse(error!));
+
+            return Ok(ApiResponse<List<HolidayDto>>.SuccessResponse(data!));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "An error occurred while uploading holidays: " + ex.Message);
         }
     }
 }
