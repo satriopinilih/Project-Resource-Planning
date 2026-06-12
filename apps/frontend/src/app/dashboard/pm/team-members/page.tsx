@@ -5,6 +5,7 @@ import { getEmployees } from "@/lib/api";
 import { Employee } from "@/lib/types";
 import { getPrimaryRole, getSessionUser } from "@/lib/auth";
 import { AlertCircle } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 
 export default function TeamMembersPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -46,7 +47,9 @@ export default function TeamMembersPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 flex flex-col h-full w-full">
+    <>
+      <AppHeader title="Team Members" role="PM" />
+      <div className="p-6 lg:p-8 flex flex-col h-full w-full">
       {isLoading && (
         <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
           Loading team members from backend...
@@ -311,6 +314,7 @@ export default function TeamMembersPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

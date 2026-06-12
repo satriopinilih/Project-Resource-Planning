@@ -19,7 +19,9 @@ public class PMProjectService
     /// </summary>
     public async Task<object> GetProjectTimelineAsync(string? currentUserId, bool isPM)
     {
-        var query = _db.Projects.AsNoTracking().AsQueryable();
+        var query = _db.Projects.AsNoTracking()
+            .Where(p => p.ProjectStatus != ProjectStatus.Deleted)
+            .AsQueryable();
 
         if (isPM && currentUserId is not null)
         {
@@ -81,7 +83,7 @@ public class PMProjectService
                 .ThenInclude(usr => usr.StaffRole)
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .Where(u => u.UserProjects.Any())
+            .Where(u => u.UserProjects.Any(up => up.Project.ProjectStatus != ProjectStatus.Deleted))
             .Where(u => !u.UserRoles.Any(r =>
                 r.Role.RoleName == RoleName.PM ||
                 r.Role.RoleName == RoleName.GM ||
@@ -108,6 +110,7 @@ public class PMProjectService
             subLabel = u.UserStaffRoles.Select(usr => usr.StaffRole.RoleName).FirstOrDefault() ?? u.ExperienceYears.ToString() + "yr",
             bars = u.UserProjects
                 .Where(up => !isPM || pmProjectIds.Contains(up.ProjectId))
+                .Where(up => up.Project.ProjectStatus != ProjectStatus.Deleted)
                 .Select(up => {
                     var statusStr = up.Status == UserProjectStatus.Completed
                         ? "Completed"
@@ -136,7 +139,8 @@ public class PMProjectService
     /// </summary>
     public async Task<object> GetDashboardStatsAsync(string? currentUserId, bool isPM)
     {
-        IQueryable<Entities.Entities.Project> query = _db.Projects.AsNoTracking();
+        IQueryable<Entities.Entities.Project> query = _db.Projects.AsNoTracking()
+            .Where(p => p.ProjectStatus != ProjectStatus.Deleted);
 
         if (isPM && currentUserId is not null)
         {

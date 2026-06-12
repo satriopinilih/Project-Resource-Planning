@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
 import { getProjects } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
+import AppHeader from "@/components/AppHeader";
 
 interface Project {
   id: string;
@@ -64,7 +65,10 @@ function PMProjectsContent() {
         const currentPmId = auth?.userId;
 
         const data = await getProjects();
-        const mappedData: Project[] = data.map((p) => {
+        const activeProjects = data.filter((p) => 
+          p.projectStatus !== 4
+        );
+        const mappedData: Project[] = activeProjects.map((p) => {
           // The PM who was swapped OUT (status = Completed)
           const swappedPmMember = p.members?.find(
             (m) =>
@@ -151,7 +155,8 @@ function PMProjectsContent() {
 
   return (
     <>
-      <div className="p-8 w-full h-full overflow-y-auto">
+      <AppHeader title="Projects" role="PM" />
+      <div className="p-8 w-full h-auto overflow-y-auto">
         <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl transition-colors duration-300">
           <div className="flex items-center justify-between p-5 pb-0">
             <div className="relative w-[300px]">
