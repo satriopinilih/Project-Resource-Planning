@@ -66,8 +66,7 @@ function PMProjectsContent() {
 
         const data = await getProjects();
         const activeProjects = data.filter((p) => 
-          p.projectStatus !== 4 && 
-          String(p.projectStatus).toLowerCase() !== "deleted"
+          p.projectStatus !== 4
         );
         const mappedData: Project[] = activeProjects.map((p) => {
           // The PM who was swapped OUT (status = Completed)
