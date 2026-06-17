@@ -52,24 +52,16 @@ public class HolidayService
             dates.Add(date);
         }
 
-        var createdHolidays = new List<Holiday>();
         bool isMultiDay = dates.Count > 1;
+        var trimmedName = request.Name.Trim();
 
-        for (int i = 0; i < dates.Count; i++)
+        var createdHolidays = dates.Select((date, index) => new Holiday
         {
-            var date = dates[i];
-            var name = isMultiDay ? $"{request.Name.Trim()}{i + 1}" : request.Name.Trim();
+            Name = isMultiDay ? $"{trimmedName}{index + 1}" : trimmedName,
+            Date = DateTime.SpecifyKind(date, DateTimeKind.Utc)
+        }).ToList();
 
-            var holiday = new Holiday
-            {
-                Name = name,
-                Date = DateTime.SpecifyKind(date, DateTimeKind.Utc)
-            };
-
-            _db.Holidays.Add(holiday);
-            createdHolidays.Add(holiday);
-        }
-
+        _db.Holidays.AddRange(createdHolidays);
         await _db.SaveChangesAsync();
 
         var result = createdHolidays.Select(h => new HolidayDto
