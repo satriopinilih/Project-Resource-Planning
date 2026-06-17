@@ -119,17 +119,13 @@ public class HolidayService
             return (false, "No holiday records provided.", null);
         }
 
-        var createdHolidays = new List<Holiday>();
-        foreach (var item in request.Holidays)
+        var createdHolidays = request.Holidays.Select(item => new Holiday
         {
-            var holiday = new Holiday
-            {
-                Name = item.Name.Trim(),
-                Date = DateTime.SpecifyKind(item.Date.Date, DateTimeKind.Utc)
-            };
-            _db.Holidays.Add(holiday);
-            createdHolidays.Add(holiday);
-        }
+            Name = item.Name.Trim(),
+            Date = DateTime.SpecifyKind(item.Date.Date, DateTimeKind.Utc)
+        }).ToList();
+
+        _db.Holidays.AddRange(createdHolidays);
 
         await _db.SaveChangesAsync();
 
