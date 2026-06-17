@@ -12,9 +12,14 @@ import {
   AlertCircle,
   RefreshCw,
   Trash2,
-  CalendarDays
+  CalendarDays,
+  UploadCloud,
+  FileSpreadsheet,
+  AlertTriangle,
+  Check
 } from "lucide-react";
-import { getHolidays, createHoliday, updateHoliday, deleteHoliday, BackendHoliday } from "@/lib/api";
+import { getHolidays, createHoliday, bulkCreateHolidays, updateHoliday, deleteHoliday, BackendHoliday } from "@/lib/api";
+import * as XLSX from "xlsx";
 
 export default function HolidaysPage() {
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
@@ -27,13 +32,22 @@ export default function HolidaysPage() {
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedHoliday, setSelectedHoliday] = useState<BackendHoliday | null>(null);
 
   // Form states
   const [nameInput, setNameInput] = useState("");
   const [dateInput, setDateInput] = useState("");
+  const [startDateInput, setStartDateInput] = useState("");
+  const [endDateInput, setEndDateInput] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Import states
+  const [isDragging, setIsDragging] = useState(false);
+  const [importFileName, setImportFileName] = useState("");
+  const [parsedHolidays, setParsedHolidays] = useState<{ name: string; date: string; isValid: boolean; error?: string }[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Toast notification
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -74,6 +88,8 @@ export default function HolidaysPage() {
   const handleOpenAddModal = () => {
     setNameInput("");
     setDateInput("");
+    setStartDateInput("");
+    setEndDateInput("");
     setFormError(null);
     setIsAddModalOpen(true);
   };
@@ -90,14 +106,20 @@ export default function HolidaysPage() {
 
   const handleAddHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameInput.trim() || !dateInput) {
-      setFormError("Holiday name and date are required.");
+    if (!nameInput.trim() || !startDateInput || !endDateInput) {
+      setFormError("Holiday name, start date, and end date are required.");
+      return;
+    }
+    const start = new Date(startDateInput);
+    const end = new Date(endDateInput);
+    if (start > end) {
+      setFormError("Start Date must be less than or equal to End Date.");
       return;
     }
     setIsSubmitting(true);
     setFormError(null);
     try {
-      await createHoliday(nameInput.trim(), new Date(dateInput).toISOString());
+      await createHoliday(nameInput.trim(), start.toISOString(), end.toISOString());
       setIsAddModalOpen(false);
       setNotification({ type: "success", message: `Successfully added holiday "${nameInput.trim()}"` });
       fetchHolidaysList();
@@ -140,6 +162,177 @@ export default function HolidaysPage() {
     }
   };
 
+  const parseExcelDate = (val: any): string | null => {
+    if (!val) return null;
+    let dateObj: Date | null = null;
+    if (val instanceof Date) {
+      dateObj = isNaN(val.getTime()) ? null : val;
+    } else if (typeof val === 'number') {
+      // Excel serial date number
+      dateObj = new Date((val - 25569) * 86400 * 1000);
+      if (isNaN(dateObj.getTime())) dateObj = null;
+    } else {
+      const str = String(val).trim();
+      // Match DD-MM-YYYY
+      const match = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+      if (match) {
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1; // 0-indexed month
+        const year = parseInt(match[3], 10);
+        dateObj = new Date(year, month, day);
+        if (isNaN(dateObj.getTime())) dateObj = null;
+      } else {
+        // Fallback to standard date parse
+        const fallback = new Date(str);
+        dateObj = isNaN(fallback.getTime()) ? null : fallback;
+      }
+    }
+
+    if (!dateObj) return null;
+    // Format to YYYY-MM-DD local format
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const processFile = async (file: File) => {
+    setImportFileName(file.name);
+    setFormError(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+
+          if (rows.length === 0) {
+            setFormError("The selected file is empty.");
+            return;
+          }
+
+          const items: { name: string; date: string; isValid: boolean; error?: string }[] = [];
+
+          // Start from row 0, but if row 0 looks like headers, skip it
+          let startRow = 0;
+          const firstRow = rows[0];
+          if (firstRow && firstRow.length > 0) {
+            const colA = String(firstRow[0]).toLowerCase().trim();
+            const colB = String(firstRow[1] || "").toLowerCase().trim();
+            if (colA.includes("name") || colA.includes("holiday") || colB.includes("date") || colB.includes("time") || colB.includes("dd-mm")) {
+              startRow = 1;
+            }
+          }
+
+          for (let i = startRow; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
+            const nameVal = row[0];
+            const dateVal = row[1];
+
+            // If both are empty, skip row
+            if (!nameVal && !dateVal) continue;
+
+            const holidayName = nameVal ? String(nameVal).trim() : "";
+            const parsedDate = parseExcelDate(dateVal);
+
+            let isValid = true;
+            let rowError = "";
+
+            if (!holidayName) {
+              isValid = false;
+              rowError = "Holiday name is empty";
+            } else if (holidayName.length > 200) {
+              isValid = false;
+              rowError = "Holiday name exceeds 200 characters";
+            } else if (!parsedDate) {
+              isValid = false;
+              rowError = `Invalid date format (expected DD-MM-YYYY or Date)`;
+            }
+
+            items.push({
+              name: holidayName,
+              date: parsedDate || (dateVal ? String(dateVal) : ""),
+              isValid,
+              error: rowError
+            });
+          }
+
+          if (items.length === 0) {
+            setFormError("No valid rows could be found in the Excel sheet.");
+          }
+          setParsedHolidays(items);
+        } catch (err) {
+          setFormError(err instanceof Error ? err.message : "Error parsing Excel file.");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Failed to read file.");
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls") && !file.name.endsWith(".csv")) {
+        setFormError("Only Excel files (.xlsx, .xls) or CSV files are supported.");
+        return;
+      }
+      await processFile(file);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    const validItems = parsedHolidays.filter(item => item.isValid);
+    if (validItems.length === 0) {
+      setFormError("There are no valid holidays to import.");
+      return;
+    }
+
+    setIsImporting(true);
+    setFormError(null);
+    try {
+      const payload = validItems.map(item => ({
+        name: item.name,
+        date: new Date(item.date).toISOString()
+      }));
+
+      await bulkCreateHolidays(payload);
+      setIsImportModalOpen(false);
+      setNotification({
+        type: "success",
+        message: `Successfully imported ${validItems.length} holidays.`
+      });
+      fetchHolidaysList();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Failed to import holidays.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
       weekday: "long",
@@ -162,13 +355,27 @@ export default function HolidaysPage() {
           </div>
           <p className="text-[14px] text-gray-500 dark:text-gray-400 font-medium">Configure and maintain company holidays catalog</p>
         </div>
-        <button
-          onClick={handleOpenAddModal}
-          className="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-semibold rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          Add New Holiday
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => {
+              setImportFileName("");
+              setParsedHolidays([]);
+              setFormError(null);
+              setIsImportModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[14px] font-semibold rounded-xl transition-all shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer"
+          >
+            <UploadCloud size={16} />
+            Import Excel
+          </button>
+          <button
+            onClick={handleOpenAddModal}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-semibold rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
+          >
+            <Plus size={16} />
+            Add New Holiday
+          </button>
+        </div>
       </section>
 
       {/* Main Content Card */}
@@ -316,16 +523,29 @@ export default function HolidaysPage() {
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[12px] font-bold text-gray-400 uppercase tracking-wider">Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={dateInput}
-                    onChange={(e) => setDateInput(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#242427] border border-gray-200 dark:border-white/10 rounded-xl text-[14px] outline-none focus:border-blue-500/50 transition-colors text-gray-900 dark:text-white"
-                    disabled={isSubmitting}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-bold text-gray-400 uppercase tracking-wider">Start Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={startDateInput}
+                      onChange={(e) => setStartDateInput(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#242427] border border-gray-200 dark:border-white/10 rounded-xl text-[14px] outline-none focus:border-blue-500/50 transition-colors text-gray-900 dark:text-white"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-bold text-gray-400 uppercase tracking-wider">End Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={endDateInput}
+                      onChange={(e) => setEndDateInput(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#242427] border border-gray-200 dark:border-white/10 rounded-xl text-[14px] outline-none focus:border-blue-500/50 transition-colors text-gray-900 dark:text-white"
+                      disabled={isSubmitting}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -419,6 +639,151 @@ export default function HolidaysPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Holidays Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsImportModalOpen(false)}>
+          <div className="bg-white dark:bg-[#1c1c1f] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl text-gray-900 dark:text-white transition-all scale-100 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-white/10 shrink-0">
+              <h3 className="text-[18px] font-bold">Import Holidays</h3>
+              <button onClick={() => setIsImportModalOpen(false)} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              {formError && (
+                <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-[13px] flex items-start gap-2.5">
+                  <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              {/* Upload Drop Zone */}
+              {!importFileName ? (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
+                    isDragging
+                      ? "border-emerald-500 bg-emerald-500/5"
+                      : "border-gray-200 dark:border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/[0.02]"
+                  }`}
+                  onClick={() => document.getElementById("excel-file-input")?.click()}
+                >
+                  <input
+                    id="excel-file-input"
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 dark:text-emerald-400">
+                    <UploadCloud size={24} />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-gray-700 dark:text-gray-300">
+                      Drag & drop your Excel file here, or click to browse
+                    </p>
+                    <p className="text-[12px] text-gray-400 mt-1">
+                      Supports .xlsx, .xls, and .csv files
+                    </p>
+                  </div>
+                  <div className="mt-2 text-[11px] font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-white/5">
+                    Column A: Holiday Name &nbsp;|&nbsp; Column B: Date (DD-MM-YYYY)
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* File Info */}
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                        <FileSpreadsheet size={20} />
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-bold truncate max-w-[250px]">{importFileName}</p>
+                        <p className="text-[12px] text-gray-400">{parsedHolidays.length} rows detected</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setImportFileName("");
+                        setParsedHolidays([]);
+                        setFormError(null);
+                      }}
+                      className="text-[12px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1 cursor-pointer bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-all"
+                    >
+                      <Trash2 size={13} />
+                      Remove File
+                    </button>
+                  </div>
+
+                  {/* Preview Section */}
+                  <div>
+                    <h4 className="text-[13px] font-bold text-gray-400 uppercase tracking-wider mb-2">Import Preview</h4>
+                    <div className="border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden max-h-[250px] overflow-y-auto">
+                      <table className="w-full text-left border-collapse text-[13px]">
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 font-bold text-gray-500 dark:text-gray-400">
+                            <th className="px-4 py-2.5">Row</th>
+                            <th className="px-4 py-2.5">Name (Col A)</th>
+                            <th className="px-4 py-2.5">Date (Col B)</th>
+                            <th className="px-4 py-2.5 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                          {parsedHolidays.map((item, index) => (
+                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-white/[0.01]">
+                              <td className="px-4 py-2 text-gray-400 font-mono">{index + 1}</td>
+                              <td className="px-4 py-2 font-medium truncate max-w-[180px]">{item.name || <span className="text-red-500 italic">Empty</span>}</td>
+                              <td className="px-4 py-2 font-mono text-gray-600 dark:text-gray-300">{item.date || <span className="text-red-500 italic">Invalid</span>}</td>
+                              <td className="px-4 py-2 text-right">
+                                {item.isValid ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                                    <Check size={10} /> Valid
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md" title={item.error}>
+                                    <AlertTriangle size={10} /> {item.error}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-5 border-t border-gray-200 dark:border-white/10 flex justify-end gap-3 bg-gray-50 dark:bg-white/[0.02] shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(false)}
+                disabled={isImporting}
+                className="px-5 py-2 text-[13px] font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              {importFileName && (
+                <button
+                  type="button"
+                  onClick={handleBulkImport}
+                  disabled={isImporting || parsedHolidays.filter(h => h.isValid).length === 0}
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  {isImporting && <Loader2 size={16} className="animate-spin" />}
+                  Import {parsedHolidays.filter(h => h.isValid).length} Holidays
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

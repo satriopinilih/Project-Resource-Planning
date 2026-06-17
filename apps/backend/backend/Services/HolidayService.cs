@@ -34,25 +34,44 @@ public class HolidayService
     }
 
     /// <summary>
-    /// Creates a new holiday entry.
+    /// Creates a new holiday entry or entries for a date range.
     /// </summary>
-    public async Task<(bool Success, string? Error, HolidayDto? Data)> CreateAsync(CreateHolidayRequest request)
+    public async Task<(bool Success, string? Error, List<HolidayDto>? Data)> CreateAsync(CreateHolidayRequest request)
     {
-        var holiday = new Holiday
-        {
-            Name = request.Name,
-            Date = request.Date
-        };
+        var startDate = request.StartDate.Date;
+        var endDate = request.EndDate.Date;
 
-        _db.Holidays.Add(holiday);
+        if (startDate > endDate)
+        {
+            return (false, "Start date must be less than or equal to End date.", null);
+        }
+
+        var dates = new List<DateTime>();
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            dates.Add(date);
+        }
+
+        bool isMultiDay = dates.Count > 1;
+        var trimmedName = request.Name.Trim();
+
+        var createdHolidays = dates.Select((date, index) => new Holiday
+        {
+            Name = isMultiDay ? $"{trimmedName}{index + 1}" : trimmedName,
+            Date = DateTime.SpecifyKind(date, DateTimeKind.Utc)
+        }).ToList();
+
+        _db.Holidays.AddRange(createdHolidays);
         await _db.SaveChangesAsync();
 
-        return (true, null, new HolidayDto
+        var result = createdHolidays.Select(h => new HolidayDto
         {
-            Id = holiday.Id,
-            Name = holiday.Name,
-            Date = holiday.Date
-        });
+            Id = h.Id,
+            Name = h.Name,
+            Date = h.Date
+        }).ToList();
+
+        return (true, null, result);
     }
 
     public async Task<(bool Success, string? Error, HolidayDto? Data)> UpdateAsync(int id, UpdateHolidayRequest request)
@@ -88,5 +107,35 @@ public class HolidayService
         await _db.SaveChangesAsync();
 
         return (true, null);
+    }
+
+    /// <summary>
+    /// Creates multiple holidays in bulk.
+    /// </summary>
+    public async Task<(bool Success, string? Error, List<HolidayDto>? Data)> BulkCreateAsync(BulkCreateHolidaysRequest request)
+    {
+        if (request.Holidays == null || !request.Holidays.Any())
+        {
+            return (false, "No holiday records provided.", null);
+        }
+
+        var createdHolidays = request.Holidays.Select(item => new Holiday
+        {
+            Name = item.Name.Trim(),
+            Date = DateTime.SpecifyKind(item.Date.Date, DateTimeKind.Utc)
+        }).ToList();
+
+        _db.Holidays.AddRange(createdHolidays);
+
+        await _db.SaveChangesAsync();
+
+        var result = createdHolidays.Select(h => new HolidayDto
+        {
+            Id = h.Id,
+            Name = h.Name,
+            Date = h.Date
+        }).ToList();
+
+        return (true, null, result);
     }
 }
