@@ -9,7 +9,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Running" | "Scheduled" | "Pending" | "Completed";
+  status: "Running" | "Scheduled" | "Pending" | "Completed" | "Deleted";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -34,6 +34,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string): Project["statu
       return "Running";
     }
     case 3: return "Completed";
+    case 4: return "Deleted";
     default: return "Pending";
   }
 };
@@ -283,7 +284,9 @@ function MarketingProjectsContent() {
                               ? "bg-green-500/10 text-green-400 border-green-500/20"
                               : project.status === "Completed"
                                 ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                                : project.status === "Deleted"
+                                  ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                  : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                           }`}
                       >
                         {project.status}

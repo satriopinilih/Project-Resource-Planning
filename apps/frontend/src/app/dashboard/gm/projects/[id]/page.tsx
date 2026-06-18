@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   Trash2,
   Calendar,
@@ -20,6 +21,7 @@ import {
   LayoutGrid,
   Minus,
   Plus,
+  PencilLine,
 } from "lucide-react";
 import {
   getProjectById,
@@ -60,7 +62,8 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
       return { label: "Running", class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
-    default: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+    case 4: return { label: "Deleted", class: "bg-red-500/10 text-red-400 border-red-500/20" };
+    default: return { label: "Unknown", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
   }
 };
 
@@ -173,6 +176,12 @@ export default function ProjectDetailsPage() {
   // Start Project state
   const [startingProject, setStartingProject] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // Confirm modal states
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
+  const [swapConfirmOpen, setSwapConfirmOpen] = useState(false);
+  const [doneEditingConfirmOpen, setDoneEditingConfirmOpen] = useState(false);
 
   // Swap Member state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
@@ -315,7 +324,13 @@ export default function ProjectDetailsPage() {
     const avail = getEmployeeAvailability(selectedEmp);
     if (!avail.available) return setAssignError(`Cannot assign ${selectedEmp.userName}: ${avail.reason}`);
     if (!assignRole.trim()) return setAssignError("Please specify a role for this member.");
+    // Show confirmation modal before assigning
+    setAssignConfirmOpen(true);
+  };
 
+  const doAssign = async () => {
+    if (!selectedEmp || !project) return;
+    setAssignConfirmOpen(false);
     setAssigning(true);
     try {
       const payload: AssignMemberPayload = { userId: selectedEmp.userId, roleInProject: assignRole.trim() };
@@ -394,6 +409,7 @@ export default function ProjectDetailsPage() {
 
   const handleStartProject = async () => {
     if (!project) return;
+    setSubmitConfirmOpen(false);
     setStartingProject(true);
     try {
       await updateProject(project.projectId, { projectStatus: 1 });
@@ -514,6 +530,12 @@ export default function ProjectDetailsPage() {
 
   const handleSwapMember = async () => {
     if (!swapTarget || !swapSelectedEmp || !project) return;
+    setSwapConfirmOpen(true);
+  };
+
+  const doSwapMember = async () => {
+    if (!swapTarget || !swapSelectedEmp || !project) return;
+    setSwapConfirmOpen(false);
     setSwapping(true);
     setSwapError(null);
     try {
@@ -576,7 +598,13 @@ export default function ProjectDetailsPage() {
               {project.projectStatus !== 0 && project.projectStatus !== 3 && (
                 <div className="flex gap-3 shrink-0">
                   <button
-                    onClick={() => setIsEditMode(!isEditMode)}
+                    onClick={() => {
+                      if (isEditMode) {
+                        setDoneEditingConfirmOpen(true);
+                      } else {
+                        setIsEditMode(true);
+                      }
+                    }}
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
                       }`}
                   >
@@ -680,9 +708,9 @@ export default function ProjectDetailsPage() {
                   </button>
                   {project.projectStatus === 0 && (
                     <button
-                      onClick={handleStartProject}
+                      onClick={() => setSubmitConfirmOpen(true)}
                       disabled={!allRolesFilled || startingProject}
-                      title={!allRolesFilled ? "All required roles must be filled before starting" : "Start this project"}
+                      title={!allRolesFilled ? "All required roles must be filled before starting" : "Submit this project"}
                       className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-[13px] font-bold transition-all disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed shadow-lg shadow-green-500/20 disabled:shadow-none"
                     >
                       {startingProject ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
@@ -1475,6 +1503,66 @@ export default function ProjectDetailsPage() {
           </div>
         </div>
       )}
+      {/* ── Submit Project Confirm Modal ── */}
+      <ConfirmModal
+        isOpen={submitConfirmOpen}
+        onClose={() => setSubmitConfirmOpen(false)}
+        onConfirm={handleStartProject}
+        isLoading={startingProject}
+        icon={<CheckCircle2 size={28} className="text-white" />}
+        iconBg="bg-gradient-to-br from-green-500 to-emerald-600"
+        title="Submit Project"
+        message="Are you sure you want to submit this project? The project will be marked as Scheduled."
+        confirmText="Submit"
+        confirmLoadingText="Submitting..."
+        confirmClass="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-lg shadow-green-500/20"
+      />
+
+      {/* ── Add Resource Confirm Modal ── */}
+      <ConfirmModal
+        isOpen={assignConfirmOpen}
+        onClose={() => setAssignConfirmOpen(false)}
+        onConfirm={doAssign}
+        isLoading={assigning}
+        icon={<UserPlus size={28} className="text-white" />}
+        iconBg="bg-gradient-to-br from-purple-600 to-indigo-600"
+        title="Add Resource"
+        message={selectedEmp ? `Do you want to assign ${selectedEmp.userName} as ${assignRole || "team member"}?` : "Do you want to add this resource?"}
+        confirmText="Confirm"
+        confirmLoadingText="Assigning..."
+        confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
+      />
+
+      {/* ── Edit Resource (Swap) Confirm Modal ── */}
+      <ConfirmModal
+        isOpen={swapConfirmOpen}
+        onClose={() => setSwapConfirmOpen(false)}
+        onConfirm={doSwapMember}
+        isLoading={swapping}
+        icon={<PencilLine size={28} className="text-white" />}
+        iconBg="bg-gradient-to-br from-purple-600 to-indigo-600"
+        title="Edit Resource"
+        message={swapSelectedEmp && swapTarget ? `Do you want to replace ${swapTarget.userName} with ${swapSelectedEmp.userName}?` : "Do you want to update this resource?"}
+        confirmText="Confirm"
+        confirmLoadingText="Updating..."
+        confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
+      />
+
+      {/* ── Done Editing Confirm Modal ── */}
+      <ConfirmModal
+        isOpen={doneEditingConfirmOpen}
+        onClose={() => setDoneEditingConfirmOpen(false)}
+        onConfirm={() => {
+          setDoneEditingConfirmOpen(false);
+          setIsEditMode(false);
+        }}
+        icon={<CheckCircle2 size={28} className="text-white" />}
+        iconBg="bg-gradient-to-br from-purple-600 to-indigo-600"
+        title="Save Changes"
+        message="Do you want to save the changes you made to this project's team?"
+        confirmText="Confirm"
+        confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
+      />
     </>
   );
 }

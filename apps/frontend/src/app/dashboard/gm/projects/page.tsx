@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { Search, Filter, Loader2, ArrowRight, Users, Trash2, RotateCcw } from "lucide-react";
 import { getProjects, deleteProject, restoreProject } from "../../../../lib/api";
 
@@ -62,6 +63,12 @@ function GMProjectsContent() {
   const [clientFilter, setClientFilter] = useState("All Clients");
   const [sortBy, setSortBy] = useState("name-asc");
 
+  // Confirm modal states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [targetProjectId, setTargetProjectId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
   const fetchProjects = async () => {
     setIsLoading(true);
     try {
@@ -102,29 +109,47 @@ function GMProjectsContent() {
     fetchProjects();
   }, []);
 
-  const handleDelete = async (e: React.MouseEvent, projectId: string) => {
+  const handleDelete = (e: React.MouseEvent, projectId: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this project?")) return;
-    
+    setTargetProjectId(projectId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const doDelete = async () => {
+    if (!targetProjectId) return;
+    setActionLoading(true);
     try {
-      const numId = parseInt(projectId.replace("proj", ""), 10);
+      const numId = parseInt(targetProjectId.replace("proj", ""), 10);
       await deleteProject(numId);
       await fetchProjects();
     } catch (error: any) {
       alert("Failed to delete project: " + error.message);
+    } finally {
+      setActionLoading(false);
+      setDeleteConfirmOpen(false);
+      setTargetProjectId(null);
     }
   };
 
-  const handleRestore = async (e: React.MouseEvent, projectId: string) => {
+  const handleRestore = (e: React.MouseEvent, projectId: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to restore this project?")) return;
-    
+    setTargetProjectId(projectId);
+    setRestoreConfirmOpen(true);
+  };
+
+  const doRestore = async () => {
+    if (!targetProjectId) return;
+    setActionLoading(true);
     try {
-      const numId = parseInt(projectId.replace("proj", ""), 10);
+      const numId = parseInt(targetProjectId.replace("proj", ""), 10);
       await restoreProject(numId);
       await fetchProjects();
     } catch (error: any) {
       alert("Failed to restore project: " + error.message);
+    } finally {
+      setActionLoading(false);
+      setRestoreConfirmOpen(false);
+      setTargetProjectId(null);
     }
   };
 
@@ -363,6 +388,37 @@ function GMProjectsContent() {
           </div>
         </div>
       </div>
+
+      {/* ── Delete Project Confirm Modal ── */}
+      <ConfirmModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => { setDeleteConfirmOpen(false); setTargetProjectId(null); }}
+        onConfirm={doDelete}
+        isLoading={actionLoading}
+        icon={<Trash2 size={28} className="text-white" />}
+        iconBg="bg-gradient-to-br from-red-700 to-red-500"
+        title="Delete Project"
+        message="Do you want to delete this project?"
+        warningText="This action cannot be undone."
+        confirmText="Delete"
+        confirmLoadingText="Deleting..."
+        confirmClass="bg-red-600 hover:bg-red-500 shadow-lg shadow-red-500/20"
+      />
+
+      {/* ── Restore Project Confirm Modal ── */}
+      <ConfirmModal
+        isOpen={restoreConfirmOpen}
+        onClose={() => { setRestoreConfirmOpen(false); setTargetProjectId(null); }}
+        onConfirm={doRestore}
+        isLoading={actionLoading}
+        icon={<RotateCcw size={28} className="text-white" />}
+        iconBg="bg-gradient-to-br from-green-600 to-emerald-500"
+        title="Restore Project"
+        message="Do you want to restore this project?"
+        confirmText="Restore"
+        confirmLoadingText="Restoring..."
+        confirmClass="bg-green-600 hover:bg-green-500 shadow-lg shadow-green-500/20"
+      />
     </>
   );
 }
