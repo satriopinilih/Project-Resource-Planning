@@ -33,6 +33,9 @@ export default function HolidaysPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [holidayToDelete, setHolidayToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedHoliday, setSelectedHoliday] = useState<BackendHoliday | null>(null);
 
   // Form states
@@ -151,14 +154,24 @@ export default function HolidaysPage() {
     }
   };
 
-  const handleDeleteHoliday = async (id: number, name: string) => {
-    if (!confirm(`Are you sure you want to delete the holiday "${name}"?`)) return;
+  const handleDeleteHoliday = (id: number, name: string) => {
+    setHolidayToDelete({ id, name });
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteHoliday = async () => {
+    if (!holidayToDelete) return;
+    setIsDeleting(true);
     try {
-      await deleteHoliday(id);
-      setNotification({ type: "success", message: `Successfully deleted holiday "${name}"` });
+      await deleteHoliday(holidayToDelete.id);
+      setNotification({ type: "success", message: `Successfully deleted holiday "${holidayToDelete.name}"` });
+      setIsDeleteModalOpen(false);
+      setHolidayToDelete(null);
       fetchHolidaysList();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete holiday.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -783,6 +796,47 @@ export default function HolidaysPage() {
                   Import {parsedHolidays.filter(h => h.isValid).length} Holidays
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && holidayToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsDeleteModalOpen(false)}>
+          <div className="bg-white dark:bg-[#1c1c1f] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-gray-900 dark:text-white transition-all scale-100 relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setIsDeleteModalOpen(false)} className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer">
+              <X size={18} />
+            </button>
+            <div className="flex flex-col items-center text-center px-6 pt-10 pb-6">
+              <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-white mb-4 shadow-lg shadow-red-600/20">
+                <Trash2 size={28} />
+              </div>
+              <h3 className="text-[20px] font-bold mb-2">Delete "{holidayToDelete.name}"</h3>
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-1">
+                Do you want to delete this holiday?
+              </p>
+              <p className="text-[14px] text-red-500 font-semibold mb-6">
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-center gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 px-5 text-[14px] font-semibold text-gray-500 hover:text-gray-750 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-gray-800 rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteHoliday}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 px-5 bg-red-600 hover:bg-red-700 text-white text-[14px] font-bold rounded-xl transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isDeleting ? <Loader2 size={16} className="animate-spin" /> : "Delete"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
