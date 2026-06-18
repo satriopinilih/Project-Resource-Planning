@@ -272,6 +272,7 @@ public class ProjectService
         if (existing is not null)
         {
             existing.RoleInProject = request.RoleInProject;
+            existing.WorkingType = request.WorkingType;
             existing.StartDate = request.StartDate ?? project.EstimatedStartDate;
             existing.EndDate = request.EndDate ?? project.EstimatedEndDate;
             existing.Status = UserProjectStatus.Assigned;
@@ -283,6 +284,7 @@ public class ProjectService
                 UserId = request.UserId,
                 ProjectId = projectId,
                 RoleInProject = request.RoleInProject,
+                WorkingType = request.WorkingType,
                 StartDate = request.StartDate ?? project.EstimatedStartDate,
                 EndDate = request.EndDate ?? project.EstimatedEndDate,
                 Status = UserProjectStatus.Assigned
@@ -311,6 +313,7 @@ public class ProjectService
 
         return (true, null, 200, MapToDto(updated));
     }
+
 
     /// <summary>
     /// Removes a member assignment from a project.
@@ -349,7 +352,8 @@ public class ProjectService
         // Don't allow reducing below the number already filled
         var filledCount = await _db.UserProjects
             .CountAsync(up => up.ProjectId == projectId &&
-                              up.RoleInProject.ToLower() == role.StaffRole.RoleName.ToLower());
+                              up.RoleInProject.ToLower() == role.StaffRole.RoleName.ToLower() &&
+                              up.WorkingType == role.WorkingType);
 
         if (newCount < filledCount)
             return (false, $"Cannot reduce below the {filledCount} member(s) already assigned to this role.", 400, null);
@@ -460,10 +464,11 @@ public class ProjectService
         var filledCount = await _db.UserProjects
             .CountAsync(up => up.ProjectId == projectId &&
                               up.RoleInProject.ToLower() == role.StaffRole!.RoleName.ToLower() &&
+                              up.WorkingType == role.WorkingType &&
                               up.Status == UserProjectStatus.Assigned);
 
         if (filledCount > 0)
-            return (false, $"Cannot delete role '{role.StaffRole!.RoleName}' — {filledCount} member(s) are currently assigned. Unassign them first.", 400, null);
+            return (false, $"Cannot delete role '{role.StaffRole!.RoleName}' {filledCount} member(s) are currently assigned. Unassign them first.", 400, null);
 
         _db.ProjectRequiredRoles.Remove(role);
         await _db.SaveChangesAsync();
@@ -737,12 +742,13 @@ public class ProjectService
         oldAssignment.SwapReason = request.Reason;
         oldAssignment.ReplacedByUserId = request.NewUserId;
 
-        // Create new assignment with same role
+        // Create new assignment with same role and same working type
         var newAssignment = new UserProject
         {
             UserId = request.NewUserId,
             ProjectId = projectId,
             RoleInProject = oldAssignment.RoleInProject,
+            WorkingType = oldAssignment.WorkingType,
             StartDate = DateTime.UtcNow,
             EndDate = project.EstimatedEndDate,
             Status = UserProjectStatus.Assigned
@@ -783,6 +789,7 @@ public class ProjectService
             UserId = up.UserId,
             UserName = up.User?.UserName ?? up.UserId,
             Role = up.RoleInProject,
+            WorkingType = up.WorkingType.ToString(),
             StaffRole = up.User?.UserStaffRoles.Select(s => s.StaffRole.RoleName).FirstOrDefault()
                         ?? up.User?.UserRoles.Select(r => r.Role.RoleName.ToString()).FirstOrDefault()
                         ?? "Staff",
@@ -802,9 +809,10 @@ public class ProjectService
             RoleName = pr.StaffRole?.RoleName ?? "Unknown",
             RequiredCount = pr.RequiredCount,
             WorkingType = pr.WorkingType.ToString(),
-            // Only count Assigned members, not Completed/swapped ones
+            // Only count Assigned members matching both role name AND working type
             FilledCount = members.Count(m =>
                 string.Equals(m.Role, pr.StaffRole?.RoleName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(m.WorkingType, pr.WorkingType.ToString(), StringComparison.OrdinalIgnoreCase)
                 && string.Equals(m.Status, "Assigned", StringComparison.OrdinalIgnoreCase)
             )
         }).ToList();

@@ -27,6 +27,7 @@ public class ProjectMemberDto
     public string UserName { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public string StaffRole { get; set; } = string.Empty;
+    public string WorkingType { get; set; } = "Dedicated";
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string Status { get; set; } = "Assigned";
