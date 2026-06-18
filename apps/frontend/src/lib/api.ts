@@ -78,6 +78,7 @@ export type BackendProjectMember = {
   userName: string;
   role: string;
   staffRole: string;
+  workingType: string;
   startDate: string | null;
   endDate: string | null;
   status: string;
@@ -377,6 +378,7 @@ export async function restoreProject(id: number): Promise<void> {
 export type AssignMemberPayload = {
   userId: string;
   roleInProject: string;
+  workingType?: string; // 'Dedicated' | 'NonDedicated'
   startDate?: string;
   endDate?: string;
 };

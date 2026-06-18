@@ -24,8 +24,14 @@ builder.Host.UseSerilog((context, config) =>
      config.ReadFrom.Configuration(context.Configuration);
 });
 
-// 2. Controllers (NO FluentValidation here anymore)
-builder.Services.AddControllers();
+// 2. Controllers with JsonStringEnumConverter so enum fields (e.g. WorkingType) 
+// are deserialized from strings like "NonDedicated" instead of silently defaulting to 0
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 builder.Services.AddCors(options =>
 {

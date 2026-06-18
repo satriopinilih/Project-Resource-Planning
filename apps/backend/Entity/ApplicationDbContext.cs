@@ -61,6 +61,10 @@ public class ApplicationDbContext : DbContext
             .Property(up => up.Status)
             .HasConversion<string>();
 
+        modelBuilder.Entity<UserProject>()
+            .Property(up => up.WorkingType)
+            .HasConversion<string>();
+
         modelBuilder.Entity<Role>()
             .Property(r => r.RoleName)
             .HasConversion<string>();
