@@ -51,6 +51,11 @@ export default function MarketingDashboard() {
   const [editEndDate, setEditEndDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Delete Confirmation Modal States
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const refreshData = () => {
     setIsLoading(true);
     Promise.all([
@@ -73,13 +78,23 @@ export default function MarketingDashboard() {
     refreshData();
   }, []);
 
-  const handleCancelProject = async (id: number, name: string) => {
-    if (!confirm(`Are you sure you want to cancel and delete the project "${name}"? This action cannot be undone.`)) return;
+  const handleCancelProject = (id: number, name: string) => {
+    setProjectToDelete({ id, name });
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    setIsDeleting(true);
     try {
-      await deleteProject(id);
+      await deleteProject(projectToDelete.id);
+      setIsDeleteModalOpen(false);
+      setProjectToDelete(null);
       refreshData();
     } catch (e) {
       alert("Failed to cancel project: " + (e instanceof Error ? e.message : "Unknown error"));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -299,6 +314,9 @@ export default function MarketingDashboard() {
               } else if (project.projectStatus === 3) {
                 statusLabel = "Completed";
                 statusColor = "bg-gray-100 text-gray-700 dark:bg-[#34353a] dark:text-gray-400";
+              } else if (project.projectStatus === 4) {
+                statusLabel = "Deleted";
+                statusColor = "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400";
               }
 
               return (
@@ -381,6 +399,50 @@ export default function MarketingDashboard() {
                 {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                 Approve & Update Project
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && projectToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsDeleteModalOpen(false)}>
+          <div className="bg-white dark:bg-[#1c1c1f] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-gray-900 dark:text-white transition-all scale-100 relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setIsDeleteModalOpen(false)} className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer">
+              <X size={18} />
+            </button>
+            <div className="flex flex-col items-center text-center px-6 pt-10 pb-6">
+              <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-white mb-4 shadow-lg shadow-red-600/20">
+                <Trash2 size={28} />
+              </div>
+              <h3 className="text-[20px] font-bold mb-2">Delete "{projectToDelete.name}"</h3>
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-1">
+                Do you want to cancel and delete this project?
+              </p>
+              <p className="text-[12px] text-amber-500 font-semibold mb-3 px-4 leading-snug">
+                This action will remove all project files, resource requirements, and requests.
+              </p>
+              <p className="text-[14px] text-red-500 font-semibold mb-6">
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-center gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 px-5 text-[14px] font-semibold text-gray-500 hover:text-gray-750 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-gray-800 rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteProject}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 px-5 bg-red-600 hover:bg-red-700 text-white text-[14px] font-bold rounded-xl transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isDeleting ? <Loader2 size={16} className="animate-spin" /> : "Delete"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
