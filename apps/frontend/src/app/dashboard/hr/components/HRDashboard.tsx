@@ -116,7 +116,7 @@ export default function HRDashboard() {
 
   const expiringEmployees = useMemo(
     () => employees.filter((e) => {
-      const isPermanent = e.employeeType === 1 || e.employeeType === '1' || (typeof e.employeeType === 'string' && String(e.employeeType).toLowerCase() === 'permanent');
+      const isPermanent = e.employeeType === 1 || String(e.employeeType) === '1' || String(e.employeeType).toLowerCase() === 'permanent';
       return !isPermanent && e.daysRemaining !== undefined && e.daysRemaining <= 30;
     }),
     [employees]
