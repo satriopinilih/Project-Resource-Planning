@@ -115,7 +115,10 @@ export default function HRDashboard() {
   }, []);
 
   const expiringEmployees = useMemo(
-    () => employees.filter((e) => e.daysRemaining !== undefined && e.daysRemaining <= 30),
+    () => employees.filter((e) => {
+      const isPermanent = e.employeeType === 1 || e.employeeType === '1' || (typeof e.employeeType === 'string' && String(e.employeeType).toLowerCase() === 'permanent');
+      return !isPermanent && e.daysRemaining !== undefined && e.daysRemaining <= 30;
+    }),
     [employees]
   );
 
@@ -264,9 +267,7 @@ export default function HRDashboard() {
     try {
       const today = new Date();
       const todayIso = today.toISOString().slice(0, 10);
-      const permanentEnd = new Date(today);
-      permanentEnd.setFullYear(permanentEnd.getFullYear() + 30);
-      const permanentEndIso = permanentEnd.toISOString().slice(0, 10);
+      const permanentEndIso = '9999-12-31';
 
       const created = await createEmployee({
         userId: nextId,
