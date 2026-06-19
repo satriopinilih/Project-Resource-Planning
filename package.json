@@ -10,7 +10,7 @@
     "dev:frontend": "npm run dev --workspace=apps/frontend",
     "build:frontend": "npm run build --workspace=apps/frontend",
     "lint:frontend": "npm run lint --workspace=apps/frontend",
-    "dev:backend": "/usr/local/share/dotnet/dotnet run --project apps/backend/backend/WebAPI.csproj",
+    "dev:backend": "dotnet run --project apps/backend/backend/WebAPI.csproj",
     "build:backend": "/usr/local/share/dotnet/dotnet build apps/backend/Backend.slnx",
     "dev": "concurrently --names \"FRONTEND,BACKEND\" --prefix-colors \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:backend\""
   },
