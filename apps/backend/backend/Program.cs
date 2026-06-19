@@ -24,14 +24,8 @@ builder.Host.UseSerilog((context, config) =>
      config.ReadFrom.Configuration(context.Configuration);
 });
 
-// 2. Controllers with JsonStringEnumConverter so enum fields (e.g. WorkingType) 
-// are deserialized from strings like "NonDedicated" instead of silently defaulting to 0
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(
-            new System.Text.Json.Serialization.JsonStringEnumConverter());
-    });
+// 2. Controllers — default JSON options (no global enum converter)
+builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
 {
