@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import ReactDOM from "react-dom";
 import { Loader2, X } from "lucide-react";
 
 export interface ConfirmModalProps {
@@ -40,7 +41,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  return (
+  const modal = (
     <div
       className="fixed inset-0 z-[999] flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
@@ -109,4 +110,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       `}</style>
     </div>
   );
+
+  // Portal ke document.body untuk escape dari backdrop-filter stacking context
+  return typeof document !== "undefined"
+    ? ReactDOM.createPortal(modal, document.body)
+    : null;
 };

@@ -43,9 +43,19 @@ interface TimelineProject {
 }
 
 // Backend ProjectStatus: 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted
-function mapStatus(s: number): ProjectStatus {
+// Status 2 (Running) with a future start date is treated as "scheduled" (same logic as projects/page.tsx)
+function mapStatus(s: number, startDateStr?: string): ProjectStatus {
   if (s === 1) return "scheduled";
-  if (s === 2) return "running";
+  if (s === 2) {
+    if (startDateStr) {
+      const start = new Date(startDateStr);
+      const today = new Date();
+      start.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      if (start > today) return "scheduled";
+    }
+    return "running";
+  }
   if (s === 3) return "completed";
   if (s === 4) return "deleted";
   return "pending";
@@ -58,7 +68,7 @@ function projectToTimeline(p: BackendProject): TimelineProject {
     client: p.clientOrganization,
     startDate: p.estimatedStartDate ? new Date(p.estimatedStartDate) : new Date(),
     endDate: p.estimatedEndDate ? new Date(p.estimatedEndDate) : new Date(),
-    status: mapStatus(p.projectStatus),
+    status: mapStatus(p.projectStatus, p.estimatedStartDate),
   };
 }
 

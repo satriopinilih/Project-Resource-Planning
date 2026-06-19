@@ -23,15 +23,34 @@ export default function StatCards() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Calculate counts based on Backend enum (0 = Pending, 1 = Scheduled, 2 = Running, 3 = Completed)
-  const total = projects.length;
-  // If there are no projects from the API but we have dummy UI data injected elsewhere,
-  // we count exactly what is fetched from the server.
-  
-  const pending = projects.filter(p => p.projectStatus === 0).length;
-  const scheduled = projects.filter(p => p.projectStatus === 1).length;
-  const running = projects.filter(p => p.projectStatus === 2).length;
-  const completed = projects.filter(p => p.projectStatus === 3).length;
+  // Calculate counts — same logic as projects/page.tsx mapStatus
+  // Backend 2=Running BUT if startDate is in the future → display as "Scheduled"
+  const mapStatus = (status: number, startDate?: string): "Pending" | "Scheduled" | "Running" | "Completed" | "Deleted" => {
+    switch (status) {
+      case 0: return "Pending";
+      case 1: return "Scheduled";
+      case 2: {
+        if (startDate) {
+          const start = new Date(startDate);
+          const today = new Date();
+          start.setHours(0, 0, 0, 0);
+          today.setHours(0, 0, 0, 0);
+          if (start > today) return "Scheduled";
+        }
+        return "Running";
+      }
+      case 3: return "Completed";
+      case 4: return "Deleted";
+      default: return "Pending";
+    }
+  };
+
+  const total = projects.filter(p => p.projectStatus !== 4).length; // exclude Deleted from total
+  const pending   = projects.filter(p => mapStatus(p.projectStatus, p.estimatedStartDate) === "Pending").length;
+  const scheduled = projects.filter(p => mapStatus(p.projectStatus, p.estimatedStartDate) === "Scheduled").length;
+  const running   = projects.filter(p => mapStatus(p.projectStatus, p.estimatedStartDate) === "Running").length;
+  const completed = projects.filter(p => mapStatus(p.projectStatus, p.estimatedStartDate) === "Completed").length;
+
 
   const stats = [
     {

@@ -24,17 +24,7 @@ export default function AlertBanner() {
     );
   }
 
-  const displayProjects = pendingProjects.length > 0 ? pendingProjects : [
-    {
-      projectId: 9999,
-      projectName: "Demo Strategy Sync",
-      clientOrganization: "Internal",
-      projectStatus: 0,
-      requiredRoles: [],
-      projectRequiredSkills: [],
-      isUnread: false
-    }
-  ] as unknown as BackendProject[];
+  if (pendingProjects.length === 0) return null;
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "TBD";
@@ -51,7 +41,7 @@ export default function AlertBanner() {
           <AlertTriangle size={18} className="text-[#f59e0b]" strokeWidth={2} />
         </div>
         <h3 className="text-[15px] font-bold text-[var(--dash-text-heading)]">
-          {displayProjects.length} Project{displayProjects.length !== 1 && "s"} Awaiting Schedule
+          {pendingProjects.length} Project{pendingProjects.length !== 1 && "s"} Awaiting Schedule
         </h3>
       </div>
       <p className="text-[13px] text-[var(--dash-text-muted)] ml-11 mb-4">
@@ -60,7 +50,7 @@ export default function AlertBanner() {
 
       {/* Project list */}
       <div className="flex flex-col gap-2 ml-11">
-        {displayProjects.map((project) => (
+        {pendingProjects.map((project) => (
           <div
             key={project.projectId}
             className="flex items-center justify-between px-4 py-3 bg-[var(--dash-bg-banner-inner)] rounded-lg border border-[var(--dash-border)]/60 gap-4"

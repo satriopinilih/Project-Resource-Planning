@@ -355,7 +355,7 @@ export default function ProjectDetailsPage() {
   };
 
   const handleRequestHireFromProject = async () => {
-    if (!project || project.projectStatus !== 0) return;
+    if (!project) return;
     if (!hireForm.roleNeeded) return;
     try {
       setHireSubmitting(true);
@@ -738,12 +738,7 @@ export default function ProjectDetailsPage() {
             {(!project.requiredRoles || project.requiredRoles.length === 0) ? (
               <div className="py-16 text-center border-2 border-dashed border-[var(--dash-border)] rounded-2xl">
                 <Briefcase size={32} className="mx-auto text-[var(--dash-text-faint)] mb-3" />
-                <p className="text-[var(--dash-text-muted)] text-[14px]">No specific roles required. Manage your team freely.</p>
-                {isEditingTeam && (
-                  <button onClick={() => openAssignModal()} className="text-blue-400 text-[13px] mt-2 font-bold hover:underline">
-                    Assign members manually
-                  </button>
-                )}
+                <p className="text-[var(--dash-text-muted)] text-[14px]">No roles defined yet. Add at least one role before starting the project.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -856,8 +851,8 @@ export default function ProjectDetailsPage() {
                                     {formatDate(member.startDate || project.estimatedStartDate)} - {formatDate(member.endDate || project.estimatedEndDate)}
                                   </p>
                                   <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${(member.workingType || 'Dedicated').toLowerCase() === 'nondedicated'
-                                      ? 'bg-purple-500/10 text-purple-400'
-                                      : 'bg-blue-500/10 text-blue-400'
+                                    ? 'bg-purple-500/10 text-purple-400'
+                                    : 'bg-blue-500/10 text-blue-400'
                                     }`}>
                                     {member.workingType || 'Dedicated'}
                                   </span>
