@@ -33,8 +33,11 @@ interface EmployeeContract {
 const SYSTEM_USER_IDS = ["GM001", "HR123"];
 
 // Backend EmployeeType: 0=Contract, 1=Permanent
-function mapEmploymentType(t: number): "Permanent" | "Contract" {
-  return t === 0 ? "Contract" : "Permanent";
+function mapEmploymentType(t: number | string): "Permanent" | "Contract" {
+  if (t === 1 || t === "1" || (typeof t === "string" && t.toLowerCase() === "permanent")) {
+    return "Permanent";
+  }
+  return "Contract";
 }
 
 // Backend ContractStatus: 0=Active, 1=Expired, 2=ExpiringSoon
