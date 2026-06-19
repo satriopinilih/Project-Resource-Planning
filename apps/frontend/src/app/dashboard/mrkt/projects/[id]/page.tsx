@@ -98,6 +98,18 @@ export default function ProjectDetailsPage() {
     [formOptions.staffRoles]
   );
 
+  const getAvailableRolesForEditRow = (currentRole: string) => {
+    const allRoles = allowedStaffRoles.length > 0
+      ? allowedStaffRoles.map((r) => r.name)
+      : ALLOWED_STAFF_ROLES;
+    const selectedOtherRoles = editForm.requiredRoles
+      .filter(r => r.role !== currentRole)
+      .map(r => r.role);
+    return allRoles.filter(
+      role => !selectedOtherRoles.includes(role)
+    );
+  };
+
   const numericId = useMemo(() => {
     if (!idStr) return null;
     let id = idStr;
@@ -147,6 +159,16 @@ export default function ProjectDetailsPage() {
     e.preventDefault();
     if (!project) return;
     setEditSubmitting(true);
+    
+    // Validate uniqueness of roles
+    const selectedRoles = editForm.requiredRoles.map(r => r.role);
+    const uniqueRoles = new Set(selectedRoles);
+    if (uniqueRoles.size !== selectedRoles.length) {
+      alert("Duplicate roles detected. Each role must be unique.");
+      setEditSubmitting(false);
+      return;
+    }
+
     try {
       await updateProject(project.projectId, {
         projectName: editForm.projectName,
@@ -514,7 +536,7 @@ export default function ProjectDetailsPage() {
                 </div>
                 <div>
                   <label className="block text-[12px] text-gray-400 mb-1">Project Status</label>
-                  <select value={editForm.projectStatus} onChange={(e) => setEditForm({ ...editForm, projectStatus: Number(e.target.value) })} className="w-full px-3 py-2 bg-[#0f0f0f] border border-gray-800 rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 transition-colors">
+                  <select disabled value={editForm.projectStatus} className="w-full px-3 py-2 bg-[#0f0f0f] border border-gray-800 rounded-lg text-[13px] outline-none opacity-50 cursor-not-allowed">
                     <option value={0}>Pending</option>
                     <option value={1}>Scheduled</option>
                     <option value={2}>Running</option>
@@ -563,16 +585,24 @@ export default function ProjectDetailsPage() {
                     <label className="text-[12px] text-gray-400 font-medium">Required Team Roles</label>
                     <button
                       type="button"
-                      onClick={() => setEditForm({
-                        ...editForm,
-                        requiredRoles: [...editForm.requiredRoles, {
-                          id: Math.random().toString(36).substring(2, 9),
-                          role: 'Senior Dev',
-                          count: 1,
-                          workingType: 'Dedicated'
-                        }]
-                      })}
-                      className="flex items-center gap-1 px-2 py-1 bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 rounded-md text-[11px] font-bold transition-all"
+                      onClick={() => {
+                        const allRoles = allowedStaffRoles.length > 0
+                          ? allowedStaffRoles.map((r) => r.name)
+                          : ALLOWED_STAFF_ROLES;
+                        const selectedRoles = editForm.requiredRoles.map(r => r.role);
+                        const nextAvailableRole = allRoles.find(r => !selectedRoles.includes(r)) || allRoles[0];
+                        setEditForm({
+                          ...editForm,
+                          requiredRoles: [...editForm.requiredRoles, {
+                            id: Math.random().toString(36).substring(2, 9),
+                            role: nextAvailableRole,
+                            count: 1,
+                            workingType: 'Dedicated'
+                          }]
+                        });
+                      }}
+                      disabled={editForm.requiredRoles.length >= (allowedStaffRoles.length > 0 ? allowedStaffRoles.length : ALLOWED_STAFF_ROLES.length)}
+                      className="flex items-center gap-1 px-2 py-1 bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-md text-[11px] font-bold transition-all"
                     >
                       <Plus size={14} /> Add Role
                     </button>
@@ -601,10 +631,7 @@ export default function ProjectDetailsPage() {
                                 setEditForm({ ...editForm, requiredRoles: newRoles });
                               }}
                             >
-                              {(allowedStaffRoles.length > 0
-                                ? allowedStaffRoles.map((r) => r.name)
-                                : ALLOWED_STAFF_ROLES
-                              ).map((role) => (
+                              {getAvailableRolesForEditRow(roleItem.role).map((role) => (
                                 <option key={role} value={role}>{role}</option>
                               ))}
                             </select>
