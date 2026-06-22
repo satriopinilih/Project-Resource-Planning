@@ -185,7 +185,7 @@ export default function ProjectDetailsPage() {
             id: typeof r.id === 'string' && r.id.includes('.') ? 0 : Number(r.id),
             staffRoleId: r.staffRoleId || 0,
             roleName: r.role,
-            requiredCount: r.count,
+            count: r.count,
             workingType: workingTypeMap[r.workingType] ?? 1
           };
         }),
@@ -277,7 +277,7 @@ export default function ProjectDetailsPage() {
                     <span className={`px-4 py-2 rounded-full text-[13px] font-semibold ${statusInfo.class}`}>
                       {statusInfo.label}
                     </span>
-                    {project.projectStatus !== 3 && (
+                    {statusInfo.label === "Pending" && (
                       <button onClick={() => {
                         setEditForm({
                           projectName: project.projectName,
