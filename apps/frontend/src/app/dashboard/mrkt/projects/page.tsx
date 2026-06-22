@@ -46,7 +46,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Pending", "Scheduled", "Running", "Completed"];
+const tabs = ["All", "Pending", "Scheduled", "Running", "Completed", "Deleted"];
 
 function MarketingProjectsContent() {
   const router = useRouter();

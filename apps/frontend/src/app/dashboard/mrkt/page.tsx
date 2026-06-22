@@ -172,22 +172,64 @@ export default function MarketingDashboard() {
     }
   };
 
+  const isProjectScheduled = (p: BackendProject) => {
+    if (p.projectStatus === 1) return true;
+    if (p.projectStatus === 2 && p.estimatedStartDate) {
+      const startDate = new Date(p.estimatedStartDate);
+      const today = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      return startDate > today;
+    }
+    return false;
+  };
+
+  const isProjectRunning = (p: BackendProject) => {
+    if (p.projectStatus === 2) {
+      if (p.estimatedStartDate) {
+        const startDate = new Date(p.estimatedStartDate);
+        const today = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        return startDate <= today;
+      }
+      return true;
+    }
+    return false;
+  };
+
   const totalProjects = projects.length;
   const pendingCount = projects.filter((p) => p.projectStatus === 0).length;
-  const scheduledCount = projects.filter((p) => p.projectStatus === 1).length;
-  const runningCount = projects.filter((p) => p.projectStatus === 2).length;
+  const scheduledCount = projects.filter(isProjectScheduled).length;
+  const runningCount = projects.filter(isProjectRunning).length;
   const completedCount = projects.filter((p) => p.projectStatus === 3).length;
 
   const recentSubmissions = useMemo(() => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
+    const checkScheduled = (p: BackendProject) => {
+      if (p.projectStatus === 1) return true;
+      if (p.projectStatus === 2 && p.estimatedStartDate) {
+        const startDate = new Date(p.estimatedStartDate);
+        const today = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        return startDate > today;
+      }
+      return false;
+    };
+
     return projects
       .filter((p) => {
         const dateStr = p.createdAt || p.estimatedStartDate;
         if (!dateStr) return false;
         const projectDate = new Date(dateStr);
-        return projectDate.getMonth() === currentMonth && projectDate.getFullYear() === currentYear;
+        return (
+          projectDate.getMonth() === currentMonth &&
+          projectDate.getFullYear() === currentYear &&
+          (p.projectStatus === 0 || checkScheduled(p))
+        );
       })
       .sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : a.projectId;
@@ -305,7 +347,9 @@ export default function MarketingDashboard() {
               let statusLabel = "Pending";
               let statusColor = "bg-amber-100 text-amber-700 dark:bg-[#3a3221] dark:text-[#eab308]";
 
-              if (project.projectStatus === 1) {
+              const isScheduled = project.projectStatus === 1 || (project.projectStatus === 2 && project.estimatedStartDate && new Date(project.estimatedStartDate).setHours(0,0,0,0) > new Date().setHours(0,0,0,0));
+
+              if (isScheduled) {
                 statusLabel = "Scheduled";
                 statusColor = "bg-blue-100 text-blue-700 dark:bg-[#262c4a] dark:text-[#608bfa]";
               } else if (project.projectStatus === 2) {
