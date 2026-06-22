@@ -55,8 +55,8 @@ const getContractLabel = (
   }
 };
 
-const getEmployeeTypeLabel = (type: number) =>
-  type === 1 ? "Permanent" : "Contract";
+const getEmployeeTypeLabel = (type: number | string) =>
+  (type === 1 || type === "1" || (typeof type === "string" && type.toLowerCase() === "permanent")) ? "Permanent" : "Contract";
 
 const getInitials = (name: string) =>
   name

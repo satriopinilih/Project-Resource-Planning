@@ -26,6 +26,12 @@ public class UserProject
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
+    /// <summary>
+    /// Whether this member is Dedicated or NonDedicated on this project.
+    /// Defaults to Dedicated.
+    /// </summary>
+    public WorkingType WorkingType { get; set; } = WorkingType.Dedicated;
+
     [StringLength(500)]
     public string? SwapReason { get; set; }
 

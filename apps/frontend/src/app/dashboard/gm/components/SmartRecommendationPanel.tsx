@@ -211,7 +211,8 @@ const OptionCard: React.FC<{
   label: string;
   originalStartDate?: string;
   originalEndDate?: string;
-}> = ({ option, isRecommended, label, originalStartDate, originalEndDate }) => {
+  hasRequiredRoles: boolean;
+}> = ({ option, isRecommended, label, originalStartDate, originalEndDate, hasRequiredRoles }) => {
   const [expanded, setExpanded] = useState(false);
   const [startConfirmOpen, setStartConfirmOpen] = useState(false);
 
@@ -319,8 +320,10 @@ const OptionCard: React.FC<{
       <div className="mt-6 flex gap-3">
         {option.requiresReschedule && !option.requiresHiring ? (
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('adjustDatesAndStart', { detail: { option, originalStartDate, originalEndDate } }))}
-            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+            disabled={!hasRequiredRoles}
+            title={!hasRequiredRoles ? "Add required roles to the project before starting" : undefined}
+            onClick={() => hasRequiredRoles && window.dispatchEvent(new CustomEvent('adjustDatesAndStart', { detail: { option, originalStartDate, originalEndDate } }))}
+            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/20 disabled:shadow-none flex items-center justify-center gap-2"
           >
             <CalendarCheck size={14} />
             Adjust Dates &amp; Start
@@ -328,11 +331,12 @@ const OptionCard: React.FC<{
         ) : (
           <>
             <button
-              disabled={option.requiresHiring || option.requiresReschedule}
-              onClick={() => !option.requiresHiring && !option.requiresReschedule && setStartConfirmOpen(true)}
+              disabled={option.requiresHiring || option.requiresReschedule || !hasRequiredRoles}
+              title={!hasRequiredRoles ? "Add required roles to the project before starting" : undefined}
+              onClick={() => !option.requiresHiring && !option.requiresReschedule && hasRequiredRoles && setStartConfirmOpen(true)}
               className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
             >
-              {option.requiresHiring ? "Unavailable to Start" : "Start Project"}
+              {!hasRequiredRoles ? "Add Roles First" : option.requiresHiring ? "Unavailable to Start" : "Start Project"}
             </button>
             <ConfirmModal
               isOpen={startConfirmOpen}
@@ -840,7 +844,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
   useEffect(() => {
     const handleStart = async (e: any) => {
       const option: OptionType = e.detail;
-      await processStartProject(option.candidates.map(c => ({ role: c.targetRole, userId: c.userId })));
+      await processStartProject(option.candidates.map(c => ({ role: c.targetRole, userId: c.userId, workingType: c.targetWorkingType })));
     };
     const handleCustomize = (e: any) => {
       setCustomizingOption(e.detail);
@@ -859,14 +863,15 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
     };
   }, [projectId]);
 
-  const processStartProject = async (assignments: { role: string, userId: string }[]) => {
+  const processStartProject = async (assignments: { role: string, userId: string, workingType?: string }[]) => {
     setIsProcessing(true);
     try {
       setProcessStatus("Assigning members...");
       for (const assign of assignments) {
         await assignMemberToProject(projectId, {
           userId: assign.userId,
-          roleInProject: assign.role
+          roleInProject: assign.role,
+          workingType: assign.workingType,
         });
       }
       setProcessStatus("Starting project...");
@@ -896,7 +901,8 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
       for (const c of option.candidates) {
         await assignMemberToProject(projectId, {
           userId: c.userId,
-          roleInProject: c.targetRole
+          roleInProject: c.targetRole,
+          workingType: c.targetWorkingType,
         });
       }
       window.location.reload();
@@ -1008,6 +1014,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             label="A"
             originalStartDate={data.estimatedStartDate}
             originalEndDate={data.estimatedEndDate}
+            hasRequiredRoles={data.requiredRoles.length > 0}
           />
           <OptionCard
             option={data.optionB}
@@ -1015,6 +1022,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             label="B"
             originalStartDate={data.estimatedStartDate}
             originalEndDate={data.estimatedEndDate}
+            hasRequiredRoles={data.requiredRoles.length > 0}
           />
         </div>
       </div>

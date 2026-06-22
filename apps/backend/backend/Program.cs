@@ -24,7 +24,7 @@ builder.Host.UseSerilog((context, config) =>
      config.ReadFrom.Configuration(context.Configuration);
 });
 
-// 2. Controllers (NO FluentValidation here anymore)
+// 2. Controllers — default JSON options (no global enum converter)
 builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
