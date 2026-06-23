@@ -22,6 +22,9 @@ public class HireRequest
 
     public int Quantity { get; set; } = 1;
 
+    [StringLength(50)]
+    public string? ExperienceYearsRange { get; set; }
+
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
 

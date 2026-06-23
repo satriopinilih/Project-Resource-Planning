@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import StatusBadge from "@/components/StatusBadge";
 import {
   Trash2,
   Calendar,
@@ -14,6 +15,7 @@ import {
   Search,
   Check,
   AlertCircle,
+  AlertTriangle,
   TrendingUp,
   CheckCircle2,
   FileText,
@@ -164,6 +166,8 @@ export default function ProjectDetailsPage() {
   const [hireForm, setHireForm] = useState({
     roleNeeded: "Senior Dev",
     quantity: 1,
+    minExperience: 1,
+    maxExperience: 3,
     notes: "",
   });
 
@@ -364,6 +368,7 @@ export default function ProjectDetailsPage() {
         projectName: project.projectName,
         roleNeeded: hireForm.roleNeeded,
         quantity: Math.max(1, hireForm.quantity),
+        experienceYearsRange: `${hireForm.minExperience}-${hireForm.maxExperience} years`,
         startDate: project.estimatedStartDate,
         endDate: project.estimatedEndDate,
         notes: hireForm.notes || `Requested from project ${project.projectName}`,
@@ -567,6 +572,16 @@ export default function ProjectDetailsPage() {
       setSwapping(false);
     }
   };
+
+  const expiringProjectMembers = useMemo(() => {
+    if (!project || !project.members) return [];
+    const assignedIds = new Set(project.members.map(m => m.userId));
+    return employees.filter(e => {
+      if (!assignedIds.has(e.userId)) return false;
+      const isPermanent = e.employeeType === 1 || String(e.employeeType) === '1' || String(e.employeeType).toLowerCase() === 'permanent';
+      return !isPermanent && e.daysRemaining !== undefined && e.daysRemaining <= 30;
+    });
+  }, [project, employees]);
 
   if (loading || !project) {
     return (
@@ -878,6 +893,7 @@ export default function ProjectDetailsPage() {
             )}
           </section>
 
+          {/* Expiring Contracts Alert has been moved to main GM dashboard */}
           {/* 4. Team Timeline (Gantt Chart) — shown for non-Pending projects */}
           {project.projectStatus !== 0 && (project.members || []).length > 0 && (
             <ProjectGanttChart
@@ -1154,6 +1170,32 @@ export default function ProjectDetailsPage() {
                   onChange={(e) => setHireForm((p) => ({ ...p, quantity: Number(e.target.value) || 1 }))}
                   className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)]"
                 />
+              </div>
+
+              <div>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Experience Years Range</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={hireForm.minExperience}
+                    onChange={(e) => setHireForm((p) => ({ ...p, minExperience: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)]"
+                  >
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                  <span className="text-[13px] text-[var(--dash-text-muted)] font-medium">to</span>
+                  <select
+                    value={hireForm.maxExperience}
+                    onChange={(e) => setHireForm((p) => ({ ...p, maxExperience: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-[var(--dash-text-primary)]"
+                  >
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                  <span className="text-[13px] text-[var(--dash-text-muted)] font-medium whitespace-nowrap">years</span>
+                </div>
               </div>
 
               <div>

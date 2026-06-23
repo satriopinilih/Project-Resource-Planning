@@ -162,6 +162,7 @@ export type HireRequest = {
   projectName: string;
   roleNeeded: string;
   quantity: number;
+  experienceYearsRange?: string;
   startDate: string;
   endDate: string;
   notes: string;
@@ -176,6 +177,7 @@ export type CreateHireRequestPayload = {
   projectName: string;
   roleNeeded: string;
   quantity: number;
+  experienceYearsRange?: string;
   startDate: string;
   endDate: string;
   notes: string;

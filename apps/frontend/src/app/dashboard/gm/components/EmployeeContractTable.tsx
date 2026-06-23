@@ -101,6 +101,9 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
   const [statusFilter, setStatusFilter] = useState("All Status");
@@ -117,6 +120,8 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
   const [hireForm, setHireForm] = useState({
     roleNeeded: "",
     quantity: 1,
+    minExperience: 1,
+    maxExperience: 3,
     notes: "",
   });
 
@@ -149,6 +154,13 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
       statusFilter === "All Status" || emp.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const currentEmployees = filteredEmployees.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, statusFilter]);
 
   const uniqueRoles = [
     "All Roles",
@@ -185,21 +197,20 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
     try {
       const startDate = new Date();
       const endDate = new Date(startDate);
-      endDate.setMonth(endDate.getMonth() + 6);
-
       await createHireRequest({
         projectName: "General Hiring Request",
         roleNeeded: hireForm.roleNeeded,
         quantity: Math.max(1, hireForm.quantity),
-        startDate: startDate.toISOString().slice(0, 10),
-        endDate: endDate.toISOString().slice(0, 10),
-        notes: hireForm.notes,
+        experienceYearsRange: `${hireForm.minExperience}-${hireForm.maxExperience} years`,
+        startDate: new Date().toISOString().split("T")[0],
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        notes: hireForm.notes || "Requested from general HR pipeline",
       });
       setHireSuccess(true);
       setTimeout(() => {
         setHireModalOpen(false);
         setHireSuccess(false);
-        setHireForm({ roleNeeded: "", quantity: 1, notes: "" });
+        setHireForm({ roleNeeded: "", quantity: 1, minExperience: 1, maxExperience: 3, notes: "" });
       }, 1200);
     } catch {
       alert("Failed to submit hire request");
@@ -308,9 +319,35 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
         {/* Table */}
         {!loading && !error && (
           <>
-            <p className="text-[12px] text-[var(--dash-text-faint)] mb-4">
-              Showing {filteredEmployees.length} of {employeesData.length} employees
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[12px] text-[var(--dash-text-faint)]">
+                Showing {currentEmployees.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredEmployees.length)} of {filteredEmployees.length} employees
+              </p>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-3">
+                  <p className="text-[12px] text-[var(--dash-text-faint)]">
+                    Page {currentPage} of {totalPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-md hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-md hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -340,7 +377,7 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEmployees.map((emp) => (
+                  {currentEmployees.map((emp) => (
                     <tr
                       key={emp.id}
                       className="border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-colors duration-150"
@@ -639,6 +676,31 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                 <div>
                   <label className="block mb-1 text-[12px] font-semibold text-[var(--dash-text-muted)]">Amount of user needed</label>
                   <input type="number" min={1} value={hireForm.quantity} onChange={(e) => setHireForm((p) => ({ ...p, quantity: Number(e.target.value) || 1 }))} className="h-10 w-full px-3 text-[14px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg" />
+                </div>
+                <div>
+                  <label className="block mb-1 text-[12px] font-semibold text-[var(--dash-text-muted)]">Experience Years Range</label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={hireForm.minExperience}
+                      onChange={(e) => setHireForm((p) => ({ ...p, minExperience: Number(e.target.value) }))}
+                      className="h-10 w-full px-3 text-[14px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg"
+                    >
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                        <option key={num} value={num}>{num}</option>
+                      ))}
+                    </select>
+                    <span className="text-[13px] text-[var(--dash-text-muted)] font-medium">to</span>
+                    <select
+                      value={hireForm.maxExperience}
+                      onChange={(e) => setHireForm((p) => ({ ...p, maxExperience: Number(e.target.value) }))}
+                      className="h-10 w-full px-3 text-[14px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg"
+                    >
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                        <option key={num} value={num}>{num}</option>
+                      ))}
+                    </select>
+                    <span className="text-[13px] text-[var(--dash-text-muted)] font-medium whitespace-nowrap">years</span>
+                  </div>
                 </div>
                 <div>
                   <label className="block mb-1 text-[12px] font-semibold text-[var(--dash-text-muted)]">Notes for HR</label>

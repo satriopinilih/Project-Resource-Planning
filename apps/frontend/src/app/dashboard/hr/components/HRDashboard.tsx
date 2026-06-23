@@ -542,7 +542,10 @@ export default function HRDashboard() {
                         <tr key={item.hireRequestId} className="border-b border-gray-100 dark:border-gray-700">
                           <td className="py-4 px-4">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.roleNeeded}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.notes || 'No additional notes'}</p>
+                            {item.experienceYearsRange && (
+                              <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mt-0.5">Exp: {item.experienceYearsRange}</p>
+                            )}
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{item.notes || 'No additional notes'}</p>
                           </td>
                           <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
                           <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.projectName}</td>
