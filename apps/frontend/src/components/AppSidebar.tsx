@@ -41,7 +41,6 @@ const navByRole: Record<string, NavItem[]> = {
   PM: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
-    { label: "Team Member", href: "/team-members", icon: Users },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   Marketing: [
