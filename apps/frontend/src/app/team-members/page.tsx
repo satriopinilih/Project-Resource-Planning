@@ -372,13 +372,10 @@ export default function TeamMembersPage() {
                           }`}
                       >
                         <div className="font-semibold text-[15px] text-[var(--dash-text-heading)] truncate">{employee.name}</div>
-                        {canResetPassword && (
-                          <div className="text-[12px] text-[var(--dash-text-faint)] mt-0.5 truncate">User ID: {employee.id}</div>
-                        )}
+                        <div className="text-[12px] text-[var(--dash-text-faint)] mt-0.5 truncate">
+                          {employee.experienceYears ?? 0} {employee.experienceYears === 1 ? 'year' : 'years'} of experience
+                        </div>
                         <div className="text-[13px] text-[var(--dash-text-secondary)] mt-0.5 truncate">{employee.role}</div>
-                        {employee.experienceYears !== undefined && (
-                          <div className="text-[12px] text-[var(--dash-text-faint)] mt-1">Exp: {employee.experienceYears} yrs</div>
-                        )}
 
                         <div className="mt-2 flex items-center gap-2">
                           <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded border ${badgeClasses}`}>
@@ -414,9 +411,9 @@ export default function TeamMembersPage() {
                         </div>
                         <div>
                           <h2 className="text-[22px] font-bold text-[var(--dash-text-heading)]">{selectedEmployee.name}</h2>
-                          {canResetPassword && (
-                            <p className="text-[12px] text-[var(--dash-text-faint)] mt-1">User ID: {selectedEmployee.id}</p>
-                          )}
+                          <p className="text-[12px] text-[var(--dash-text-faint)] mt-1">
+                            {selectedEmployee.experienceYears ?? 0} {selectedEmployee.experienceYears === 1 ? 'year' : 'years'} of experience
+                          </p>
                           <p className="text-[14px] text-[var(--dash-text-secondary)] mt-1">{selectedEmployee.role}</p>
                         </div>
                       </div>
