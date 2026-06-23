@@ -165,7 +165,7 @@ export type HireRequest = {
   startDate: string;
   endDate: string;
   notes: string;
-  status: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined';
+  status: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined' | string;
   hiredEmployeeName?: string;
   createdAt: string;
   fulfilledAt?: string;
@@ -534,7 +534,7 @@ export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryIte
   }));
 }
 
-export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined', projectId?: number): Promise<HireRequest[]> {
+export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined' | string, projectId?: number): Promise<HireRequest[]> {
   const params = new URLSearchParams();
   if (status) params.set('status', status);
   if (projectId !== undefined) params.set('projectId', String(projectId));
@@ -587,6 +587,13 @@ export async function declineHireRequest(id: number, notes?: string): Promise<vo
   await fetchJson(`/api/hirerequests/${id}/decline`, {
     method: 'POST',
     body: JSON.stringify({ notes })
+  });
+}
+
+export async function updateHireRequestStatus(id: number, status: string, notes?: string, hiredEmployeeName?: string): Promise<void> {
+  await fetchJson(`/api/hirerequests/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status, notes, hiredEmployeeName })
   });
 }
 

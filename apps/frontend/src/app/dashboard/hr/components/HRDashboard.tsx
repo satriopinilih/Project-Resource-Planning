@@ -21,6 +21,7 @@ import {
   getNextEmployeeUserId,
   getRequestHistory,
   startHireRequest,
+  updateHireRequestStatus,
   EmployeeFormOptions,
   BackendEmployee
 } from '@/lib/api';
@@ -55,6 +56,11 @@ export default function HRDashboard() {
   const [selectedHireRequestId, setSelectedHireRequestId] = useState<number | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [hireFormError, setHireFormError] = useState<string | null>(null);
+  const [updateRecruitmentModalOpen, setUpdateRecruitmentModalOpen] = useState(false);
+  const [recruitmentStatus, setRecruitmentStatus] = useState('InProgress');
+  const [recruitmentNotes, setRecruitmentNotes] = useState('');
+  const [recruitmentHiredName, setRecruitmentHiredName] = useState('');
+  const [updatingRecruitment, setUpdatingRecruitment] = useState(false);
   const [showTempPassword, setShowTempPassword] = useState<string | null>(null);
   const [employeeFormOptions, setEmployeeFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
   const [hireForm, setHireForm] = useState({
@@ -180,6 +186,33 @@ export default function HRDashboard() {
   const handleStartHireRequest = async (id: number) => {
     await startHireRequest(id);
     await loadData();
+  };
+
+  const openUpdateRecruitmentModal = (request: HireRequest) => {
+    setSelectedHireRequestId(request.hireRequestId);
+    setRecruitmentStatus(request.status === 'Open' ? 'InProgress' : request.status);
+    setRecruitmentNotes(request.notes || '');
+    setRecruitmentHiredName(request.hiredEmployeeName || '');
+    setUpdateRecruitmentModalOpen(true);
+  };
+
+  const handleUpdateRecruitmentStatus = async () => {
+    if (!selectedHireRequestId) return;
+    setUpdatingRecruitment(true);
+    try {
+      await updateHireRequestStatus(
+        selectedHireRequestId,
+        recruitmentStatus,
+        recruitmentNotes.trim() || undefined,
+        recruitmentStatus === 'Fulfilled' ? recruitmentHiredName.trim() || undefined : undefined
+      );
+      setUpdateRecruitmentModalOpen(false);
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update recruitment status');
+    } finally {
+      setUpdatingRecruitment(false);
+    }
   };
 
   const handleFulfillHireRequest = async (id: number, hiredEmployeeName?: string) => {
@@ -490,14 +523,20 @@ export default function HRDashboard() {
                   <tbody>
                     {activeHireRequests.map((item) => {
                       const state = item.status;
-                      const statusClass =
-                        state === 'Open'
-                          ? 'bg-red-500/15 text-red-600 dark:text-red-400'
-                          : state === 'InProgress'
-                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
-                            : state === 'Declined'
-                              ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300'
-                              : 'bg-green-500/15 text-green-600 dark:text-green-400';
+                      let statusClass = 'bg-green-500/15 text-green-600 dark:text-green-400';
+                      if (state === 'Open') {
+                        statusClass = 'bg-red-500/15 text-red-600 dark:text-red-400';
+                      } else if (state === 'Declined') {
+                        statusClass = 'bg-orange-500/15 text-orange-700 dark:text-orange-300';
+                      } else if (
+                        state === 'InProgress' ||
+                        state === 'Preview Interview' ||
+                        state === 'Interviewing' ||
+                        state === 'Offering' ||
+                        state === 'Onboarding'
+                      ) {
+                        statusClass = 'bg-blue-500/15 text-blue-600 dark:text-blue-400';
+                      }
 
                       return (
                         <tr key={item.hireRequestId} className="border-b border-gray-100 dark:border-gray-700">
@@ -514,17 +553,13 @@ export default function HRDashboard() {
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-2">
-                              {state === 'Open' && (
+                              {state !== 'Fulfilled' && state !== 'Declined' ? (
                                 <>
-                                  <button onClick={() => handleStartHireRequest(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">Start</button>
+                                  <button onClick={() => openUpdateRecruitmentModal(item)} className="px-3 py-1.5 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">{state === 'Open' ? 'Start' : 'Update Status'}</button>
                                   <button onClick={() => openDeclineHireModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
                                 </>
-                              )}
-                              {state === 'InProgress' && (
-                                <>
-                                  <button onClick={() => openAddEmployeeModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-purple-600 text-white hover:bg-purple-700">Add Employee</button>
-                                  <button onClick={() => openDeclineHireModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
-                                </>
+                              ) : (
+                                <span className="text-xs text-gray-400 font-medium">—</span>
                               )}
                             </div>
                           </td>
@@ -832,6 +867,77 @@ export default function HRDashboard() {
             </div>
           </div>
         </div>
+      )}
+      {updateRecruitmentModalOpen && selectedHireRequest && (
+        <Modal
+          isOpen={updateRecruitmentModalOpen}
+          onClose={() => setUpdateRecruitmentModalOpen(false)}
+          title="Update Recruitment Status"
+        >
+          <div className="space-y-4 text-[var(--dash-text-primary)]">
+            <div>
+              <label className="text-sm font-semibold text-[var(--dash-text-secondary)]">Role Needed</label>
+              <p className="text-base font-bold text-[var(--dash-text-heading)] mt-0.5">{selectedHireRequest.roleNeeded}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-semibold text-[var(--dash-text-secondary)]">Recruitment Status</label>
+              <select
+                value={recruitmentStatus}
+                onChange={(e) => setRecruitmentStatus(e.target.value)}
+                className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm text-[var(--dash-text-primary)] outline-none focus:border-blue-500"
+              >
+                <option value="InProgress">In Progress</option>
+                <option value="Preview Interview">Preview Interview</option>
+                <option value="Interviewing">Interviewing</option>
+                <option value="Offering">Offering</option>
+                <option value="Onboarding">Onboarding</option>
+                <option value="Fulfilled">Fulfilled</option>
+                <option value="Declined">Declined</option>
+              </select>
+            </div>
+
+            {recruitmentStatus === 'Fulfilled' && (
+              <div>
+                <label className="text-sm font-semibold text-[var(--dash-text-secondary)]">Hired Employee Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={recruitmentHiredName}
+                  onChange={(e) => setRecruitmentHiredName(e.target.value)}
+                  className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm text-[var(--dash-text-primary)] outline-none focus:border-blue-500"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="text-sm font-semibold text-[var(--dash-text-secondary)]">Notes / Progress Update</label>
+              <textarea
+                rows={4}
+                value={recruitmentNotes}
+                onChange={(e) => setRecruitmentNotes(e.target.value)}
+                placeholder="Enter recruitment status details or notes..."
+                className="mt-1 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] p-3 text-sm text-[var(--dash-text-primary)] outline-none focus:border-blue-500 resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-[var(--dash-border)]">
+              <button
+                onClick={() => setUpdateRecruitmentModalOpen(false)}
+                className="px-4 py-2 border border-[var(--dash-border)] rounded-lg text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateRecruitmentStatus}
+                disabled={updatingRecruitment || (recruitmentStatus === 'Fulfilled' && !recruitmentHiredName.trim())}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {updatingRecruitment ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

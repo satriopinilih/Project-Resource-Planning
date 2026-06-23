@@ -128,6 +128,42 @@ public class HireRequestService
         return (true, null, 200, Map(row));
     }
 
+    /// <summary>
+    /// Updates status, hired employee name and notes of a hire request.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, HireRequestDto? Data)> UpdateStatusAsync(
+        int id, UpdateHireRequestStatusDto request, string actorUserId)
+    {
+        var row = await _db.HireRequests.FirstOrDefaultAsync(h => h.HireRequestId == id);
+        if (row is null)
+            return (false, "Hire request not found", 404, null);
+
+        if (string.IsNullOrWhiteSpace(request.Status))
+            return (false, "Status is required", 400, null);
+
+        row.Status = request.Status;
+        if (!string.IsNullOrWhiteSpace(request.HiredEmployeeName))
+        {
+            row.HiredEmployeeName = request.HiredEmployeeName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Notes))
+        {
+            row.Notes = request.Notes;
+        }
+
+        if (request.Status == "Fulfilled" || request.Status == "Declined")
+        {
+            row.FulfilledAt = DateTime.UtcNow;
+        }
+
+        row.UpdatedAt = DateTime.UtcNow;
+        row.UpdatedBy = actorUserId;
+        await _db.SaveChangesAsync();
+
+        return (true, null, 200, Map(row));
+    }
+
     private static HireRequestDto Map(HireRequest row) => new()
     {
         HireRequestId = row.HireRequestId,

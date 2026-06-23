@@ -102,4 +102,23 @@ public class HireRequestsController : ControllerBase
 
         return Ok(ApiResponse<HireRequestDto>.SuccessResponse(data!, "Hire request declined"));
     }
+
+    [HttpPost("{id}/status")]
+    public async Task<ActionResult<ApiResponse<HireRequestDto>>> UpdateStatus(int id, [FromBody] UpdateHireRequestStatusDto request)
+    {
+        var isHr = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "HR");
+        if (!isHr)
+            return StatusCode(403, ApiResponse<HireRequestDto>.ErrorResponse("Only HR can update recruitment status"));
+
+        var actorUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value
+            ?? "HR";
+
+        var (success, error, statusCode, data) = await _service.UpdateStatusAsync(id, request, actorUserId);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<HireRequestDto>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<HireRequestDto>.SuccessResponse(data!, "Recruitment status updated"));
+    }
 }

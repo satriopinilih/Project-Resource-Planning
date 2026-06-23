@@ -160,7 +160,7 @@ export default function ProjectDetailsPage() {
   const [hireSubmitting, setHireSubmitting] = useState(false);
   const [hireRequestOpen, setHireRequestOpen] = useState(false);
   const [hireAlreadyRequested, setHireAlreadyRequested] = useState(false);
-  const [hireRequestStatus, setHireRequestStatus] = useState<"none" | "Open" | "InProgress" | "Fulfilled" | "Declined">("none");
+  const [hireRequestStatus, setHireRequestStatus] = useState<string>("none");
   const [hireForm, setHireForm] = useState({
     roleNeeded: "Senior Dev",
     quantity: 1,
@@ -237,7 +237,7 @@ export default function ProjectDetailsPage() {
 
         const latestHire = hireRows[0];
         setHireRequestStatus(latestHire?.status ?? "none");
-        setHireAlreadyRequested(hireRows.some((r) => r.status === "Open" || r.status === "InProgress"));
+        setHireAlreadyRequested(hireRows.some((r) => r.status !== "Fulfilled" && r.status !== "Declined"));
         setTimelineEditRequested(timelineRows.some((r) => r.status === "Open" || r.status === "InProgress"));
       } catch {
         setHireRequestStatus("none");
