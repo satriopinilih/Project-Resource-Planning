@@ -6,7 +6,7 @@ import AppHeader from '@/components/AppHeader';
 import { getEmployees, getProjects, createContractExtension, getContractExtensionRequests, resetEmployeePassword } from '@/lib/api';
 import { Employee } from '@/lib/types';
 import { getPrimaryRole, getSessionUser } from '@/lib/auth';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, SlidersHorizontal } from 'lucide-react';
 
 export default function TeamMembersPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -27,6 +27,67 @@ export default function TeamMembersPage() {
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState('');
   const [resetTempPassword, setResetTempPassword] = useState<string | null>(null);
+
+  // Filter & Sorting State
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRole, setSelectedRole] = useState("");
+  const [minExperience, setMinExperience] = useState<number | "">("");
+  const [sortBy, setSortBy] = useState<"name" | "role" | "experience">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Get distinct roles
+  const roles = Array.from(new Set(employees.map((emp) => emp.role))).filter(Boolean).sort();
+
+  // Compute filtered & sorted employees list
+  const filteredEmployees = employees
+    .filter((employee) => {
+      const matchesName = employee.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = !selectedRole || employee.role === selectedRole;
+      const matchesExperience = minExperience === "" || employee.experienceYears >= minExperience;
+      return matchesName && matchesRole && matchesExperience;
+    })
+    .sort((a, b) => {
+      let valA: string | number = "";
+      let valB: string | number = "";
+
+      if (sortBy === "name") {
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+      } else if (sortBy === "role") {
+        valA = a.role.toLowerCase();
+        valB = b.role.toLowerCase();
+      } else if (sortBy === "experience") {
+        valA = a.experienceYears ?? 0;
+        valB = b.experienceYears ?? 0;
+      }
+
+      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+  // Sync selectedMember when list changes
+  useEffect(() => {
+    if (isLoading) return;
+    
+    // Check filtered list
+    const filtered = employees.filter((employee) => {
+      const matchesName = employee.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = !selectedRole || employee.role === selectedRole;
+      const matchesExperience = minExperience === "" || employee.experienceYears >= minExperience;
+      return matchesName && matchesRole && matchesExperience;
+    });
+
+    if (filtered.length > 0) {
+      const isSelectedInFiltered = filtered.some(e => e.id === selectedMember);
+      if (!isSelectedInFiltered) {
+        setSelectedMember(filtered[0].id);
+      }
+    } else {
+      setSelectedMember(null);
+    }
+  }, [searchTerm, selectedRole, minExperience, employees, isLoading, selectedMember]);
 
   useEffect(() => {
     (async () => {
@@ -153,65 +214,187 @@ export default function TeamMembersPage() {
             {/* ── Left Panel: Team Members List ── */}
             <div className="w-[340px] flex-shrink-0 bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] flex flex-col overflow-hidden">
               <div className="flex items-center justify-between p-5 border-b border-[var(--dash-border)]">
-                <h2 className="text-[16px] font-semibold text-[var(--dash-text-heading)]">Team Members</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[16px] font-semibold text-[var(--dash-text-heading)]">Team Members</h2>
+                  <button
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className={`p-1.5 rounded-lg border transition-all duration-200 cursor-pointer ${
+                      isFilterOpen
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/10'
+                        : 'border-[var(--dash-border)] text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)]'
+                    }`}
+                    title="Filter Team Members"
+                  >
+                    <SlidersHorizontal size={15} />
+                  </button>
+                </div>
                 <span className="text-[12px] font-semibold bg-blue-100 border border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/40 dark:text-blue-300 px-3 py-1 rounded-md">
-                  {employees.length} Total
+                  {filteredEmployees.length} of {employees.length}
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                {employees.map((employee) => {
-                  let badgeStatus = 'Active';
-                  let badgeClasses = 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40';
-                  
-                  if (employee.employmentType !== 'Permanent' && employee.daysRemaining !== undefined) {
-                    if (employee.daysRemaining < 0) {
-                      badgeStatus = 'Expired';
-                      badgeClasses = 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700';
-                    } else if (employee.daysRemaining < 15) {
-                      badgeStatus = 'Urgent';
-                      badgeClasses = 'bg-red-100 text-red-800 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-400/40';
-                    } else if (employee.daysRemaining < 30) {
-                      badgeStatus = 'Expiring Soon';
-                      badgeClasses = 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/40';
-                    }
-                  }
+              {isFilterOpen && (
+                <div className="p-4 border-b border-[var(--dash-border)] bg-[var(--dash-bg-input)]/30 flex flex-col gap-3.5 transition-all duration-300 animate-in slide-in-from-top-2">
+                  {/* Name Filter */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-[var(--dash-text-muted)] uppercase tracking-wider">
+                      Filter by Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Search name..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg px-3 py-2 text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-blue-500 placeholder:text-[var(--dash-text-faint)] transition-colors"
+                    />
+                  </div>
 
-                  return (
-                    <button
-                      key={employee.id}
-                      onClick={() => setSelectedMember(employee.id)}
-                      className={`w-full text-left p-4 rounded-xl transition-all border ${selectedMember === employee.id
-                        ? 'border-[#3b82f6] bg-[#1e3a8a]/10 shadow-sm'
-                        : 'border-transparent bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)]'
-                        }`}
+                  {/* Role Filter */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-[var(--dash-text-muted)] uppercase tracking-wider">
+                      Filter by Role
+                    </label>
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      className="w-full bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg px-3 py-2 text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-blue-500 cursor-pointer transition-colors"
                     >
-                      <div className="font-semibold text-[15px] text-[var(--dash-text-heading)] truncate">{employee.name}</div>
-                      {canResetPassword && (
-                        <div className="text-[12px] text-[var(--dash-text-faint)] mt-0.5 truncate">User ID: {employee.id}</div>
-                      )}
-                      <div className="text-[13px] text-[var(--dash-text-secondary)] mt-0.5 truncate">{employee.role}</div>
-                      {employee.experienceYears !== undefined && (
-                        <div className="text-[12px] text-[var(--dash-text-faint)] mt-1">Exp: {employee.experienceYears} yrs</div>
-                      )}
+                      <option value="">All Roles</option>
+                      {roles.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded border ${badgeClasses}`}>
-                          {badgeStatus}
-                        </span>
+                  {/* Experience Filter */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-[var(--dash-text-muted)] uppercase tracking-wider">
+                      Filter by Experience (Min Years)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 2"
+                      value={minExperience}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setMinExperience(val === '' ? '' : parseInt(val) || 0);
+                      }}
+                      className="w-full bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg px-3 py-2 text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-blue-500 placeholder:text-[var(--dash-text-faint)] transition-colors"
+                    />
+                  </div>
 
-                        {badgeStatus !== 'Active' && badgeStatus !== 'Expired' && employee.daysRemaining !== undefined && (
-                          <div className={`flex items-center gap-1 text-[11px] font-medium ${badgeStatus === 'Urgent' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-300'}`}>
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <span>{employee.daysRemaining} days left</span>
-                          </div>
-                        )}
-                      </div>
+                  {/* Sort By & Order */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-bold text-[var(--dash-text-muted)] uppercase tracking-wider">
+                        Sort By
+                      </label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="w-full bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg px-3 py-2 text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-blue-500 cursor-pointer transition-colors"
+                      >
+                        <option value="name">Name</option>
+                        <option value="role">Role</option>
+                        <option value="experience">Experience</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-bold text-[var(--dash-text-muted)] uppercase tracking-wider">
+                        Order
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        className="w-full h-[38px] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] hover:bg-[var(--dash-bg-hover)] rounded-lg px-3 text-[13px] text-[var(--dash-text-primary)] font-medium transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        {sortOrder === 'asc' ? 'Ascending ↑' : 'Descending ↓'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Clear Button */}
+                  {(searchTerm || selectedRole || minExperience !== '' || sortBy !== 'name' || sortOrder !== 'asc') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedRole('');
+                        setMinExperience('');
+                        setSortBy('name');
+                        setSortOrder('asc');
+                      }}
+                      className="w-full mt-1 py-1.5 text-[12px] font-semibold text-blue-500 hover:text-blue-400 text-center transition-colors cursor-pointer"
+                    >
+                      Clear Filters
                     </button>
-                  );
-                })}
+                  )}
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                {filteredEmployees.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--dash-text-muted)]">
+                    <svg className="w-12 h-12 text-[var(--dash-text-faint)] mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-[14px]">No team members match the filters.</p>
+                  </div>
+                ) : (
+                  filteredEmployees.map((employee) => {
+                    let badgeStatus = 'Active';
+                    let badgeClasses = 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40';
+                    
+                    if (employee.employmentType !== 'Permanent' && employee.daysRemaining !== undefined) {
+                      if (employee.daysRemaining < 0) {
+                        badgeStatus = 'Expired';
+                        badgeClasses = 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700';
+                      } else if (employee.daysRemaining < 15) {
+                        badgeStatus = 'Urgent';
+                        badgeClasses = 'bg-red-100 text-red-800 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-400/40';
+                      } else if (employee.daysRemaining < 30) {
+                        badgeStatus = 'Expiring Soon';
+                        badgeClasses = 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/40';
+                      }
+                    }
+
+                    return (
+                      <button
+                        key={employee.id}
+                        onClick={() => setSelectedMember(employee.id)}
+                        className={`w-full text-left p-4 rounded-xl transition-all border ${selectedMember === employee.id
+                          ? 'border-[#3b82f6] bg-[#1e3a8a]/10 shadow-sm'
+                          : 'border-transparent bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)]'
+                          }`}
+                      >
+                        <div className="font-semibold text-[15px] text-[var(--dash-text-heading)] truncate">{employee.name}</div>
+                        <div className="text-[12px] text-[var(--dash-text-faint)] mt-0.5 truncate">
+                          {employee.experienceYears ?? 0} {employee.experienceYears === 1 ? 'year' : 'years'} of experience
+                        </div>
+                        <div className="text-[13px] text-[var(--dash-text-secondary)] mt-0.5 truncate">{employee.role}</div>
+
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded border ${badgeClasses}`}>
+                            {badgeStatus}
+                          </span>
+
+                          {badgeStatus !== 'Active' && badgeStatus !== 'Expired' && employee.daysRemaining !== undefined && (
+                            <div className={`flex items-center gap-1 text-[11px] font-medium ${badgeStatus === 'Urgent' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-300'}`}>
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              <span>{employee.daysRemaining} days left</span>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -228,9 +411,9 @@ export default function TeamMembersPage() {
                         </div>
                         <div>
                           <h2 className="text-[22px] font-bold text-[var(--dash-text-heading)]">{selectedEmployee.name}</h2>
-                          {canResetPassword && (
-                            <p className="text-[12px] text-[var(--dash-text-faint)] mt-1">User ID: {selectedEmployee.id}</p>
-                          )}
+                          <p className="text-[12px] text-[var(--dash-text-faint)] mt-1">
+                            {selectedEmployee.experienceYears ?? 0} {selectedEmployee.experienceYears === 1 ? 'year' : 'years'} of experience
+                          </p>
                           <p className="text-[14px] text-[var(--dash-text-secondary)] mt-1">{selectedEmployee.role}</p>
                         </div>
                       </div>

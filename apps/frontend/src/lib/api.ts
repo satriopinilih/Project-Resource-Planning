@@ -35,7 +35,7 @@ type BackendUser = {
   role: string;
   departmentId: number;
   departmentName: string;
-  employeeType: 'Contract' | 'Permanent' | string | number;
+  employeeType: 'Professional Services' | 'Permanent' | string | number;
   experienceYears: number;
   contractStart: string;
   contractEnd: string;
@@ -165,7 +165,7 @@ export type HireRequest = {
   startDate: string;
   endDate: string;
   notes: string;
-  status: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined';
+  status: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined' | string;
   hiredEmployeeName?: string;
   createdAt: string;
   fulfilledAt?: string;
@@ -193,12 +193,12 @@ const mapProject = (project: BackendUserProject): Project => ({
   status: 'Active'
 });
 
-const normalizeEmploymentType = (value: BackendUser['employeeType']): 'Contract' | 'Permanent' => {
+const normalizeEmploymentType = (value: BackendUser['employeeType']): 'Professional Services' | 'Permanent' => {
   if (value === 1 || value === '1') return 'Permanent';
-  if (value === 0 || value === '0') return 'Contract';
+  if (value === 0 || value === '0') return 'Professional Services';
   const v = String(value).toLowerCase();
   if (v.includes('permanent')) return 'Permanent';
-  return 'Contract';
+  return 'Professional Services';
 };
 
 const mapEmployee = (user: BackendUser): Employee => {
@@ -534,7 +534,7 @@ export async function getRequestHistory(scope = 'HR'): Promise<RequestHistoryIte
   }));
 }
 
-export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined', projectId?: number): Promise<HireRequest[]> {
+export async function getHireRequests(status?: 'Open' | 'InProgress' | 'Fulfilled' | 'Declined' | string, projectId?: number): Promise<HireRequest[]> {
   const params = new URLSearchParams();
   if (status) params.set('status', status);
   if (projectId !== undefined) params.set('projectId', String(projectId));
@@ -587,6 +587,13 @@ export async function declineHireRequest(id: number, notes?: string): Promise<vo
   await fetchJson(`/api/hirerequests/${id}/decline`, {
     method: 'POST',
     body: JSON.stringify({ notes })
+  });
+}
+
+export async function updateHireRequestStatus(id: number, status: string, notes?: string, hiredEmployeeName?: string): Promise<void> {
+  await fetchJson(`/api/hirerequests/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status, notes, hiredEmployeeName })
   });
 }
 

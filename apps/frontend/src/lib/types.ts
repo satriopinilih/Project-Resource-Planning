@@ -15,7 +15,7 @@ export interface Employee {
   email: string;
   role: string;
   department?: string;
-  employmentType: 'Permanent' | 'Contract';
+  employmentType: 'Permanent' | 'Professional Services';
   contractStart: string;
   contractEnd: string;
   contractStatus: 'Active' | 'Expiring Soon';
