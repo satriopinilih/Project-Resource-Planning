@@ -18,7 +18,7 @@ interface EmployeeContract {
   name: string;
   email: string;
   role: string;
-  employmentType: "Permanent" | "Contract";
+  employmentType: "Permanent" | "Professional Services";
   contractStart: string;
   contractEnd: string;
   contractEndRaw: string; // original ISO for date calculation
@@ -32,12 +32,12 @@ interface EmployeeContract {
 
 const SYSTEM_USER_IDS = ["GM001", "HR123"];
 
-// Backend EmployeeType: 0=Contract, 1=Permanent
-function mapEmploymentType(t: number | string): "Permanent" | "Contract" {
+// Backend EmployeeType: 0=ProfessionalServices, 1=Permanent
+function mapEmploymentType(t: number | string): "Permanent" | "Professional Services" {
   if (t === 1 || t === "1" || (typeof t === "string" && t.toLowerCase() === "permanent")) {
     return "Permanent";
   }
-  return "Contract";
+  return "Professional Services";
 }
 
 // Backend ContractStatus: 0=Active, 1=Expired, 2=ExpiringSoon
@@ -88,7 +88,7 @@ const statusColor: Record<string, string> = {
 
 const typeStyles: Record<string, string> = {
   Permanent: "bg-[#3b82f6]/15 text-[#60a5fa] border border-[#3b82f6]/25",
-  Contract:
+  "Professional Services":
     "bg-[var(--dash-badge-contract-bg)] text-[var(--dash-badge-contract-text)] border border-[var(--dash-badge-contract-border)]",
 };
 

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Entities.Entities;
 using Commons.Enums;
 
@@ -31,9 +32,16 @@ public class ApplicationDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         // Configure enum to string conversion (optional, but recommended for readability)
+        var employeeTypeConverter = new ValueConverter<EmployeeType, string>(
+            v => v == EmployeeType.ProfessionalServices ? "Professional Services" : v.ToString(),
+            v => v == "Contract" || v == "Professional Services" || v == "ProfessionalServices"
+                 ? EmployeeType.ProfessionalServices 
+                 : Enum.Parse<EmployeeType>(v)
+        );
+
         modelBuilder.Entity<User>()
             .Property(u => u.EmployeeType)
-            .HasConversion<string>();
+            .HasConversion(employeeTypeConverter);
 
         modelBuilder.Entity<User>()
             .Property(u => u.ContractStatus)

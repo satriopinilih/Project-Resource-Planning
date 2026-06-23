@@ -62,7 +62,7 @@ export default function HRDashboard() {
     role: 'Senior Dev',
     staffRoleId: 0,
     experienceLevel: '5',
-    employmentType: 'Contract' as 'Contract' | 'Permanent',
+    employmentType: 'Professional Services' as 'Professional Services' | 'Permanent',
     contractStart: getTodayISO(),
     contractEnd: getSixMonthsISO(),
     skills: '',
@@ -199,7 +199,7 @@ export default function HRDashboard() {
       role: 'Senior Dev',
       staffRoleId: 0,
       experienceLevel: '5',
-      employmentType: 'Contract',
+      employmentType: 'Professional Services',
       contractStart: getTodayISO(),
       contractEnd: getSixMonthsISO(),
       skills: '',
@@ -250,7 +250,7 @@ export default function HRDashboard() {
       return;
     }
 
-    if (hireForm.employmentType === 'Contract') {
+    if (hireForm.employmentType === 'Professional Services') {
       const start = new Date(hireForm.contractStart);
       const end = new Date(hireForm.contractEnd);
       const minContractMs = 1000 * 60 * 60 * 24 * 30 * 6;
@@ -275,10 +275,10 @@ export default function HRDashboard() {
         email: hireForm.email.trim().toLowerCase(),
         password: '',
         departmentId: hireForm.departmentId,
-        employeeType: hireForm.employmentType === 'Contract' ? 0 : 1,
+        employeeType: hireForm.employmentType === 'Professional Services' ? 0 : 1,
         experienceYears: Number(hireForm.experienceLevel) || 0,
-        contractStart: hireForm.employmentType === 'Contract' ? hireForm.contractStart : todayIso,
-        contractEnd: hireForm.employmentType === 'Contract' ? hireForm.contractEnd : permanentEndIso,
+        contractStart: hireForm.employmentType === 'Professional Services' ? hireForm.contractStart : todayIso,
+        contractEnd: hireForm.employmentType === 'Professional Services' ? hireForm.contractEnd : permanentEndIso,
         skillIds: hireForm.skillIds,
         roleIds: [
           employeeFormOptions.roles.find((r) => r.name === (hireForm.role === 'PM' ? 'PM' : 'Staff'))?.id ?? hireForm.roleId
@@ -745,10 +745,10 @@ export default function HRDashboard() {
                     <input
                       type="radio"
                       name="employmentType"
-                      checked={hireForm.employmentType === 'Contract'}
-                      onChange={() => setHireForm((prev) => ({ ...prev, employmentType: 'Contract' }))}
+                      checked={hireForm.employmentType === 'Professional Services'}
+                      onChange={() => setHireForm((prev) => ({ ...prev, employmentType: 'Professional Services' }))}
                     />
-                    <span>Contract</span>
+                    <span>Professional Services</span>
                   </label>
                   <label className="inline-flex items-center gap-2">
                     <input
@@ -761,7 +761,7 @@ export default function HRDashboard() {
                   </label>
                 </div>
               </div>
-              {hireForm.employmentType === 'Contract' && (
+              {hireForm.employmentType === 'Professional Services' && (
                 <>
                   <div>
                     <label className="text-sm text-[var(--dash-text-secondary)]">Contract Start Date</label>

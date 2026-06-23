@@ -15,7 +15,7 @@ export interface Employee {
   email: string;
   role: string;
   department?: string;
-  employmentType: 'Permanent' | 'Contract';
+  employmentType: 'Permanent' | 'Professional Services';
   contractStart: string;
   contractEnd: string;
   contractStatus: 'Active' | 'Expiring Soon';
@@ -85,7 +85,7 @@ export const employees: Employee[] = [
     email: 'michael.chen@company.com',
     role: 'Junior BA',
     department: 'Business Analysis',
-    employmentType: 'Contract',
+    employmentType: 'Professional Services',
     contractStart: 'Mar 1, 2025',
     contractEnd: 'Aug 31, 2026',
     contractStatus: 'Active',
@@ -179,7 +179,7 @@ export const employees: Employee[] = [
     email: 'rachel.lee@company.com',
     role: 'Senior Dev',
     department: 'Engineering',
-    employmentType: 'Contract',
+    employmentType: 'Professional Services',
     contractStart: 'Aug 1, 2024',
     contractEnd: 'May 6, 2026',
     contractStatus: 'Expiring Soon',
@@ -207,7 +207,7 @@ export const employees: Employee[] = [
     email: 'linda.martinez@company.com',
     role: 'Junior Dev',
     department: 'Engineering',
-    employmentType: 'Contract',
+    employmentType: 'Professional Services',
     contractStart: 'Oct 1, 2024',
     contractEnd: 'Sep 30, 2026',
     contractStatus: 'Active',

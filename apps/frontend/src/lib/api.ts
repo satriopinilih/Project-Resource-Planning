@@ -35,7 +35,7 @@ type BackendUser = {
   role: string;
   departmentId: number;
   departmentName: string;
-  employeeType: 'Contract' | 'Permanent' | string | number;
+  employeeType: 'Professional Services' | 'Permanent' | string | number;
   experienceYears: number;
   contractStart: string;
   contractEnd: string;
@@ -193,12 +193,12 @@ const mapProject = (project: BackendUserProject): Project => ({
   status: 'Active'
 });
 
-const normalizeEmploymentType = (value: BackendUser['employeeType']): 'Contract' | 'Permanent' => {
+const normalizeEmploymentType = (value: BackendUser['employeeType']): 'Professional Services' | 'Permanent' => {
   if (value === 1 || value === '1') return 'Permanent';
-  if (value === 0 || value === '0') return 'Contract';
+  if (value === 0 || value === '0') return 'Professional Services';
   const v = String(value).toLowerCase();
   if (v.includes('permanent')) return 'Permanent';
-  return 'Contract';
+  return 'Professional Services';
 };
 
 const mapEmployee = (user: BackendUser): Employee => {
