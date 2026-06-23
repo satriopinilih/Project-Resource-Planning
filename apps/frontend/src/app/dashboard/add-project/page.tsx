@@ -31,6 +31,12 @@ interface SkillOption {
   name: string;
 }
 
+const isDateHoliday = (h: BackendHoliday, dateStr: string) => {
+  const start = h.dateStart.split("T")[0];
+  const end = h.dateEnd.split("T")[0];
+  return dateStr >= start && dateStr <= end;
+};
+
 export default function AddProjectPage() {
   const ALLOWED_STAFF_ROLES = ["PM", "Senior Dev", "Junior Dev", "Senior BA", "Junior BA", "Architect"];
   const TECHNICAL_ROLES = ["Senior Dev", "Junior Dev", "Senior BA", "Junior BA", "Architect"];
@@ -63,8 +69,8 @@ export default function AddProjectPage() {
     const dateString = new Date(newHolidayDate).toISOString().split('T')[0];
 
     // Check if duplicate date
-    const isDbHoliday = holidays.some(h => new Date(h.date).toISOString().split('T')[0] === dateString);
-    const isCustomHoliday = customHolidays.some(h => new Date(h.date).toISOString().split('T')[0] === dateString);
+    const isDbHoliday = holidays.some(h => isDateHoliday(h, dateString));
+    const isCustomHoliday = customHolidays.some(h => isDateHoliday(h, dateString));
 
     if (isDbHoliday || isCustomHoliday) {
       setError("A holiday on this date already exists.");
@@ -74,7 +80,10 @@ export default function AddProjectPage() {
     const newHoliday: BackendHoliday = {
       id: -Math.floor(Math.random() * 1000000) - 1,
       name: `${newHolidayName.trim()} (Custom)`,
-      date: newHolidayDate
+      dateStart: newHolidayDate,
+      dateEnd: newHolidayDate,
+      clientId: null,
+      clientName: "Custom"
     };
 
     setCustomHolidays(prev => [...prev, newHoliday]);
@@ -219,13 +228,7 @@ export default function AddProjectPage() {
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
       const dateString = current.toISOString().split('T')[0];
-      const holidayFound = holidays.find(h => {
-        const hDate = new Date(h.date).toISOString().split('T')[0];
-        return hDate === dateString;
-      }) || customHolidays.find(h => {
-        const hDate = new Date(h.date).toISOString().split('T')[0];
-        return hDate === dateString;
-      });
+      const holidayFound = holidays.find(h => isDateHoliday(h, dateString)) || customHolidays.find(h => isDateHoliday(h, dateString));
 
       if (!isWeekend && !holidayFound) {
         workingDaysCount++;
@@ -302,7 +305,7 @@ export default function AddProjectPage() {
     let finalDescription = projectDescription;
     if (customHolidays.length > 0) {
       const customHolidayList = customHolidays
-        .map(h => `- ${h.name.replace(" (Custom)", "")} (${new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`)
+        .map(h => `- ${h.name.replace(" (Custom)", "")} (${new Date(h.dateStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`)
         .join("\n");
       finalDescription += `\n\n[Custom Project Holidays]\n${customHolidayList}`;
     }
@@ -487,7 +490,7 @@ export default function AddProjectPage() {
                       className="inline-flex items-center gap-1.5 text-[12px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-500/20"
                     >
                       <span>
-                        {ch.name.replace(" (Custom)", "")} ({new Date(ch.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                        {ch.name.replace(" (Custom)", "")} ({new Date(ch.dateStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
                       </span>
                       <button
                         type="button"

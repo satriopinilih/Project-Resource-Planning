@@ -50,7 +50,9 @@ DECLARE
         'StaffRoles',
         'Roles',
         'Users',
-        'Departments'
+        'Departments',
+        'Clients',
+        'Holidays'
     ];
 BEGIN
     FOREACH table_name IN ARRAY table_names
@@ -63,7 +65,17 @@ END $$;");
 
             var now = DateTime.UtcNow;
 
-            // Departments
+            // Clients
+            var internalClient = new Client { Name = "Internal", Description = "Internal client for holidays", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
+            var clientABC = new Client { Name = "PT. ABC", Description = "ABCDEF", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
+            var clientAccelist = new Client { Name = "PT. Accelist Lentera Indonesia", Description = "Accelist", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
+            var clientBGA = new Client { Name = "PT. BGA", Description = "Binus Graduate Attributes", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
+            var clientLibur = new Client { Name = "PT. Libur", Description = "Liburin aja", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
+            var clientSingapore = new Client { Name = "PT. Singapore Limited", Description = "SLO", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
+
+            _db.Clients.AddRange(internalClient, clientABC, clientAccelist, clientBGA, clientLibur, clientSingapore);
+
+// Departments
             var baDept = new Department { DepartmentName = "Business Analysis", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
             var engDept = new Department { DepartmentName = "Engineering", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
             var hrDept = new Department { DepartmentName = "Human Resource", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
@@ -441,6 +453,40 @@ END $$;");
                 .Select(skillName => new ProjectRequiredSkill { ProjectId = hmsProject.ProjectID, SkillId = byName[skillName] })
                 .ToList();
             _db.ProjectRequiredSkills.AddRange(projectRequiredSkills);
+
+            // Seeding default holidays (National holidays have ClientId = null)
+            var seedHolidays = new[]
+            {
+                new Holiday { Name = "New Year's Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), Client = null },
+                new Holiday { Name = "Good Friday", DateStart = DateTime.SpecifyKind(new DateTime(2026, 4, 3), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 4, 3), DateTimeKind.Utc), Client = null },
+                new Holiday { Name = "Labour Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc), Client = null },
+                new Holiday { Name = "Hari Lahir Pancasila", DateStart = DateTime.SpecifyKind(new DateTime(2026, 6, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 6, 1), DateTimeKind.Utc), Client = null },
+                new Holiday { Name = "Independence Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc), Client = null },
+                new Holiday { Name = "Christmas Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc), Client = null }
+            };
+            _db.Holidays.AddRange(seedHolidays);
+
+            // Seeding client-specific holidays
+            var clientHolidays = new[]
+            {
+                // PT. ABC (1 day)
+                new Holiday { Name = "ABC Anniversary", DateStart = DateTime.SpecifyKind(new DateTime(2026, 2, 12), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 2, 12), DateTimeKind.Utc), Client = clientABC },
+                
+                // PT. Accelist
+                new Holiday { Name = "Accelist Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 7, 10), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 7, 12), DateTimeKind.Utc), Client = clientAccelist },
+                new Holiday { Name = "Accelist Year End Leave", DateStart = DateTime.SpecifyKind(new DateTime(2026, 12, 28), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 12, 31), DateTimeKind.Utc), Client = clientAccelist },
+
+                // PT. BGA
+                new Holiday { Name = "BGA Holiday", DateStart = DateTime.SpecifyKind(new DateTime(2026, 6, 16), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 6, 16), DateTimeKind.Utc), Client = clientBGA },
+                new Holiday { Name = "BGA Winter Break", DateStart = DateTime.SpecifyKind(new DateTime(2026, 1, 15), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 1, 15), DateTimeKind.Utc), Client = clientBGA },
+
+                // PT. Libur
+                new Holiday { Name = "Libur Long Break", DateStart = DateTime.SpecifyKind(new DateTime(2026, 10, 5), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 10, 8), DateTimeKind.Utc), Client = clientLibur },
+
+                // PT. Singapore Limited
+                new Holiday { Name = "SG National Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 8, 9), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 8, 9), DateTimeKind.Utc), Client = clientSingapore }
+            };
+            _db.Holidays.AddRange(clientHolidays);
 
             await _db.SaveChangesAsync();
 

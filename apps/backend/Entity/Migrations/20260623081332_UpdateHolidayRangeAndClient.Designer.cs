@@ -3,6 +3,7 @@ using System;
 using Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Entities.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260623081332_UpdateHolidayRangeAndClient")]
+    partial class UpdateHolidayRangeAndClient
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,47 +24,6 @@ namespace Entities.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Entities.Entities.Client", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("UpdatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Clients");
-                });
 
             modelBuilder.Entity("Entities.Entities.ContractExtension", b =>
                 {
@@ -261,8 +223,9 @@ namespace Entities.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("ClientId")
-                        .HasColumnType("integer");
+                    b.Property<string>("Client")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateEnd")
                         .HasColumnType("timestamp with time zone");
@@ -276,14 +239,13 @@ namespace Entities.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId");
-
                     b.ToTable("Holidays");
 
                     b.HasData(
                         new
                         {
                             Id = 1,
+                            Client = "Internal",
                             DateEnd = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DateStart = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "New Year's Day"
@@ -291,6 +253,7 @@ namespace Entities.Migrations
                         new
                         {
                             Id = 2,
+                            Client = "Internal",
                             DateEnd = new DateTime(2026, 4, 3, 0, 0, 0, 0, DateTimeKind.Utc),
                             DateStart = new DateTime(2026, 4, 3, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "Good Friday"
@@ -298,6 +261,7 @@ namespace Entities.Migrations
                         new
                         {
                             Id = 3,
+                            Client = "Internal",
                             DateEnd = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             DateStart = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "Easter Sunday"
@@ -305,6 +269,7 @@ namespace Entities.Migrations
                         new
                         {
                             Id = 4,
+                            Client = "Internal",
                             DateEnd = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DateStart = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "Labour Day"
@@ -312,6 +277,7 @@ namespace Entities.Migrations
                         new
                         {
                             Id = 5,
+                            Client = "Internal",
                             DateEnd = new DateTime(2026, 8, 17, 0, 0, 0, 0, DateTimeKind.Utc),
                             DateStart = new DateTime(2026, 8, 17, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "Independence Day"
@@ -319,6 +285,7 @@ namespace Entities.Migrations
                         new
                         {
                             Id = 6,
+                            Client = "Internal",
                             DateEnd = new DateTime(2026, 12, 25, 0, 0, 0, 0, DateTimeKind.Utc),
                             DateStart = new DateTime(2026, 12, 25, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "Christmas Day"
@@ -720,15 +687,6 @@ namespace Entities.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Entities.Entities.Holiday", b =>
-                {
-                    b.HasOne("Entities.Entities.Client", "Client")
-                        .WithMany("Holidays")
-                        .HasForeignKey("ClientId");
-
-                    b.Navigation("Client");
-                });
-
             modelBuilder.Entity("Entities.Entities.ProjectRequiredRole", b =>
                 {
                     b.HasOne("Entities.Entities.Project", "Project")
@@ -852,11 +810,6 @@ namespace Entities.Migrations
                     b.Navigation("StaffRole");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Entities.Entities.Client", b =>
-                {
-                    b.Navigation("Holidays");
                 });
 
             modelBuilder.Entity("Entities.Entities.Department", b =>

@@ -26,6 +26,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ContractExtension> ContractExtensions { get; set; }
     public DbSet<HireRequest> HireRequests { get; set; }
     public DbSet<Holiday> Holidays { get; set; }
+    public DbSet<Client> Clients { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -135,13 +136,21 @@ public class ApplicationDbContext : DbContext
             .Property(hr => hr.Status)
             .HasDefaultValue("Open");
 
+        modelBuilder.Entity<Client>()
+            .Property(c => c.CreatedAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        modelBuilder.Entity<Client>()
+            .Property(c => c.UpdatedAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
         modelBuilder.Entity<Holiday>().HasData(
-            new Holiday { Id = 1, Name = "New Year's Day", Date = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },
-            new Holiday { Id = 2, Name = "Good Friday", Date = DateTime.SpecifyKind(new DateTime(2026, 4, 3), DateTimeKind.Utc) },
-            new Holiday { Id = 3, Name = "Easter Sunday", Date = DateTime.SpecifyKind(new DateTime(2026, 4, 5), DateTimeKind.Utc) },
-            new Holiday { Id = 4, Name = "Labour Day", Date = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc) },
-            new Holiday { Id = 5, Name = "Independence Day", Date = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc) },
-            new Holiday { Id = 6, Name = "Christmas Day", Date = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc) }
+            new Holiday { Id = 1, Name = "New Year's Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), ClientId = null },
+            new Holiday { Id = 2, Name = "Good Friday", DateStart = DateTime.SpecifyKind(new DateTime(2026, 4, 3), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 4, 3), DateTimeKind.Utc), ClientId = null },
+            new Holiday { Id = 3, Name = "Easter Sunday", DateStart = DateTime.SpecifyKind(new DateTime(2026, 4, 5), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 4, 5), DateTimeKind.Utc), ClientId = null },
+            new Holiday { Id = 4, Name = "Labour Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc), ClientId = null },
+            new Holiday { Id = 5, Name = "Independence Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc), ClientId = null },
+            new Holiday { Id = 6, Name = "Christmas Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc), ClientId = null }
         );
     }
 

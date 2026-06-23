@@ -13,4 +13,6 @@ public class CreateHolidayRequest
 
     [Required]
     public DateTime EndDate { get; set; }
+
+    public int? ClientId { get; set; }
 }

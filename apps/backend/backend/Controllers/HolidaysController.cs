@@ -23,9 +23,9 @@ public class HolidaysController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<HolidayDto>>>> GetAll()
+    public async Task<ActionResult<ApiResponse<List<HolidayDto>>>> GetAll([FromQuery] int? clientId = null)
     {
-        var data = await _service.GetAllAsync();
+        var data = await _service.GetAllAsync(clientId);
         return Ok(ApiResponse<List<HolidayDto>>.SuccessResponse(data));
     }
 

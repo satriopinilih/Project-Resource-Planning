@@ -9,5 +9,10 @@ public class UpdateHolidayRequest
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    public DateTime Date { get; set; }
+    public DateTime DateStart { get; set; }
+
+    [Required]
+    public DateTime DateEnd { get; set; }
+
+    public int? ClientId { get; set; }
 }
