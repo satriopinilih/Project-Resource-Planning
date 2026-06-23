@@ -61,6 +61,9 @@ export default function ResourcePipeline() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Default window starts at the Monday of the current week
   const [windowStart, setWindowStart] = useState<Date>(() => {
     return toMonday(new Date());
@@ -193,6 +196,9 @@ export default function ResourcePipeline() {
 
   const windowEnd = useMemo(() => addDays(windowStart, 12 * 7 - 1), [windowStart]);
 
+  const totalPages = Math.ceil(employees.length / itemsPerPage);
+  const currentEmployees = employees.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300">
       {/* Header */}
@@ -228,21 +234,47 @@ export default function ResourcePipeline() {
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legend and Pagination */}
       {!loading && !error && (
-        <div className="flex items-center gap-5 mb-5 text-[11px] font-semibold text-[var(--dash-text-muted)]">
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-[#3b82f6]" />
-            Scheduled
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-5 text-[11px] font-semibold text-[var(--dash-text-muted)]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-[#3b82f6]" />
+              Scheduled
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-[#22c55e]" />
+              Running
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-gray-500" />
+              Completed
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-[#22c55e]" />
-            Running
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-gray-500" />
-            Completed
-          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-3">
+              <p className="text-[12px] text-[var(--dash-text-faint)]">
+                Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-md hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-md hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -276,7 +308,7 @@ export default function ResourcePipeline() {
             </div>
 
             {/* List Karyawan */}
-            {employees.map((employee) => (
+            {currentEmployees.map((employee) => (
               <div
                 key={employee.id}
                 className="flex items-center py-3 border-t border-[var(--dash-border-subtle)] group hover:bg-[#1a1f2e]/30 transition-colors"
@@ -356,6 +388,8 @@ export default function ResourcePipeline() {
           </div>
         </div>
       )}
+
+
     </div>
   );
 }

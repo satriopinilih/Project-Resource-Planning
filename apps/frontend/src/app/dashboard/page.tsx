@@ -8,6 +8,7 @@ import AlertBanner from './gm/components/AlertBanner';
 import ProjectTimeline from './gm/components/ProjectTimeline';
 import ResourcePipeline from './gm/components/ResourcePipeline';
 import EmployeeContractTable from './gm/components/EmployeeContractTable';
+import ExpiringContractsAlert from './gm/components/ExpiringContractsAlert';
 import HRDashboard from './hr/components/HRDashboard';
 import PMDashboard from './pm/page';
 import MarketingDashboard from './mrkt/page';
@@ -47,6 +48,7 @@ export default function DashboardPage() {
       <div className="flex-1 p-6 space-y-5 overflow-y-auto">
         <StatCards />
         <AlertBanner />
+        <ExpiringContractsAlert />
         <ProjectTimeline />
         <ResourcePipeline />
         <EmployeeContractTable />
