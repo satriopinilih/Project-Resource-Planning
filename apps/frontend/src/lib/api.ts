@@ -117,7 +117,10 @@ export type BackendProject = {
 export type BackendHoliday = {
   id: number;
   name: string;
-  date: string;
+  dateStart: string;
+  dateEnd: string;
+  clientId: number | null;
+  clientName: string | null;
 };
 
 export type SkillDto = {
@@ -649,33 +652,68 @@ export async function getResourceTimeline(): Promise<TimelineItem[]> {
   return fetchRaw<TimelineItem[]>('/api/timeline/resources');
 }
 
-export async function getHolidays(): Promise<BackendHoliday[]> {
-  return fetchJson<BackendHoliday[]>('/api/holidays');
+export async function getHolidays(clientId?: number): Promise<BackendHoliday[]> {
+  const query = clientId ? `?clientId=${clientId}` : '';
+  return fetchJson<BackendHoliday[]>(`/api/holidays${query}`);
 }
 
-export async function createHoliday(name: string, startDate: string, endDate: string): Promise<BackendHoliday[]> {
+export async function createHoliday(name: string, startDate: string, endDate: string, clientId?: number | null): Promise<BackendHoliday[]> {
   return fetchJson<BackendHoliday[]>('/api/holidays', {
     method: 'POST',
-    body: JSON.stringify({ name, startDate, endDate })
+    body: JSON.stringify({ name, startDate, endDate, clientId })
   });
 }
 
-export async function bulkCreateHolidays(holidays: { name: string; date: string }[]): Promise<BackendHoliday[]> {
+export async function bulkCreateHolidays(holidays: { name: string; dateStart: string; dateEnd: string; clientId?: number | null }[]): Promise<BackendHoliday[]> {
   return fetchJson<BackendHoliday[]>('/api/holidays/bulk', {
     method: 'POST',
     body: JSON.stringify({ holidays })
   });
 }
 
-export async function updateHoliday(id: number, name: string, date: string): Promise<BackendHoliday> {
+export async function updateHoliday(id: number, name: string, dateStart: string, dateEnd: string, clientId?: number | null): Promise<BackendHoliday> {
   return fetchJson<BackendHoliday>(`/api/holidays/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ name, date })
+    body: JSON.stringify({ name, dateStart, dateEnd, clientId })
   });
 }
 
 export async function deleteHoliday(id: number): Promise<void> {
   await fetchJson(`/api/holidays/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+export type BackendClient = {
+  id: number;
+  name: string;
+  description: string;
+  totalHolidayDays: number;
+  upcomingHoliday: string;
+  longestHolidayDays: number;
+  lastUpdated: string;
+};
+
+export async function getClients(): Promise<BackendClient[]> {
+  return fetchJson<BackendClient[]>('/api/clients');
+}
+
+export async function createClient(name: string, description: string): Promise<BackendClient> {
+  return fetchJson<BackendClient>('/api/clients', {
+    method: 'POST',
+    body: JSON.stringify({ name, description })
+  });
+}
+
+export async function updateClient(id: number, name: string, description: string): Promise<BackendClient> {
+  return fetchJson<BackendClient>(`/api/clients/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name, description })
+  });
+}
+
+export async function deleteClient(id: number): Promise<void> {
+  await fetchJson(`/api/clients/${id}`, {
     method: 'DELETE'
   });
 }
