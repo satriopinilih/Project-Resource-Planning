@@ -300,7 +300,7 @@ public class EmployeeService
         {
             User = MapToUserDto(created),
             TemporaryPassword = temporaryPassword,
-            MustChangePassword = true
+            MustChangePassword = false // Disabled for Keycloak integration
         };
 
         return (true, null, result);
@@ -311,24 +311,8 @@ public class EmployeeService
     /// </summary>
     public async Task<(bool Success, string? Error, int StatusCode, object? Data)> ResetPasswordAsync(string id, string actorUserId)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id);
-        if (user is null)
-        {
-            return (false, "Employee not found", 404, null);
-        }
-
-        var temporaryPassword = AuthService.BuildTemporaryPassword(user.UserName, user.UserId);
-        user.Password = temporaryPassword;
-        user.UpdatedAt = DateTime.UtcNow;
-        user.UpdatedBy = actorUserId;
-
-        await _db.SaveChangesAsync();
-
-        return (true, null, 200, new
-        {
-            temporaryPassword,
-            mustChangePassword = true
-        });
+        // Reset password is disabled as passwords are managed by Keycloak.
+        return await Task.FromResult<(bool, string?, int, object?)>((false, "Password reset is disabled as passwords are managed by Keycloak.", 400, null));
     }
 
     private static UserDto MapToUserDto(User u)

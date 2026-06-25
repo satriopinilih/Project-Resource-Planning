@@ -83,12 +83,12 @@ export default function LoginPage() {
               htmlFor="userId"
               className="text-sm font-semibold text-[#2d3748] pl-0.5"
             >
-              User ID
+              Email or User ID
             </label>
             <input
               id="userId"
               type="text"
-              placeholder="UserId"
+              placeholder="Email or User ID"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               className="w-full h-12 px-4 text-[0.95rem] text-[#1a1f36] bg-[#f7f9fc] border-[1.5px] border-[#e2e8f0] rounded-xl outline-none transition-all duration-200 placeholder:text-[#a0aec0] hover:border-[#c5d1e8] hover:bg-[#f0f4fb] focus:border-[#3366ff] focus:bg-white focus:shadow-[0_0_0_3px_rgba(51,102,255,0.1)]"
