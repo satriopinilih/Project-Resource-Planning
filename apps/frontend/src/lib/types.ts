@@ -4,9 +4,12 @@ export interface Project {
   client: string;
   startDate: string;
   endDate: string;
-  status: 'Completed' | 'Active' | 'Scheduled' | 'Upcoming';
+  status: 'Completed' | 'Running' | 'Scheduled' | 'Upcoming';
   startWeek?: string;
   endWeek?: string;
+  roleInProject?: string;
+  isUnread?: boolean;
+  swapReason?: string;
 }
 
 export interface Employee {

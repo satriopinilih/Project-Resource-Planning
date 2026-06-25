@@ -30,4 +30,7 @@ public class UserProjectDto
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public UserProjectStatus Status { get; set; }
+    public ProjectStatus? ProjectStatus { get; set; }
+    public bool IsUnread { get; set; }
+    public string? SwapReason { get; set; }
 }

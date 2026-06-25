@@ -160,6 +160,36 @@ public class HireRequestService
 
         row.UpdatedAt = DateTime.UtcNow;
         row.UpdatedBy = actorUserId;
+
+        if (row.ProjectId.HasValue && row.ProjectId.Value > 0)
+        {
+            var gms = await _db.UserRoles
+                .Include(ur => ur.Role)
+                .Where(ur => ur.Role.RoleName == Commons.Enums.RoleName.GM)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            var candidateName = !string.IsNullOrWhiteSpace(request.HiredEmployeeName)
+                ? request.HiredEmployeeName
+                : "a candidate";
+
+            foreach (var gmId in gms)
+            {
+                var notif = new UserProject
+                {
+                    UserId = gmId,
+                    ProjectId = row.ProjectId.Value,
+                    RoleInProject = "GM Notification",
+                    Status = Commons.Enums.UserProjectStatus.Assigned,
+                    IsNotificationRead = false,
+                    SwapReason = $"HR updated the hiring status of {candidateName} to {request.Status}.",
+                    StartDate = DateTime.UtcNow,
+                    EndDate = DateTime.UtcNow
+                };
+                _db.UserProjects.Add(notif);
+            }
+        }
+
         await _db.SaveChangesAsync();
 
         return (true, null, 200, Map(row));

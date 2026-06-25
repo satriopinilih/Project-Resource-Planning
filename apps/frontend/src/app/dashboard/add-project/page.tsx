@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Plus,
   Calendar as CalendarIcon,
@@ -13,7 +13,9 @@ import {
   ShieldAlert,
   Search,
   Sparkles,
-  X
+  X,
+  ChevronDown,
+  Building2
 } from "lucide-react";
 import {
   getHolidays,
@@ -23,6 +25,8 @@ import {
   EmployeeFormOptions,
   getProjects,
   BackendProject,
+  getClients,
+  BackendClient,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
@@ -43,7 +47,16 @@ export default function AddProjectPage() {
   const MAX_TECHNICAL_ROLES = 5;
   const ALLOWED_WORKING_TYPES = ["Dedicated", "Non-Dedicated"];
 
+  // --- Client dropdown state ---
+  const [clients, setClients] = useState<BackendClient[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
+
+  // --- Holiday state ---
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
+  const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
   const [customHolidays, setCustomHolidays] = useState<BackendHoliday[]>([]);
   const [newHolidayName, setNewHolidayName] = useState("");
   const [newHolidayDate, setNewHolidayDate] = useState("");
@@ -68,7 +81,6 @@ export default function AddProjectPage() {
 
     const dateString = new Date(newHolidayDate).toISOString().split('T')[0];
 
-    // Check if duplicate date
     const isDbHoliday = holidays.some(h => isDateHoliday(h, dateString));
     const isCustomHoliday = customHolidays.some(h => isDateHoliday(h, dateString));
 
@@ -119,8 +131,9 @@ export default function AddProjectPage() {
     { id: '1', role: 'PM', count: 1, workingType: 'Dedicated' }
   ]);
 
+  // --- Initial data fetch ---
   useEffect(() => {
-    getHolidays().then(setHolidays).catch(console.error);
+    getClients().then(setClients).catch(console.error);
     getEmployeeFormOptions().then(setFormOptions).catch(console.error);
     getProjects()
       .then((allProjects) => {
@@ -131,6 +144,38 @@ export default function AddProjectPage() {
       })
       .catch(console.error);
   }, []);
+
+  // --- Fetch holidays when client changes ---
+  useEffect(() => {
+    if (selectedClientId === null) {
+      setHolidays([]);
+      return;
+    }
+    setIsLoadingHolidays(true);
+    getHolidays(selectedClientId)
+      .then(setHolidays)
+      .catch(console.error)
+      .finally(() => setIsLoadingHolidays(false));
+  }, [selectedClientId]);
+
+  // --- Close client dropdown when clicking outside ---
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target as Node)) {
+        setIsClientDropdownOpen(false);
+        setClientSearchQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredClients = useMemo(() => {
+    if (!clientSearchQuery.trim()) return clients;
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(clientSearchQuery.toLowerCase())
+    );
+  }, [clients, clientSearchQuery]);
 
   const filteredHistoryProjects = useMemo(() => {
     if (!searchHistoryQuery.trim()) return historicalProjects;
@@ -147,7 +192,6 @@ export default function AddProjectPage() {
     [formOptions.staffRoles]
   );
 
-  // --- Derived state for role management ---
   const technicalRolesCount = useMemo(
     () => teamRoles.filter(r => r.role !== 'PM').length,
     [teamRoles]
@@ -209,6 +253,7 @@ export default function AddProjectPage() {
     return missing;
   }, [teamRoles]);
 
+  // --- End date calculation ---
   useEffect(() => {
     if (!startDate || durationWeeks <= 0) {
       setEndDateDetails({ date: null, skippedHolidays: [], totalWorkingDays: 0 });
@@ -274,7 +319,6 @@ export default function AddProjectPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    // Validate uniqueness of technical roles
     const techRoleNames = teamRoles.filter(r => r.role !== 'PM').map(r => r.role);
     const uniqueRoles = new Set(techRoleNames);
     if (uniqueRoles.size !== techRoleNames.length) {
@@ -301,7 +345,6 @@ export default function AddProjectPage() {
     const priorityMap: Record<string, number> = { "Low": 0, "Medium": 1, "High": 2 };
     const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
 
-    // Format custom holidays list to append to project description/notes
     let finalDescription = projectDescription;
     if (customHolidays.length > 0) {
       const customHolidayList = customHolidays
@@ -346,6 +389,8 @@ export default function AddProjectPage() {
   const inputClasses = "w-full bg-gray-50 dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 cursor-pointer";
   const labelClasses = "block text-[13px] font-medium text-gray-700 dark:text-gray-100 mb-2 mt-1 ml-0.5";
 
+  const selectedClient = clients.find(c => c.id === selectedClientId) ?? null;
+
   return (
     <div className="flex-1 p-8 overflow-y-auto w-full">
       <div className="max-w-4xl mx-auto">
@@ -376,16 +421,103 @@ export default function AddProjectPage() {
                 />
               </div>
 
-              <div>
+              {/* Client Organization — Radix-style custom Popover dropdown */}
+              <div ref={clientDropdownRef} className="relative">
                 <label className={labelClasses}>Client Organization <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g., TechCorp Inc."
-                  className={inputClasses}
-                  value={clientOrganization}
-                  onChange={(e) => setClientOrganization(e.target.value)}
-                  required
-                />
+
+                {/* Trigger Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsClientDropdownOpen(prev => !prev);
+                    setClientSearchQuery("");
+                  }}
+                  className={`w-full flex items-center justify-between gap-2 bg-gray-50 dark:bg-[#1b202e] border ${isClientDropdownOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200 dark:border-white/10'} text-gray-900 dark:text-white rounded-xl px-4 py-3 text-[14px] transition-colors`}
+                >
+                  <span className={`flex items-center gap-2 truncate ${!selectedClient ? 'text-gray-400 dark:text-gray-500' : ''}`}>
+                    {selectedClient ? (
+                      <>
+                        <Building2 size={14} className="shrink-0 text-blue-500" />
+                        {selectedClient.name}
+                      </>
+                    ) : (
+                      "Select client..."
+                    )}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`shrink-0 text-gray-400 transition-transform duration-200 ${isClientDropdownOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {/* Dropdown Panel */}
+                {isClientDropdownOpen && (
+                  <div className="absolute z-30 mt-1.5 w-full bg-white dark:bg-[#1b202e] border border-gray-200 dark:border-white/10 rounded-2xl shadow-xl overflow-hidden">
+                    {/* Search inside dropdown */}
+                    <div className="p-2 border-b border-gray-100 dark:border-white/5">
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search clients..."
+                          value={clientSearchQuery}
+                          onChange={(e) => setClientSearchQuery(e.target.value)}
+                          className="w-full pl-8 pr-4 py-2 text-[13px] bg-gray-50 dark:bg-[#242427] border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-blue-500/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Client list */}
+                    <div className="max-h-52 overflow-y-auto">
+                      {filteredClients.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-[13px] text-gray-400 dark:text-gray-500">
+                          No clients found.
+                        </div>
+                      ) : (
+                        filteredClients.map((client) => {
+                          const isSelected = client.id === selectedClientId;
+                          return (
+                            <button
+                              key={client.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedClientId(client.id);
+                                setClientOrganization(client.name);
+                                setIsClientDropdownOpen(false);
+                                setClientSearchQuery("");
+                              }}
+                              className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors border-b border-gray-100 dark:border-white/[0.04] last:border-b-0 ${isSelected
+                                ? 'bg-blue-50 dark:bg-blue-500/10'
+                                : 'hover:bg-gray-50 dark:hover:bg-white/[0.03]'
+                                }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-[11px] shrink-0">
+                                  {client.name.replace("PT. ", "").charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className={`text-[13px] font-semibold truncate ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
+                                    {client.name}
+                                  </p>
+                                  {client.totalHolidayDays > 0 && (
+                                    <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                                      {client.totalHolidayDays} holiday day{client.totalHolidayDays !== 1 ? 's' : ''}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <Check size={14} className="shrink-0 text-blue-500" />
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -440,6 +572,43 @@ export default function AddProjectPage() {
                 </div>
               </div>
             </div>
+
+            {/* Client holiday info panel */}
+            {selectedClient && (
+              <div className="bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl p-4 flex items-start gap-3 transition-all duration-300">
+                <div className="p-1.5 bg-indigo-100 dark:bg-indigo-500/10 rounded-lg shrink-0">
+                  <CalendarIcon className="text-indigo-600 dark:text-indigo-400" size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-200">
+                    Holiday calendar loaded for <span className="text-indigo-600 dark:text-indigo-400">{selectedClient.name}</span>
+                  </p>
+                  {isLoadingHolidays ? (
+                    <p className="text-[12px] text-gray-400 mt-0.5 flex items-center gap-1.5">
+                      <Loader2 size={12} className="animate-spin" /> Fetching holidays...
+                    </p>
+                  ) : (
+                    <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      {holidays.length > 0
+                        ? `${holidays.length} holiday(s) will be factored into the end date calculation.`
+                        : "No holidays registered for this client yet."}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedClientId(null);
+                    setClientOrganization("");
+                    setHolidays([]);
+                  }}
+                  className="shrink-0 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+                  title="Clear client selection"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
 
             {/* Custom Project Holidays Widget */}
             <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-6 space-y-4 transition-colors">
@@ -538,7 +707,7 @@ export default function AddProjectPage() {
               </div>
             )}
 
-            {/* Have experience on Project A - Smart Auto-populate Skills selection */}
+            {/* Smart Recommendation */}
             <div className="space-y-4 pt-2">
               <label className={labelClasses}>
                 <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold text-[14px]">
@@ -656,6 +825,7 @@ export default function AddProjectPage() {
               )}
             </div>
 
+            {/* Skills */}
             <div className="space-y-4">
               <label className={labelClasses}>Project-Level Required Skills</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -686,6 +856,7 @@ export default function AddProjectPage() {
               </div>
             </div>
 
+            {/* Team Roles */}
             <div className="space-y-4 pt-4">
               <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap justify-between items-center gap-4">
@@ -698,7 +869,6 @@ export default function AddProjectPage() {
                         Required Team Roles <span className="text-red-500">*</span>
                       </label>
                     </div>
-                    {/* Role counter badge */}
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-colors ${isTechRoleLimitReached
                       ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
                       : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/25'
@@ -707,7 +877,6 @@ export default function AddProjectPage() {
                     </span>
                   </div>
 
-                  {/* Action buttons row */}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -734,7 +903,6 @@ export default function AddProjectPage() {
                   </div>
                 </div>
 
-                {/* Limit reached warning */}
                 {isTechRoleLimitReached && (
                   <div className="flex items-center gap-2 text-[12px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 px-3 py-2 rounded-xl">
                     <ShieldAlert size={14} />
@@ -866,7 +1034,6 @@ export default function AddProjectPage() {
               Please double-check the project scope and team requirements before sending it for approval.
             </p>
 
-            {/* Smart Warnings */}
             {missingRoles.length > 0 && (
               <div className="mb-8 p-5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 rounded-2xl">
                 <div className="flex items-center gap-2.5 text-amber-700 dark:text-amber-400 font-bold text-[14px] mb-2 px-1">

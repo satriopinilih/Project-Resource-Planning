@@ -276,6 +276,8 @@ public class ProjectService
             existing.StartDate = request.StartDate ?? project.EstimatedStartDate;
             existing.EndDate = request.EndDate ?? project.EstimatedEndDate;
             existing.Status = UserProjectStatus.Assigned;
+            existing.IsNotificationRead = false;
+            existing.SwapReason = "Assigned to project";
         }
         else
         {
@@ -287,7 +289,9 @@ public class ProjectService
                 WorkingType = request.WorkingType,
                 StartDate = request.StartDate ?? project.EstimatedStartDate,
                 EndDate = request.EndDate ?? project.EstimatedEndDate,
-                Status = UserProjectStatus.Assigned
+                Status = UserProjectStatus.Assigned,
+                IsNotificationRead = false,
+                SwapReason = "Assigned to project"
             };
             _db.UserProjects.Add(userProject);
         }
@@ -321,12 +325,26 @@ public class ProjectService
     public async Task<(bool Success, string? Error, int StatusCode)> UnassignMemberAsync(int projectId, string userId)
     {
         var assignment = await _db.UserProjects
+            .Include(up => up.Project)
             .FirstOrDefaultAsync(up => up.ProjectId == projectId && up.UserId == userId);
 
         if (assignment is null)
             return (false, "Assignment not found", 404);
 
-        _db.UserProjects.Remove(assignment);
+        if (assignment.Project.ProjectStatus != ProjectStatus.Pending && assignment.StartDate <= DateTime.UtcNow)
+        {
+            // If they have likely contributed, mark as completed and trigger notification
+            assignment.Status = UserProjectStatus.Completed;
+            assignment.EndDate = DateTime.UtcNow;
+            assignment.SwapReason = "Removed by GM";
+            assignment.IsNotificationRead = false;
+        }
+        else
+        {
+            // If project hasn't started or they haven't started, just hard delete
+            _db.UserProjects.Remove(assignment);
+        }
+
         await _db.SaveChangesAsync();
 
         return (true, null, 200);
@@ -782,9 +800,12 @@ public class ProjectService
         // Build a lookup so we can resolve ReplacedByUserName
         var userNameLookup = p.UserProjects
             .Where(up => up.User != null)
-            .ToDictionary(up => up.UserId, up => up.User!.UserName);
+            .GroupBy(up => up.UserId)
+            .ToDictionary(g => g.Key, g => g.First().User!.UserName);
 
-        var members = p.UserProjects.Select(up => new ProjectMemberDto
+        var members = p.UserProjects
+            .Where(up => up.RoleInProject != "GM Notification")
+            .Select(up => new ProjectMemberDto
         {
             UserId = up.UserId,
             UserName = up.User?.UserName ?? up.UserId,

@@ -42,7 +42,7 @@ export default function HolidaysPage() {
   const [clients, setClients] = useState<BackendClient[]>([]);
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
   const [selectedClient, setSelectedClient] = useState<BackendClient | null>(null);
-  
+
   // Loading states
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [isLoadingHolidays, setIsLoadingHolidays] = useState(true);
@@ -56,7 +56,7 @@ export default function HolidaysPage() {
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
   const [isDeleteClientModalOpen, setIsDeleteClientModalOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<BackendClient | null>(null);
-  
+
   const [isAddHolidayModalOpen, setIsAddHolidayModalOpen] = useState(false);
   const [isEditHolidayModalOpen, setIsEditHolidayModalOpen] = useState(false);
   const [isDeleteHolidayModalOpen, setIsDeleteHolidayModalOpen] = useState(false);
@@ -68,7 +68,7 @@ export default function HolidaysPage() {
   // Form states - Client
   const [clientNameInput, setClientNameInput] = useState("");
   const [clientDescInput, setClientDescInput] = useState("");
-  
+
   // Form states - Holiday
   const [holidayNameInput, setHolidayNameInput] = useState("");
   const [holidayStartDateInput, setHolidayStartDateInput] = useState("");
@@ -99,7 +99,7 @@ export default function HolidaysPage() {
     try {
       const clientData = await getClients();
       const holidayData = await getHolidays();
-      
+
       setClients(clientData);
       setHolidays(holidayData);
 
@@ -171,7 +171,7 @@ export default function HolidaysPage() {
   const getMonthTimeline = (clientId: number) => {
     const timeline = Array(12).fill(false);
     const year = calendarDate.getFullYear();
-    
+
     const relevantHolidays = holidays.filter(
       (h) => h.clientId === null || h.clientId === clientId
     );
@@ -179,14 +179,14 @@ export default function HolidaysPage() {
     relevantHolidays.forEach((h) => {
       const start = new Date(h.dateStart);
       const end = new Date(h.dateEnd);
-      
+
       const startYear = start.getFullYear();
       const endYear = end.getFullYear();
 
       if (startYear <= year && endYear >= year) {
         const startMonth = startYear < year ? 0 : start.getMonth();
         const endMonth = endYear > year ? 11 : end.getMonth();
-        
+
         for (let m = startMonth; m <= endMonth; m++) {
           timeline[m] = true;
         }
@@ -378,19 +378,19 @@ export default function HolidaysPage() {
   const calendarCells = useMemo(() => {
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth();
-    
+
     // First day of month
     const firstDay = new Date(year, month, 1);
     const startDayOfWeek = firstDay.getDay(); // 0: Sun, 1: Mon, ...
-    
+
     // Total days in month
     const totalDays = new Date(year, month + 1, 0).getDate();
-    
+
     // Total days in previous month
     const prevMonthTotalDays = new Date(year, month, 0).getDate();
-    
+
     const cells: { date: Date; isCurrentMonth: boolean }[] = [];
-    
+
     // Previous month filler days (dimmed)
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
       cells.push({
@@ -398,7 +398,7 @@ export default function HolidaysPage() {
         isCurrentMonth: false
       });
     }
-    
+
     // Current month days
     for (let i = 1; i <= totalDays; i++) {
       cells.push({
@@ -406,7 +406,7 @@ export default function HolidaysPage() {
         isCurrentMonth: true
       });
     }
-    
+
     // Next month filler days (dimmed)
     const remaining = cells.length % 7;
     if (remaining > 0) {
@@ -418,7 +418,7 @@ export default function HolidaysPage() {
         });
       }
     }
-    
+
     // Keep standard 6 rows to prevent height shifts
     while (cells.length < 42) {
       const nextMonthStart = cells.length - totalDays - startDayOfWeek + 1;
@@ -427,7 +427,7 @@ export default function HolidaysPage() {
         isCurrentMonth: false
       });
     }
-    
+
     return cells;
   }, [calendarDate]);
 
@@ -452,8 +452,8 @@ export default function HolidaysPage() {
   const checkIsToday = (date: Date) => {
     const today = new Date();
     return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear();
   };
 
   const checkIsWeekend = (date: Date) => {
@@ -537,27 +537,63 @@ export default function HolidaysPage() {
             if (!nameVal && !dateVal) continue;
 
             const holidayName = nameVal ? String(nameVal).trim() : "";
-            const parsedDate = parseExcelDate(dateVal);
+            const isRange = typeof dateVal === 'string' && dateVal.includes(' - ');
 
-            let isValid = true;
-            let rowError = "";
+            const datesToProcess: { val: any, parsed: string | null }[] = [];
 
-            if (!holidayName) {
-              isValid = false;
-              rowError = "Holiday name is empty";
-            } else if (holidayName.length > 200) {
-              isValid = false;
-              rowError = "Holiday name exceeds 200 characters";
-            } else if (!parsedDate) {
-              isValid = false;
-              rowError = `Invalid date format (expected DD-MM-YYYY or Date)`;
+            if (isRange) {
+              const parts = String(dateVal).split(' - ');
+              if (parts.length === 2) {
+                const parsedStart = parseExcelDate(parts[0].trim());
+                const parsedEnd = parseExcelDate(parts[1].trim());
+
+                if (parsedStart && parsedEnd) {
+                  const [sYear, sMonth, sDay] = parsedStart.split('-').map(Number);
+                  const [eYear, eMonth, eDay] = parsedEnd.split('-').map(Number);
+
+                  const start = new Date(sYear, sMonth - 1, sDay);
+                  const end = new Date(eYear, eMonth - 1, eDay);
+
+                  if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+                    let current = new Date(start);
+                    while (current <= end) {
+                      datesToProcess.push({ val: current, parsed: formatLocalDate(current) });
+                      current.setDate(current.getDate() + 1);
+                    }
+                  } else {
+                    datesToProcess.push({ val: dateVal, parsed: null });
+                  }
+                } else {
+                  datesToProcess.push({ val: dateVal, parsed: null });
+                }
+              } else {
+                datesToProcess.push({ val: dateVal, parsed: null });
+              }
+            } else {
+              datesToProcess.push({ val: dateVal, parsed: parseExcelDate(dateVal) });
             }
 
-            items.push({
-              name: holidayName,
-              date: parsedDate || (dateVal ? String(dateVal) : ""),
-              isValid,
-              error: rowError
+            datesToProcess.forEach(dateItem => {
+              let isValid = true;
+              let rowError = "";
+
+              if (!holidayName) {
+                isValid = false;
+                rowError = "Holiday name is empty";
+              } else if (holidayName.length > 200) {
+                isValid = false;
+                rowError = "Holiday name exceeds 200 characters";
+              } else if (!dateItem.parsed) {
+                isValid = false;
+                rowError = `Invalid date format (expected DD-MM-YYYY or Date or Range)`;
+              }
+
+              items.push({
+                name: holidayName,
+                date: dateItem.parsed || (dateItem.val ? String(dateItem.val) : ""),
+                isValid,
+                error: rowError
+              });
             });
           }
 
@@ -633,7 +669,7 @@ export default function HolidaysPage() {
   const getAvatarStyle = (name: string) => {
     const firstChar = name.replace("PT. ", "").trim().charAt(0).toUpperCase();
     const code = firstChar.charCodeAt(0);
-    
+
     // Curated aesthetic gradients/colors matching modern systems
     const palettes = [
       "from-indigo-500 to-indigo-600 shadow-indigo-500/10 text-white",
@@ -643,7 +679,7 @@ export default function HolidaysPage() {
       "from-amber-500 to-amber-600 shadow-amber-500/10 text-white",
       "from-purple-500 to-purple-600 shadow-purple-500/10 text-white"
     ];
-    
+
     return palettes[code % palettes.length];
   };
 
@@ -659,7 +695,7 @@ export default function HolidaysPage() {
 
   return (
     <div className="min-h-screen bg-[var(--dash-bg-page)] text-gray-900 dark:text-white p-6 font-sans transition-colors duration-300">
-      
+
       {/* Top Header Block */}
       <section className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-[#242427] rounded-3xl p-6 shadow-sm border border-gray-250/30 dark:border-white/5 transition-all duration-300">
         <div>
@@ -680,7 +716,7 @@ export default function HolidaysPage() {
               setFormError(null);
               setIsImportModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold rounded-xl transition-all shadow-md shadow-emerald-500/10 active:scale-95 cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-800 hover:bg-emerald-900 text-white text-[13px] font-semibold rounded-xl transition-all shadow-md shadow-emerald-500/10 active:scale-95 cursor-pointer"
           >
             <UploadCloud size={16} />
             Import Excel
@@ -697,10 +733,10 @@ export default function HolidaysPage() {
 
       {/* Main Two-Section Panel */}
       <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-180px)]">
-        
+
         {/* SECTION 1: Client List (Left) */}
         <aside className="w-full lg:w-80 xl:w-96 shrink-0 bg-white dark:bg-[#242427] border border-gray-200 dark:border-white/5 rounded-3xl p-5 flex flex-col shadow-sm">
-          
+
           {/* Search bar */}
           <div className="relative mb-4">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
@@ -743,11 +779,10 @@ export default function HolidaysPage() {
                   <div
                     key={client.id}
                     onClick={() => setSelectedClient(client)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer select-none relative group ${
-                      isSelected
-                        ? "bg-indigo-500/5 border-indigo-500 shadow-sm shadow-indigo-500/5"
-                        : "bg-transparent border-gray-150/60 dark:border-white/[0.03] hover:bg-gray-50 dark:hover:bg-white/[0.01]"
-                    }`}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer select-none relative group ${isSelected
+                      ? "bg-indigo-500/5 border-indigo-500 shadow-sm shadow-indigo-500/5"
+                      : "bg-transparent border-gray-150/60 dark:border-white/[0.03] hover:bg-gray-50 dark:hover:bg-white/[0.01]"
+                      }`}
                   >
                     {/* Client Main Row */}
                     <div className="flex items-start justify-between gap-3 mb-2">
@@ -808,7 +843,7 @@ export default function HolidaysPage() {
 
         {/* SECTION 2: Selected Client Dashboard (Right) */}
         <main className="flex-1 flex flex-col gap-6">
-          
+
           {selectedClient ? (
             <>
               {/* Selected Client Card Header */}
@@ -847,7 +882,7 @@ export default function HolidaysPage() {
 
               {/* Stats Cards Row */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                
+
                 {/* Stat 1: Total Holiday */}
                 <div className="bg-white dark:bg-[#242427] border border-gray-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
                   <span className="inline-flex items-center px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-full mb-3">
@@ -892,14 +927,14 @@ export default function HolidaysPage() {
 
               {/* Holiday Calendar Component */}
               <div className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-250/30 dark:border-white/5 shadow-sm flex flex-col gap-6">
-                
+
                 {/* Calendar Navigation and Title */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-white/5 pb-4">
                   <div>
                     <h4 className="text-[17px] font-bold text-gray-900 dark:text-white">Holiday Calendar</h4>
                     <p className="text-[12px] text-gray-400">View and audit dates for this month</p>
                   </div>
-                  
+
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center bg-gray-100 dark:bg-white/5 rounded-xl p-1">
                       <button
@@ -931,7 +966,7 @@ export default function HolidaysPage() {
 
                 {/* Calendar View Container */}
                 <div className="flex flex-col xl:flex-row gap-6">
-                  
+
                   {/* Calendar Grid */}
                   <div className="flex-1">
                     <div className="grid grid-cols-7 text-center gap-1 mb-2">
@@ -977,7 +1012,7 @@ export default function HolidaysPage() {
                             <span className="text-[12px] font-semibold self-end">
                               {cell.date.getDate()}
                             </span>
-                            
+
                             {/* Hover tooltip for holiday names */}
                             {holiday && isCurrentMonth && (
                               <>
@@ -1010,7 +1045,7 @@ export default function HolidaysPage() {
                         <span>Today</span>
                       </div>
                     </div>
-                    
+
                     <div className="mt-2 text-[11px] font-medium text-gray-400 flex items-start gap-1.5 border-t border-gray-200/50 dark:border-white/5 pt-3">
                       <Info size={12} className="shrink-0 mt-0.5 text-indigo-500" />
                       <span>Hover over holiday cells to view their catalog titles.</span>
@@ -1043,9 +1078,9 @@ export default function HolidaysPage() {
                       const isNational = h.clientId === null;
                       const dateStart = h.dateStart.split("T")[0];
                       const dateEnd = h.dateEnd.split("T")[0];
-                      
+
                       const duration = Math.round((new Date(dateEnd).getTime() - new Date(dateStart).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                      
+
                       return (
                         <div key={h.id} className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0 group">
                           <div className="flex items-start gap-3 min-w-0">
@@ -1057,16 +1092,15 @@ export default function HolidaysPage() {
                                 <h5 className="text-[14px] font-bold text-gray-900 dark:text-white truncate">
                                   {h.name}
                                 </h5>
-                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                                  isNational 
-                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" 
-                                    : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                                }`}>
+                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${isNational
+                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                  : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                                  }`}>
                                   {isNational ? "NATIONAL" : "CLIENT"}
                                 </span>
                               </div>
                               <p className="text-[12px] text-gray-500 dark:text-gray-400 font-medium">
-                                {dateStart === dateEnd 
+                                {dateStart === dateEnd
                                   ? formatDateReadable(h.dateStart)
                                   : `${formatDateReadable(h.dateStart)} - ${formatDateReadable(h.dateEnd)}`
                                 }
@@ -1572,11 +1606,10 @@ export default function HolidaysPage() {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
-                    isDragging
-                      ? "border-indigo-500 bg-indigo-500/5"
-                      : "border-gray-200 dark:border-white/10 hover:border-indigo-500/50 hover:bg-indigo-500/[0.02]"
-                  }`}
+                  className={`border-2 border-dashed rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${isDragging
+                    ? "border-indigo-500 bg-indigo-500/5"
+                    : "border-gray-200 dark:border-white/10 hover:border-indigo-500/50 hover:bg-indigo-500/[0.02]"
+                    }`}
                   onClick={() => document.getElementById("excel-import-input")?.click()}
                 >
                   <input
