@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getSessionUser, SessionUser } from "@/lib/auth";
 import { getEmployeeById, getEmployeeFormOptions, updateEmployeeSkills, LookupItem } from "@/lib/api";
 import { Employee, Project } from "@/lib/types";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, Calendar as CalendarIcon, FolderKanban, CalendarClock, Users, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import GanttTimeline from "./GanttTimeline";
 
 export default function StaffDashboard() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -98,11 +99,99 @@ export default function StaffDashboard() {
     );
   }
 
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  };
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+
+  const totalCount = employee?.projects?.length ?? 0;
+  const scheduledCount = employee?.projects?.filter(p => p.status === 'Scheduled').length ?? 0;
+  const runningCount = employee?.projects?.filter(p => p.status === 'Running').length ?? 0;
+  const completedCount = employee?.projects?.filter(p => p.status === 'Completed').length ?? 0;
+
   return (
     <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-      <div className="mb-2">
-        <h1 className="text-[24px] font-bold text-[var(--dash-text-heading)]">Staff Dashboard</h1>
-        <p className="text-[14px] text-[var(--dash-text-secondary)] mt-1">Welcome, {user?.userName}. Here are the projects you are currently assigned to.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--dash-text-heading)] tracking-tight">
+            {greeting}, {user?.userName}
+          </h1>
+          <p className="text-[var(--dash-text-muted)] text-sm mt-1 leading-relaxed">
+            Overview of your current project landscape.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center bg-[var(--dash-bg-card)] backdrop-blur-md p-1.5 rounded-2xl border border-[var(--dash-border)] shadow-sm">
+            <div className="flex items-center gap-3 px-4 py-2">
+              <div className="p-2 bg-blue-500/10 rounded-xl dark:bg-blue-500/20">
+                <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[9px] text-[var(--dash-text-faint)] uppercase font-black tracking-widest leading-none mb-1">
+                  Calendar
+                </span>
+                <span className="text-sm font-bold text-[var(--dash-text-primary)]">
+                  {formatDate(new Date())}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stat Cards Grid (Reference UI Image - Display Only) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 select-none">
+        {/* Card 1: Total Projects (Wider) */}
+        <div className="sm:col-span-2 bg-[#2563eb] text-white rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-white/80">Total Projects</p>
+            <h3 className="text-3xl font-bold text-white mt-1.5">{totalCount}</h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+            <FolderKanban className="w-5 h-5 text-white" />
+          </div>
+        </div>
+
+        {/* Card 2: Scheduled */}
+        <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-[var(--dash-text-muted)]">Scheduled</p>
+            <h3 className="text-3xl font-bold text-purple-400 mt-1.5">{scheduledCount}</h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+            <CalendarClock className="w-5 h-5 text-purple-400" />
+          </div>
+        </div>
+
+        {/* Card 3: Running */}
+        <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-[var(--dash-text-muted)]">Running</p>
+            <h3 className="text-3xl font-bold text-emerald-500 mt-1.5">{runningCount}</h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5 text-emerald-500" />
+          </div>
+        </div>
+
+        {/* Card 4: Completed */}
+        <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-[var(--dash-text-muted)]">Completed</p>
+            <h3 className="text-3xl font-bold text-[var(--dash-text-heading)] mt-1.5">{completedCount}</h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-[var(--dash-text-muted)]" />
+          </div>
+        </div>
       </div>
 
       <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300 shadow-sm">
@@ -146,10 +235,8 @@ export default function StaffDashboard() {
                   key={project.id}
                   className="border-b border-[var(--dash-border-subtle)] last:border-0 hover:bg-[var(--dash-bg-hover)] transition-colors group"
                 >
-                  <td className="py-3 px-4 pl-0">
-                    <Link href={`/projects/${project.id}`} className="text-[13px] font-semibold text-[var(--dash-text-heading)] hover:text-[#3b82f6] transition-colors line-clamp-1">
-                      {project.name}
-                    </Link>
+                  <td className="py-3 px-4 pl-0 text-[13px] font-semibold text-[var(--dash-text-heading)] hover:text-[#3b82f6] transition-colors ">
+                    {project.name}
                   </td>
                   <td className="py-3 px-4 text-[13px] text-[var(--dash-text-muted)] whitespace-nowrap">
                     {project.client}
@@ -167,13 +254,13 @@ export default function StaffDashboard() {
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${project.status === 'Completed'
-                        ? 'bg-[#64748b]/20 border-[#64748b]/60 text-[#64748b]'
-                        : project.status === 'Scheduled'
-                          ? 'bg-[#3b82f6]/20 border-[#3b82f6]/60 text-[#3b82f6]'
-                          : 'bg-[#22c55e]/20 border-[#22c55e]/60 text-[#22c55e]'
+                      ? 'bg-[#64748b]/20 border-[#64748b]/60 text-[#64748b]'
+                      : project.status === 'Scheduled'
+                        ? 'bg-[#3b82f6]/20 border-[#3b82f6]/60 text-[#3b82f6]'
+                        : 'bg-[#22c55e]/20 border-[#22c55e]/60 text-[#22c55e]'
                       }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${project.status === 'Completed' ? 'bg-[#64748b]' :
-                          project.status === 'Scheduled' ? 'bg-[#3b82f6]' : 'bg-[#22c55e]'
+                        project.status === 'Scheduled' ? 'bg-[#3b82f6]' : 'bg-[#22c55e]'
                         }`} />
                       {project.status}
                     </span>
@@ -192,6 +279,11 @@ export default function StaffDashboard() {
           </table>
         </div>
       </div>
+
+      {/* ── Gantt-style Project Timeline ─────────────────────────── */}
+      {activeProjects.length > 0 && (
+        <GanttTimeline projects={activeProjects} />
+      )}
 
       {hasAnyCompletedProjects && (
         <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300 shadow-sm mt-6">
@@ -235,10 +327,8 @@ export default function StaffDashboard() {
                     key={project.id}
                     className="border-b border-[var(--dash-border-subtle)] last:border-0 hover:bg-[var(--dash-bg-hover)] transition-colors group"
                   >
-                    <td className="py-3 px-4 pl-0">
-                      <Link href={`/projects/${project.id}`} className="text-[13px] font-semibold text-[var(--dash-text-heading)] hover:text-[#3b82f6] transition-colors line-clamp-1">
-                        {project.name}
-                      </Link>
+                    <td className="py-3 px-4 pl-0 text-[13px] font-semibold text-[var(--dash-text-heading)]">
+                      {project.name}
                     </td>
                     <td className="py-3 px-4 text-[13px] text-[var(--dash-text-muted)] whitespace-nowrap">
                       {project.client}
@@ -359,8 +449,8 @@ export default function StaffDashboard() {
                         );
                       }}
                       className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 cursor-pointer text-center ${isSelected
-                          ? "bg-blue-600 text-white border border-blue-500"
-                          : "bg-white/[0.03] text-slate-300 border border-white/[0.08]"
+                        ? "bg-blue-600 text-white border border-blue-500"
+                        : "bg-white/[0.03] text-slate-300 border border-white/[0.08]"
                         }`}
                     >
                       {skill.name}

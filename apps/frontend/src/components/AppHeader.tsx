@@ -80,14 +80,21 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       }
       if (userRole === "GM") {
         const reviewed = await getHireRequests();
-        setGmHireNotifications(reviewed.filter((h) => h.status === 'Fulfilled' || h.status === 'Declined'));
+        const filteredHire = reviewed
+          .filter((h) => h.status === 'Fulfilled' || h.status === 'Declined')
+          .sort((a: any, b: any) => {
+            const dateA = new Date(a.createdAt || a.requestedDate || 0).getTime();
+            const dateB = new Date(b.createdAt || b.requestedDate || 0).getTime();
+            return dateB - dateA; // DESC — newest first
+          });
+        setGmHireNotifications(filteredHire);
         const extensions = await getRequestHistory('HR');
         const processed = extensions
           .filter((r: any) => r.status === 'Approved' || r.status === 'Declined')
           .sort((a: any, b: any) => {
             const dateA = new Date(a.reviewedDate || a.requestedDate).getTime();
             const dateB = new Date(b.reviewedDate || b.requestedDate).getTime();
-            return dateB - dateA;
+            return dateB - dateA; // DESC — newest first
           });
         setGmContractNotifications(processed);
       }
