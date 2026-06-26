@@ -143,13 +143,73 @@ export default function HolidaysPage() {
     );
   }, [clients, searchClientQuery]);
 
-  // Selected client's holidays (National holidays + specific client holidays)
+  // Selected client's holidays (National holidays + specific client holidays), sorted chronologically ASC
   const clientHolidays = useMemo(() => {
     if (!selectedClient) return [];
     return holidays.filter(
       (h) => h.clientId === null || h.clientId === selectedClient.id
     ).sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime());
   }, [holidays, selectedClient]);
+
+  // Group consecutive same-name holidays into a single display row
+  interface GroupedHoliday {
+    id: number; // first record's ID (for edit/delete)
+    name: string;
+    clientId: number | null;
+    dateStart: string; // ISO string of group start
+    dateEnd: string;   // ISO string of group end
+    dayCount: number;  // total days in group
+  }
+
+  const groupedHolidays = useMemo((): GroupedHoliday[] => {
+    if (clientHolidays.length === 0) return [];
+
+    const result: GroupedHoliday[] = [];
+    let current: GroupedHoliday | null = null;
+
+    for (const h of clientHolidays) {
+      const hStart = h.dateStart.split('T')[0];
+      const hEnd = h.dateEnd.split('T')[0];
+
+      if (!current) {
+        current = {
+          id: h.id,
+          name: h.name,
+          clientId: h.clientId,
+          dateStart: h.dateStart,
+          dateEnd: h.dateEnd,
+          dayCount: Math.round((new Date(hEnd).getTime() - new Date(hStart).getTime()) / 86400000) + 1,
+        };
+        continue;
+      }
+
+      const isSameName = h.name === current.name && h.clientId === current.clientId;
+      if (isSameName) {
+        // Merge: extend the group's end date and accumulate days
+        const newEndStr = hEnd;
+        const newDays = Math.round((new Date(hEnd).getTime() - new Date(hStart).getTime()) / 86400000) + 1;
+        current.dateEnd = h.dateEnd;
+        current.dayCount += newDays;
+      } else {
+        result.push(current);
+        current = {
+          id: h.id,
+          name: h.name,
+          clientId: h.clientId,
+          dateStart: h.dateStart,
+          dateEnd: h.dateEnd,
+          dayCount: Math.round((new Date(hEnd).getTime() - new Date(hStart).getTime()) / 86400000) + 1,
+        };
+      }
+    }
+
+    if (current) result.push(current);
+
+    // Final chronological sort ASC (should already be sorted, but ensure after grouping)
+    result.sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime());
+
+    return result;
+  }, [clientHolidays]);
 
   // Date Formatting Helper
   const formatLocalDate = (date: Date) => {
@@ -1074,15 +1134,24 @@ export default function HolidaysPage() {
                       No holidays scheduled for this client.
                     </div>
                   ) : (
-                    clientHolidays.map((h) => {
+                    groupedHolidays.map((h) => {
                       const isNational = h.clientId === null;
-                      const dateStart = h.dateStart.split("T")[0];
-                      const dateEnd = h.dateEnd.split("T")[0];
+                      const dateStartStr = h.dateStart.split('T')[0];
+                      const dateEndStr = h.dateEnd.split('T')[0];
+                      const isRange = dateStartStr !== dateEndStr;
 
-                      const duration = Math.round((new Date(dateEnd).getTime() - new Date(dateStart).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                      // Format: DD-MM-YYYY for display
+                      const fmtShort = (iso: string) => {
+                        const d = new Date(iso);
+                        return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+                      };
+
+                      const dateLabel = isRange
+                        ? `${fmtShort(h.dateStart)} – ${fmtShort(h.dateEnd)}`
+                        : formatDateReadable(h.dateStart);
 
                       return (
-                        <div key={h.id} className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0 group">
+                        <div key={`${h.name}-${dateStartStr}`} className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0 group">
                           <div className="flex items-start gap-3 min-w-0">
                             <div className={`p-2.5 rounded-xl shrink-0 ${isNational ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"}`}>
                               <Calendar size={18} />
@@ -1100,18 +1169,19 @@ export default function HolidaysPage() {
                                 </span>
                               </div>
                               <p className="text-[12px] text-gray-500 dark:text-gray-400 font-medium">
-                                {dateStart === dateEnd
-                                  ? formatDateReadable(h.dateStart)
-                                  : `${formatDateReadable(h.dateStart)} - ${formatDateReadable(h.dateEnd)}`
-                                }
-                                <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-1.5">({duration} days)</span>
+                                {dateLabel}
+                                <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-1.5">({h.dayCount} days)</span>
                               </p>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                              onClick={() => handleOpenEditHoliday(h)}
+                              onClick={() => {
+                                // Find and open the first raw record matching this group
+                                const raw = clientHolidays.find(r => r.id === h.id);
+                                if (raw) handleOpenEditHoliday(raw);
+                              }}
                               className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-all cursor-pointer"
                               title="Edit Holiday"
                             >
