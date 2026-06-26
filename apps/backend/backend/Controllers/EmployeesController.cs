@@ -98,4 +98,38 @@ public class EmployeesController : ControllerBase
 
         return Ok(ApiResponse<object>.SuccessResponse(data!, "Password has been reset to default temporary password"));
     }
+    [HttpPut("{id}/skills")]
+    public async Task<ActionResult<ApiResponse<UserDto>>> UpdateSkills(string id, [FromBody] UpdateEmployeeSkillsRequest request)
+    {
+        var isHrOrAdmin = User.Claims.Any(c => c.Type == ClaimTypes.Role && (c.Value == "HR" || c.Value == "GM"));
+        if (!isHrOrAdmin && CurrentUserId != id)
+        {
+            return StatusCode(403, ApiResponse<UserDto>.ErrorResponse("You can only update your own skills"));
+        }
+
+        var actorUserId = CurrentUserId ?? "system";
+        var (success, error, statusCode, data) = await _service.UpdateSkillsAsync(id, request.SkillIds, actorUserId);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<UserDto>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<UserDto>.SuccessResponse(data!, "Skills updated successfully"));
+    }
+
+    [HttpGet("{id}/notifications")]
+    public async Task<ActionResult<ApiResponse<Contracts.DTOs.User.NotificationResponseDto>>> GetUnreadNotifications(string id)
+    {
+        var isHrOrAdmin = User.Claims.Any(c => c.Type == ClaimTypes.Role && (c.Value == "HR" || c.Value == "GM"));
+        if (!isHrOrAdmin && CurrentUserId != id)
+        {
+            return StatusCode(403, ApiResponse<Contracts.DTOs.User.NotificationResponseDto>.ErrorResponse("You can only view your own notifications"));
+        }
+
+        var (success, error, statusCode, data) = await _service.GetUnreadNotificationsAsync(id);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<Contracts.DTOs.User.NotificationResponseDto>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<Contracts.DTOs.User.NotificationResponseDto>.SuccessResponse(data!));
+    }
 }

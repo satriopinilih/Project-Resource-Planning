@@ -50,9 +50,7 @@ DECLARE
         'StaffRoles',
         'Roles',
         'Users',
-        'Departments',
-        'Clients',
-        'Holidays'
+        'Departments'
     ];
 BEGIN
     FOREACH table_name IN ARRAY table_names
@@ -65,17 +63,7 @@ END $$;");
 
             var now = DateTime.UtcNow;
 
-            // Clients
-            var internalClient = new Client { Name = "Internal", Description = "Internal client for holidays", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
-            var clientABC = new Client { Name = "PT. ABC", Description = "ABCDEF", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
-            var clientAccelist = new Client { Name = "PT. Accelist Lentera Indonesia", Description = "Accelist", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
-            var clientBGA = new Client { Name = "PT. BGA", Description = "Binus Graduate Attributes", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
-            var clientLibur = new Client { Name = "PT. Libur", Description = "Liburin aja", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
-            var clientSingapore = new Client { Name = "PT. Singapore Limited", Description = "SLO", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
-
-            _db.Clients.AddRange(internalClient, clientABC, clientAccelist, clientBGA, clientLibur, clientSingapore);
-
-// Departments
+            // Departments
             var baDept = new Department { DepartmentName = "Business Analysis", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
             var engDept = new Department { DepartmentName = "Engineering", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
             var hrDept = new Department { DepartmentName = "Human Resource", CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" };
@@ -253,6 +241,7 @@ END $$;");
                 new User { UserId = "HR123", UserName = "HR Manager", Email = "hr.manager@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 10, ContractStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "GM001", UserName = "General Manager", Email = "gm@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 15, ContractStart = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "MKT001", UserName = "Market Manager", Email = "mrkt@company.com", Password = "password123", DepartmentId = hrDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 15, ContractStart = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2030, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+
                 new User { UserId = "EMP001", UserName = "Sarah Johnson", Email = "sarah.johnson@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 8, ContractStart = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 14, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "EMP002", UserName = "Michael Chen", Email = "michael.chen@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.ProfessionalServices, ExperienceYears = 3, ContractStart = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "EMP003", UserName = "Jessica Brown", Email = "jessica.brown@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 6, ContractStart = new DateTime(2024, 7, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
@@ -261,11 +250,14 @@ END $$;");
                 new User { UserId = "EMP006", UserName = "Linda Martinez", Email = "linda.martinez@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.ProfessionalServices, ExperienceYears = 2, ContractStart = new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 9, 30, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "EMP007", UserName = "David Kim", Email = "david.kim@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 7, ContractStart = new DateTime(2024, 9, 15, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 9, 14, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "PM001", UserName = "Project Manager", Email = "pm@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 10, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
- 
+
                 // ── NEW EMPLOYEES for Smart Recommendation test ──
                 new User { UserId = "EMP008", UserName = "Nina Patel", Email = "nina.patel@company.com", Password = "password123", DepartmentId = baDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 5, ContractStart = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 5, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "EMP009", UserName = "Omar Hassan", Email = "omar.hassan@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 7, ContractStart = new DateTime(2024, 11, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 10, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP010", UserName = "Yuki Tanaka", Email = "yuki.tanaka@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.ProfessionalServices, ExperienceYears = 4, ContractStart = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
+                new User { UserId = "EMP010", UserName = "Yuki Tanaka", Email = "yuki.tanaka@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.ProfessionalServices, ExperienceYears = 4, ContractStart = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP999", UserName = "Dummy NoSkills", Email = "noskills@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 1, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP888", UserName = "Dummy NoSkills2", Email = "noskills2@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 1, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP011", UserName = "Dummy Test", Email = "noskills3@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 1, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
             };
             _db.Users.AddRange(users);
             await _db.SaveChangesAsync();
@@ -288,7 +280,10 @@ END $$;");
                 new UserRole { UserId = "EMP007", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP008", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP009", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP010", RoleId = roleStaff.RoleId }
+                new UserRole { UserId = "EMP010", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP999", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP888", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP011", RoleId = roleStaff.RoleId }
             );
 
             // Staff roles (display)
@@ -303,7 +298,10 @@ END $$;");
                 // New employees
                 new UserStaffRole { UserId = "EMP008", StaffRoleId = srJuniorBA.StaffRoleId },      // Nina: Junior BA (available, no project yet)
                 new UserStaffRole { UserId = "EMP009", StaffRoleId = srSeniorDev.StaffRoleId },    // Omar: Senior Dev (available)
-                new UserStaffRole { UserId = "EMP010", StaffRoleId = srPm.StaffRoleId } // Yuki: PM (available)
+                new UserStaffRole { UserId = "EMP010", StaffRoleId = srPm.StaffRoleId },           // Yuki: PM (available)
+                new UserStaffRole { UserId = "EMP999", StaffRoleId = srJuniorDev.StaffRoleId },    // Dummy: For NoSkills testing
+                new UserStaffRole { UserId = "EMP888", StaffRoleId = srJuniorDev.StaffRoleId },    // Dummy: For NoSkills2 testing
+                new UserStaffRole { UserId = "EMP011", StaffRoleId = srSeniorBA.StaffRoleId }     // Dummy: For NoSkills3 testing
             );
 
             // Skill mapping — collect all items then AddRange for batch efficiency
@@ -452,40 +450,6 @@ END $$;");
                 .Select(skillName => new ProjectRequiredSkill { ProjectId = hmsProject.ProjectID, SkillId = byName[skillName] })
                 .ToList();
             _db.ProjectRequiredSkills.AddRange(projectRequiredSkills);
-
-            // Seeding default holidays (National holidays have ClientId = null)
-            var seedHolidays = new[]
-            {
-                new Holiday { Name = "New Year's Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), Client = null },
-                new Holiday { Name = "Good Friday", DateStart = DateTime.SpecifyKind(new DateTime(2026, 4, 3), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 4, 3), DateTimeKind.Utc), Client = null },
-                new Holiday { Name = "Labour Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc), Client = null },
-                new Holiday { Name = "Hari Lahir Pancasila", DateStart = DateTime.SpecifyKind(new DateTime(2026, 6, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 6, 1), DateTimeKind.Utc), Client = null },
-                new Holiday { Name = "Independence Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc), Client = null },
-                new Holiday { Name = "Christmas Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc), Client = null }
-            };
-            _db.Holidays.AddRange(seedHolidays);
-
-            // Seeding client-specific holidays
-            var clientHolidays = new[]
-            {
-                // PT. ABC (1 day)
-                new Holiday { Name = "ABC Anniversary", DateStart = DateTime.SpecifyKind(new DateTime(2026, 2, 12), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 2, 12), DateTimeKind.Utc), Client = clientABC },
-                
-                // PT. Accelist
-                new Holiday { Name = "Accelist Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 7, 10), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 7, 12), DateTimeKind.Utc), Client = clientAccelist },
-                new Holiday { Name = "Accelist Year End Leave", DateStart = DateTime.SpecifyKind(new DateTime(2026, 12, 28), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 12, 31), DateTimeKind.Utc), Client = clientAccelist },
-
-                // PT. BGA
-                new Holiday { Name = "BGA Holiday", DateStart = DateTime.SpecifyKind(new DateTime(2026, 6, 16), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 6, 16), DateTimeKind.Utc), Client = clientBGA },
-                new Holiday { Name = "BGA Winter Break", DateStart = DateTime.SpecifyKind(new DateTime(2026, 1, 15), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 1, 15), DateTimeKind.Utc), Client = clientBGA },
-
-                // PT. Libur
-                new Holiday { Name = "Libur Long Break", DateStart = DateTime.SpecifyKind(new DateTime(2026, 10, 5), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 10, 8), DateTimeKind.Utc), Client = clientLibur },
-
-                // PT. Singapore Limited
-                new Holiday { Name = "SG National Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 8, 9), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 8, 9), DateTimeKind.Utc), Client = clientSingapore }
-            };
-            _db.Holidays.AddRange(clientHolidays);
 
             await _db.SaveChangesAsync();
 

@@ -31,6 +31,14 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
     { label: "Team Member", href: "/team-members", icon: Users },
+    {
+      label: "Master Data",
+      icon: Database,
+      subItems: [
+        { label: "Skills", href: "/dashboard/master-data/skills" },
+        { label: "Holidays", href: "/dashboard/master-data/holidays" },
+      ]
+    },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   HR: [
@@ -47,14 +55,6 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
     { label: "Add Project", href: "/dashboard/add-project", icon: PlusCircle },
-    {
-      label: "Master Data",
-      icon: Database,
-      subItems: [
-        { label: "Skills", href: "/dashboard/master-data/skills" },
-        { label: "Holidays", href: "/dashboard/master-data/holidays" },
-      ]
-    },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   Staff: [

@@ -204,7 +204,7 @@ export default function HRDashboard() {
         selectedHireRequestId,
         recruitmentStatus,
         recruitmentNotes.trim() || undefined,
-        recruitmentStatus === 'Fulfilled' ? recruitmentHiredName.trim() || undefined : undefined
+        recruitmentHiredName.trim() || undefined
       );
       setUpdateRecruitmentModalOpen(false);
       await loadData();
@@ -900,9 +900,11 @@ export default function HRDashboard() {
               </select>
             </div>
 
-            {recruitmentStatus === 'Fulfilled' && (
+            {recruitmentStatus !== 'Declined' && (
               <div>
-                <label className="text-sm font-semibold text-[var(--dash-text-secondary)]">Hired Employee Name</label>
+                <label className="text-sm font-semibold text-[var(--dash-text-secondary)]">
+                  {recruitmentStatus === 'Fulfilled' ? 'Hired Employee Name' : 'Candidate Name (Optional)'}
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. John Doe"

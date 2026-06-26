@@ -331,6 +331,66 @@ public class EmployeeService
         });
     }
 
+    /// <summary>
+    /// Updates the skills for a specific employee.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, UserDto? Data)> UpdateSkillsAsync(string id, List<int> skillIds, string actorUserId)
+    {
+        var user = await _db.Users
+            .Include(u => u.UserSkills)
+            .Include(u => u.Department)
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
+            .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+            .FirstOrDefaultAsync(u => u.UserId == id);
+
+        if (user is null)
+        {
+            return (false, "Employee not found", 404, null);
+        }
+
+        // Validate that all skills exist
+        if (skillIds.Any())
+        {
+            var validSkillCount = await _db.Skills.CountAsync(s => skillIds.Contains(s.SkillID));
+            if (validSkillCount != skillIds.Count)
+            {
+                return (false, "One or more selected skills are invalid", 400, null);
+            }
+        }
+
+        // Remove old skills
+        _db.UserSkills.RemoveRange(user.UserSkills);
+
+        // Add new skills
+        foreach (var skillId in skillIds)
+        {
+            user.UserSkills.Add(new UserSkill
+            {
+                UserId = id,
+                SkillId = skillId
+            });
+        }
+
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = actorUserId;
+
+        await _db.SaveChangesAsync();
+
+        // Re-query the user to ensure all navigation properties (like Skill.SkillName) are loaded
+        var updatedUserEntity = await _db.Users
+            .AsNoTracking()
+            .Include(u => u.UserSkills).ThenInclude(us => us.Skill)
+            .Include(u => u.Department)
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
+            .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+            .FirstAsync(u => u.UserId == id);
+
+        var updatedUser = MapToUserDto(updatedUserEntity);
+
+        return (true, null, 200, updatedUser);
+    }
     private static UserDto MapToUserDto(User u)
     {
         var daysRemaining = (u.ContractEnd.Date - DateTime.UtcNow.Date).Days;
@@ -359,8 +419,50 @@ public class EmployeeService
                 RoleInProject = p.RoleInProject,
                 StartDate = p.StartDate ?? p.Project?.EstimatedStartDate ?? DateTime.MinValue,
                 EndDate = p.EndDate ?? p.Project?.EstimatedEndDate,
-                Status = p.Status
+                Status = p.Status,
+                ProjectStatus = p.Project?.ProjectStatus,
+                IsUnread = !p.IsNotificationRead,
+                SwapReason = p.SwapReason
             }).ToList()
         };
+    }
+
+    /// <summary>
+    /// Retrieves a lightweight list of unread notifications for a specific user.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, Contracts.DTOs.User.NotificationResponseDto? Data)> GetUnreadNotificationsAsync(string userId)
+    {
+        var userExists = await _db.Users.AnyAsync(u => u.UserId == userId);
+        if (!userExists)
+            return (false, "User not found", 404, null);
+
+        var unreadProjects = await _db.UserProjects
+            .AsNoTracking()
+            .Include(up => up.Project)
+            .Where(up => up.UserId == userId && !up.IsNotificationRead)
+            .ToListAsync();
+
+        var notifications = unreadProjects.Select(p => new UserProjectDto
+        {
+            ProjectId = p.ProjectId,
+            ProjectName = p.Project?.ProjectName ?? string.Empty,
+            ClientOrganization = p.Project?.ClientOrganization ?? string.Empty,
+            RoleInProject = p.RoleInProject,
+            StartDate = p.StartDate ?? p.Project?.EstimatedStartDate ?? DateTime.MinValue,
+            EndDate = p.EndDate ?? p.Project?.EstimatedEndDate,
+            Status = p.Status,
+            ProjectStatus = p.Project?.ProjectStatus,
+            IsUnread = true,
+            SwapReason = p.SwapReason
+        }).ToList();
+
+        var response = new Contracts.DTOs.User.NotificationResponseDto
+        {
+            HasUnread = notifications.Any(),
+            Count = notifications.Count,
+            Notifications = notifications
+        };
+
+        return (true, null, 200, response);
     }
 }

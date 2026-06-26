@@ -26,6 +26,9 @@ type BackendUserProject = {
   startDate: string;
   endDate: string | null;
   status: number; // 0=Assigned, 1=Completed
+  projectStatus?: number; // 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted
+  isUnread?: boolean;
+  swapReason?: string;
 };
 
 type BackendUser = {
@@ -189,14 +192,32 @@ export type CreateHireRequestPayload = {
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-const mapProject = (project: BackendUserProject): Project => ({
-  id: String(project.projectId),
-  name: project.projectName,
-  client: project.clientOrganization || 'In-House',
-  startDate: formatDate(project.startDate),
-  endDate: project.endDate ? formatDate(project.endDate) : 'Ongoing',
-  status: 'Active'
-});
+const mapProject = (project: BackendUserProject): Project => {
+  let finalStatus: Project['status'] = 'Running';
+
+  if (project.status === 1) {
+    finalStatus = 'Completed';
+  } else if (project.projectStatus !== undefined) {
+    if (project.projectStatus === 1) finalStatus = 'Scheduled';
+    else if (project.projectStatus === 2) finalStatus = 'Running';
+    else if (project.projectStatus === 3) finalStatus = 'Completed';
+    else finalStatus = 'Running';
+  } else {
+    finalStatus = 'Running';
+  }
+
+  return {
+    id: String(project.projectId),
+    name: project.projectName,
+    client: project.clientOrganization || 'In-House',
+    roleInProject: project.roleInProject,
+    startDate: formatDate(project.startDate),
+    endDate: project.endDate ? formatDate(project.endDate) : 'Ongoing',
+    status: finalStatus,
+    isUnread: project.isUnread,
+    swapReason: project.swapReason
+  };
+};
 
 const normalizeEmploymentType = (value: BackendUser['employeeType']): 'Professional Services' | 'Permanent' => {
   if (value === 1 || value === '1') return 'Permanent';
@@ -320,6 +341,20 @@ export async function getEmployees(): Promise<Employee[]> {
 export async function getExpiringEmployees(days = 60): Promise<Employee[]> {
   const data = await fetchJson<BackendUser[]>(`/api/employees/expiring?days=${days}`);
   return data.map(mapEmployee);
+}
+
+export async function getEmployeeById(id: string): Promise<Employee> {
+  const data = await fetchJson<BackendUser>(`/api/employees/${encodeURIComponent(id)}`);
+  return mapEmployee(data);
+}
+
+export async function getStaffNotifications(id: string): Promise<{ hasUnread: boolean; count: number; notifications: Project[] }> {
+  const data = await fetchJson<{ hasUnread: boolean; count: number; notifications: BackendUserProject[] }>(`/api/employees/${encodeURIComponent(id)}/notifications`);
+  return {
+    hasUnread: data.hasUnread,
+    count: data.count,
+    notifications: data.notifications.map(mapProject)
+  };
 }
 
 export async function getContractExtensionRequests(status?: 'Pending' | 'Approved' | 'Declined'): Promise<ContractExtensionRequest[]> {
@@ -518,6 +553,13 @@ export async function forgotPassword(identifier: string): Promise<void> {
 export async function resetEmployeePassword(userId: string): Promise<{ temporaryPassword: string; mustChangePassword: boolean }> {
   return fetchJson<{ temporaryPassword: string; mustChangePassword: boolean }>(`/api/employees/${encodeURIComponent(userId)}/reset-password`, {
     method: 'POST'
+  });
+}
+
+export async function updateEmployeeSkills(userId: string, skillIds: number[]): Promise<void> {
+  await fetchJson(`/api/employees/${encodeURIComponent(userId)}/skills`, {
+    method: 'PUT',
+    body: JSON.stringify({ skillIds })
   });
 }
 

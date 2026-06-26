@@ -564,7 +564,7 @@ export default function TeamMembersPage() {
                                 <div className="text-[13px] text-[var(--dash-text-secondary)] mt-0.5">{project.client}</div>
                               </div>
                               <span className={`px-3 py-1 text-[12px] font-medium rounded-lg border ${project.status === 'Completed' ? 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600' :
-                                project.status === 'Active' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40' :
+                                project.status === 'Running' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-400/40' :
                                   'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-400/40'
                                  }`}>
                                 {project.status}
@@ -601,7 +601,7 @@ export default function TeamMembersPage() {
 
                         <div className="bg-emerald-100 border border-emerald-300 rounded-xl p-5 text-center dark:bg-emerald-500/20 dark:border-emerald-400/40">
                           <div className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">
-                            {selectedEmployee.projects.filter(p => p.status === 'Active').length}
+                            {selectedEmployee.projects.filter(p => p.status === 'Running').length}
                           </div>
                           <div className="text-[12px] text-emerald-700 dark:text-emerald-300/80 mt-1">Active</div>
                         </div>

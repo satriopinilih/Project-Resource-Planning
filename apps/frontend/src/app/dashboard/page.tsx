@@ -12,6 +12,7 @@ import ExpiringContractsAlert from './gm/components/ExpiringContractsAlert';
 import HRDashboard from './hr/components/HRDashboard';
 import PMDashboard from './pm/page';
 import MarketingDashboard from './mrkt/page';
+import StaffDashboard from './staff/components/StaffDashboard';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -66,6 +67,10 @@ export default function DashboardPage() {
 
   if (role === 'Marketing') {
     return <MarketingDashboard />;
+  }
+
+  if (role === 'Staff') {
+    return <StaffDashboard />;
   }
 
   return (

@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { Bell, Sun, Moon, User, Check, X, Calendar } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
-import { getContractExtensionRequests, getProjects, getHireRequests, HireRequest, getRequestHistory } from "@/lib/api";
-import { ContractExtensionRequest } from "@/lib/types";
+import { getContractExtensionRequests, getProjects, getHireRequests, HireRequest, getRequestHistory, getStaffNotifications, } from "@/lib/api";
+import { ContractExtensionRequest, Project } from "@/lib/types";
 import { usePathname, useRouter } from "next/navigation";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
@@ -49,6 +49,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const pathname = usePathname();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [userName, setUserName] = useState("User");
+  const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>(role ?? "Staff");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
@@ -57,14 +58,15 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const [gmHireNotifications, setGmHireNotifications] = useState<HireRequest[]>([]);
   const [gmContractNotifications, setGmContractNotifications] = useState<any[]>([]);
   const [pmNotifications, setPmNotifications] = useState<PMNotification[]>([]);
+  const [staffNotifications, setStaffNotifications] = useState<Project[]>([]);
 
   const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
-  
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem('read_notif_ids');
       if (stored) setReadNotifIds(JSON.parse(stored));
-    } catch {}
+    } catch { }
   }, []);
 
   const loadNotifications = async () => {
@@ -83,9 +85,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         const processed = extensions
           .filter((r: any) => r.status === 'Approved' || r.status === 'Declined')
           .sort((a: any, b: any) => {
-             const dateA = new Date(a.reviewedDate || a.requestedDate).getTime();
-             const dateB = new Date(b.reviewedDate || b.requestedDate).getTime();
-             return dateB - dateA;
+            const dateA = new Date(a.reviewedDate || a.requestedDate).getTime();
+            const dateB = new Date(b.reviewedDate || b.requestedDate).getTime();
+            return dateB - dateA;
           });
         setGmContractNotifications(processed);
       }
@@ -109,14 +111,28 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     if (userRole !== "PM") return;
     try {
       const projects = await getProjects();
-      
+
       const newNotifs: PMNotification[] = projects
         .filter(p => p.isUnread)
         .map(p => ({ projectId: p.projectId, projectName: p.projectName }));
-        
+
       setPmNotifications(newNotifs);
     } catch {
       setPmNotifications([]);
+    }
+  };
+
+  const loadStaffNotifications = async () => {
+    if ((userRole !== "Staff" && userRole !== "GM") || !userId) return;
+    try {
+      const data = await getStaffNotifications(userId);
+      if (data.hasUnread) {
+        setStaffNotifications(data.notifications);
+      } else {
+        setStaffNotifications([]);
+      }
+    } catch {
+      setStaffNotifications([]);
     }
   };
 
@@ -128,6 +144,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         return;
       }
       setUserName(auth.userName);
+      setUserId(auth.userId);
       if (!role) {
         // Detect role from session if not passed as prop
         const r = auth.roles?.[0] ?? "Staff";
@@ -143,14 +160,22 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
     if (userRole === "HR" || userRole === "GM" || userRole === "Marketing") {
       loadNotifications();
-      timer = setInterval(loadNotifications, 10000);
+      if (userRole === "GM") loadStaffNotifications();
+      timer = setInterval(() => {
+        loadNotifications();
+        if (userRole === "GM") loadStaffNotifications();
+      }, 10000);
     } else if (userRole === "PM") {
       loadPMNotifications();
       timer = setInterval(loadPMNotifications, 15000);
+    } else if (userRole === "Staff") {
+      loadStaffNotifications();
+      timer = setInterval(loadStaffNotifications, 15000);
     } else {
       setNotifications([]);
       setHireNotifications([]);
       setPmNotifications([]);
+      setStaffNotifications([]);
     }
 
     return () => {
@@ -162,7 +187,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     try {
       const { markProjectAsRead } = await import("@/lib/api");
       await markProjectAsRead(notif.projectId);
-      
+
       setPmNotifications(prev => prev.filter(n => n.projectId !== notif.projectId));
       setIsNotificationOpen(false);
       router.push(`/project/${notif.projectId}`);
@@ -179,7 +204,8 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     ...(userRole === "Marketing" ? hireNotifications.map(n => `mrkt-timeline-${n.hireRequestId}`) : []),
     ...(userRole === "GM" ? gmHireNotifications.map(n => `gm-hire-${n.hireRequestId}`) : []),
     ...(userRole === "GM" ? gmContractNotifications.map(n => `gm-ext-${n.referenceId}`) : []),
-    ...(userRole === "PM" ? pmNotifications.map(n => `pm-proj-${n.projectId}`) : [])
+    ...(userRole === "PM" ? pmNotifications.map(n => `pm-proj-${n.projectId}`) : []),
+    ...((userRole === "Staff" || userRole === "GM") ? staffNotifications.map(n => `staff-notif-${n.id}-${n.swapReason}`) : [])
   ];
 
   const hasUnread = currentNotifIds.length > 0 && currentNotifIds.some(id => !readNotifIds.includes(id));
@@ -191,7 +217,8 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         loadNotifications();
       }
       if (userRole === "PM") loadPMNotifications();
-      
+      if (userRole === "Staff" || userRole === "GM") loadStaffNotifications();
+
       // Mark as read
       if (currentNotifIds.length > 0) {
         const newReadIds = Array.from(new Set([...readNotifIds, ...currentNotifIds]));
@@ -221,6 +248,20 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     router.push('/project');
   };
 
+  const handleStaffNotificationClick = async (notif: Project) => {
+    try {
+      const { markProjectAsRead } = await import("@/lib/api");
+      await markProjectAsRead(Number(notif.id));
+
+      setStaffNotifications(prev => prev.filter(n => n.id !== notif.id));
+      setIsNotificationOpen(false);
+      router.push(`/dashboard`);
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+      setIsNotificationOpen(false);
+    }
+  };
+
   const badgeClass = roleBadgeClass[userRole] ?? roleBadgeClass["Staff"];
   const avatarClass = avatarBgClass[userRole] ?? avatarBgClass["Staff"];
 
@@ -242,7 +283,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
             {hasUnread && (
               <>
                 <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)] animate-pulse" />
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[var(--dash-bg-header)] leading-none">
+                <span className="absolute -bottom-0.5 -left-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[var(--dash-bg-header)] leading-none">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               </>
@@ -346,7 +387,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                 </div>
               )}
 
-              {userRole === "GM" && (gmHireNotifications.length > 0 || gmContractNotifications.length > 0) && (
+              {userRole === "GM" && (gmHireNotifications.length > 0 || gmContractNotifications.length > 0 || staffNotifications.length > 0) && (
                 <div className="max-h-72 overflow-y-auto">
                   {gmHireNotifications.slice(0, 6).map((item) => {
                     if (item.roleNeeded === 'GM Notification') {
@@ -410,16 +451,62 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
                       <p className="text-[12px] text-[#93a2c0] mt-1 text-right">{item.reviewedDate || item.requestedDate}</p>
                     </div>
                   ))}
+
+                  {staffNotifications.map((n, idx) => (
+                    <div
+                      key={`gm-hr-status-${n.id}-${idx}`}
+                      onClick={() => handleStaffNotificationClick(n)}
+                      className="w-full text-left px-5 py-3.5 border-b border-[var(--dash-border-subtle)] last:border-b-0 hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1 p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                          <User size={14} />
+                        </div>
+                        <div>
+                          <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                            {n.swapReason}
+                          </p>
+                          <p className="text-[11px] text-[#2B7FFC] mt-1 font-semibold">
+                            Click to dismiss
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              {((userRole === "HR" && notifications.length === 0 && hireNotifications.length === 0) || 
-                (userRole === "GM" && gmHireNotifications.length === 0 && gmContractNotifications.length === 0) ||
-                (userRole === "PM" && pmNotifications.length === 0) || 
-                (userRole === "Marketing" && hireNotifications.length === 0) ||
-                (!["HR", "PM", "GM", "Marketing"].includes(userRole || ""))) && (
-                <div className="px-4 py-8 text-center text-[13px] text-[var(--dash-text-secondary)]">No notifications</div>
+              {userRole === "Staff" && staffNotifications.length > 0 && (
+                <div className="max-h-72 overflow-y-auto">
+                  {staffNotifications.map((n, idx) => (
+                    <div
+                      key={`staff-notif-${n.id}-${idx}`}
+                      onClick={() => handleStaffNotificationClick(n)}
+                      className="px-4 py-3 border-b border-[var(--dash-border-subtle)] hover:bg-[var(--dash-bg-hover)] transition-colors cursor-pointer"
+                    >
+                      <p className="text-[13px] text-[var(--dash-text-primary)] leading-5">
+                        {n.swapReason === "Assigned to project" || n.status !== "Completed" ? (
+                          <>Congrats, You have been assigned to Project <span className="font-semibold text-[var(--dash-text-heading)]">{n.name}</span> by the GM.</>
+                        ) : (
+                          <>Your assignment on Project <span className="font-semibold text-[var(--dash-text-heading)]">{n.name}</span> has been marked as completed/reassigned by the GM.</>
+                        )}
+                      </p>
+                      <p className="text-[12px] text-[#2B7FFC] mt-1 font-semibold">
+                        Click to dismiss
+                      </p>
+                    </div>
+                  ))}
+                </div>
               )}
+
+              {((userRole === "HR" && notifications.length === 0 && hireNotifications.length === 0) ||
+                (userRole === "GM" && gmHireNotifications.length === 0 && gmContractNotifications.length === 0 && staffNotifications.length === 0) ||
+                (userRole === "PM" && pmNotifications.length === 0) ||
+                (userRole === "Staff" && staffNotifications.length === 0) ||
+                (userRole === "Marketing" && hireNotifications.length === 0) ||
+                (!["HR", "PM", "GM", "Marketing", "Staff"].includes(userRole || ""))) && (
+                  <div className="px-4 py-8 text-center text-[13px] text-[var(--dash-text-secondary)]">No notifications</div>
+                )}
             </div>
           )}
         </div>
