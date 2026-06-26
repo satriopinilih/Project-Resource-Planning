@@ -159,7 +159,7 @@ export default function EmployeeDetailsModal({ isOpen, onClose, employee }: Empl
                   className={`border rounded-lg p-3 ${
                     project.status === 'Completed'
                       ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50'
-                      : project.status === 'Active'
+                      : project.status === 'Running'
                       ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20'
                       : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20'
                   }`}
@@ -173,7 +173,7 @@ export default function EmployeeDetailsModal({ isOpen, onClose, employee }: Empl
                       className={`px-2 py-0.5 text-xs rounded-full ${
                         project.status === 'Completed'
                           ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                          : project.status === 'Active'
+                          : project.status === 'Running'
                           ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-300'
                           : 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-300'
                       }`}
@@ -209,7 +209,7 @@ export default function EmployeeDetailsModal({ isOpen, onClose, employee }: Empl
               </div>
               <div>
                 <div className="text-2xl font-bold text-green-600 dark:text-green-500">
-                  {employee.projects.filter(p => p.status === 'Active').length}
+                  {employee.projects.filter(p => p.status === 'Running').length}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Active</div>
               </div>
