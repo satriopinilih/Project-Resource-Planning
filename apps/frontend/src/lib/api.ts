@@ -19,6 +19,7 @@ export type LoginResponse = {
 };
 
 type BackendUserProject = {
+  userProjectId?: number;
   projectId: number;
   projectName: string;
   clientOrganization?: string;
@@ -215,7 +216,8 @@ const mapProject = (project: BackendUserProject): Project => {
     endDate: project.endDate ? formatDate(project.endDate) : 'Ongoing',
     status: finalStatus,
     isUnread: project.isUnread,
-    swapReason: project.swapReason
+    swapReason: project.swapReason,
+    userProjectId: project.userProjectId
   };
 };
 
@@ -477,6 +479,12 @@ export async function swapMember(projectId: number, payload: SwapMemberPayload):
 
 export async function markProjectAsRead(projectId: number): Promise<void> {
   await fetchJson(`/api/projects/mark-read/${projectId}`, {
+    method: 'POST'
+  });
+}
+
+export async function markNotificationAsRead(userProjectId: number): Promise<void> {
+  await fetchJson(`/api/projects/mark-notif-read/${userProjectId}`, {
     method: 'POST'
   });
 }

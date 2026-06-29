@@ -108,19 +108,62 @@ public class ProjectService
     }
 
     /// <summary>
-    /// Marks a project notification as read for the current user.
+    /// Marks ALL unread notification rows as read for a given project + user.
+    /// Using Where instead of FirstOrDefault so multiple GM-notification rows
+    /// (one per HR status update) are all dismissed in a single call.
+    /// ProjectId == 0 is a sentinel used when a hire request has no project;
+    /// in that case we match on RoleInProject == "GM Notification" for that user.
     /// </summary>
     public async Task<(bool Success, string? Error, int StatusCode)> MarkAsReadAsync(int projectId, string userId)
     {
-        var userProject = await _db.UserProjects
-            .FirstOrDefaultAsync(up => up.ProjectId == projectId && up.UserId == userId);
+        List<UserProject> rows;
 
-        if (userProject == null)
-            return (false, "Project assignment not found", 404);
+        if (projectId == 0)
+        {
+            // Sentinel path: no real project — match all unread GM notification rows for this user
+            rows = await _db.UserProjects
+                .Where(up => up.UserId == userId
+                          && up.ProjectId == 0
+                          && up.RoleInProject == "GM Notification"
+                          && !up.IsNotificationRead)
+                .ToListAsync();
+        }
+        else
+        {
+            // Normal path: mark every unread notification row for this project + user
+            rows = await _db.UserProjects
+                .Where(up => up.ProjectId == projectId
+                          && up.UserId == userId
+                          && !up.IsNotificationRead)
+                .ToListAsync();
+        }
 
-        userProject.IsNotificationRead = true;
+        if (rows.Count == 0)
+        {
+            // Already read or not found — treat as success so the frontend can dismiss optimistically
+            return (true, null, 200);
+        }
+
+        foreach (var row in rows)
+            row.IsNotificationRead = true;
+
         await _db.SaveChangesAsync();
+        return (true, null, 200);
+    }
 
+    /// <summary>
+    /// Marks a single specific notification row as read by its primary key (UserProject.Id).
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode)> MarkNotificationRowAsReadAsync(int userProjectId, string userId)
+    {
+        var row = await _db.UserProjects
+            .FirstOrDefaultAsync(up => up.Id == userProjectId && up.UserId == userId);
+
+        if (row != null && !row.IsNotificationRead)
+        {
+            row.IsNotificationRead = true;
+            await _db.SaveChangesAsync();
+        }
         return (true, null, 200);
     }
 
