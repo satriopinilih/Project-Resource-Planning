@@ -20,6 +20,21 @@ import { usePathname, useRouter } from "next/navigation";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
 
+const renderFormattedText = (text: string | undefined) => {
+  if (!text) return "";
+  const parts = text.split("**");
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      return (
+        <strong key={i} className="font-bold text-[var(--dash-text-heading)]">
+          {part}
+        </strong>
+      );
+    }
+    return part;
+  });
+};
+
 // ─── Unified notification data model ─────────────────────────────────────────
 interface UnifiedNotif {
   key: string;
@@ -570,7 +585,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
           iconBg: "bg-blue-500/10",
           iconColor: "text-blue-500",
           icon: <User size={14} />,
-          message: <>{n.swapReason}</>,
+          message: <>{renderFormattedText(n.swapReason)}</>,
           dateLabel: "",
           actionLabel: "Click to dismiss",
           onAction: async () => {

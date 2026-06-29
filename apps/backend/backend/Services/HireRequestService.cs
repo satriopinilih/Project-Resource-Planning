@@ -170,15 +170,23 @@ public class HireRequestService
                 .Select(ur => ur.UserId)
                 .ToListAsync();
 
-            var candidateName = !string.IsNullOrWhiteSpace(request.HiredEmployeeName)
-                ? request.HiredEmployeeName
-                : "a candidate";
+            string candidateText = !string.IsNullOrWhiteSpace(request.HiredEmployeeName)
+                ? $"**{request.HiredEmployeeName}** ({row.RoleNeeded})"
+                : $"candidate for **{row.RoleNeeded}**";
 
-            // Use the actual ProjectId when available; fall back to 0 as a sentinel value.
-            // The frontend already handles projectId == 0/null by redirecting to /project.
-            var notifProjectId = row.ProjectId.HasValue && row.ProjectId.Value > 0
+            int? notifProjectId = row.ProjectId.HasValue && row.ProjectId.Value > 0
                 ? row.ProjectId.Value
-                : 0;
+                : null;
+
+            string swapReason;
+            if (row.ProjectId.HasValue && row.ProjectId.Value > 0)
+            {
+                swapReason = $"Hiring update: {candidateText} is now at the **{request.Status}** stage for project **{row.ProjectName}**.";
+            }
+            else
+            {
+                swapReason = $"Hiring update: {candidateText} is now at the **{request.Status}** stage (General Hiring).";
+            }
 
             foreach (var gmId in gms)
             {
@@ -189,7 +197,7 @@ public class HireRequestService
                     RoleInProject = "GM Notification",
                     Status = Commons.Enums.UserProjectStatus.Assigned,
                     IsNotificationRead = false,
-                    SwapReason = $"HR updated the hiring status of {candidateName} to {request.Status}.",
+                    SwapReason = swapReason,
                     StartDate = DateTime.UtcNow,
                     EndDate = DateTime.UtcNow
                 };

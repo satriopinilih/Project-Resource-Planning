@@ -14,7 +14,7 @@ public class UserProject
     [StringLength(20)]
     public string UserId { get; set; } = string.Empty;
 
-    public int ProjectId { get; set; }
+    public int? ProjectId { get; set; }
 
     [StringLength(100)]
     public string RoleInProject { get; set; } = string.Empty;
@@ -42,5 +42,5 @@ public class UserProject
     public virtual User User { get; set; } = default!;
 
     [ForeignKey(nameof(ProjectId))]
-    public virtual Project Project { get; set; } = default!;
+    public virtual Project? Project { get; set; } = default!;
 }
