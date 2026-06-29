@@ -67,6 +67,21 @@ public class ProjectsController : ControllerBase
         return Ok(ApiResponse<string>.SuccessResponse("Notification marked as read"));
     }
 
+    [HttpPost("mark-notif-read/{id}")]
+    public async Task<IActionResult> MarkNotificationAsRead(int id)
+    {
+        var userId = CurrentUserId;
+        if (userId == null)
+            return Unauthorized();
+
+        var (success, error, statusCode) = await _service.MarkNotificationRowAsReadAsync(id, userId);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<string>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<string>.SuccessResponse("Notification marked as read"));
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateProject([FromBody] CreateProjectRequest request)
     {

@@ -161,7 +161,8 @@ public class HireRequestService
         row.UpdatedAt = DateTime.UtcNow;
         row.UpdatedBy = actorUserId;
 
-        if (row.ProjectId.HasValue && row.ProjectId.Value > 0)
+        // Bug #3 fix: notify GMs regardless of whether the hire request is tied to a project.
+        // Previously only fired when ProjectId > 0, so new-hire requests with no project were silent.
         {
             var gms = await _db.UserRoles
                 .Include(ur => ur.Role)
@@ -173,12 +174,18 @@ public class HireRequestService
                 ? request.HiredEmployeeName
                 : "a candidate";
 
+            // Use the actual ProjectId when available; fall back to 0 as a sentinel value.
+            // The frontend already handles projectId == 0/null by redirecting to /project.
+            var notifProjectId = row.ProjectId.HasValue && row.ProjectId.Value > 0
+                ? row.ProjectId.Value
+                : 0;
+
             foreach (var gmId in gms)
             {
                 var notif = new UserProject
                 {
                     UserId = gmId,
-                    ProjectId = row.ProjectId.Value,
+                    ProjectId = notifProjectId,
                     RoleInProject = "GM Notification",
                     Status = Commons.Enums.UserProjectStatus.Assigned,
                     IsNotificationRead = false,

@@ -413,6 +413,7 @@ public class EmployeeService
             Roles = u.UserRoles.Select(r => r.Role.RoleName.ToString()).ToList(),
             Projects = u.UserProjects.Select(p => new UserProjectDto
             {
+                UserProjectId = p.Id,
                 ProjectId = p.ProjectId,
                 ProjectName = p.Project?.ProjectName ?? string.Empty,
                 ClientOrganization = p.Project?.ClientOrganization ?? string.Empty,
@@ -444,6 +445,7 @@ public class EmployeeService
 
         var notifications = unreadProjects.Select(p => new UserProjectDto
         {
+            UserProjectId = p.Id,
             ProjectId = p.ProjectId,
             ProjectName = p.Project?.ProjectName ?? string.Empty,
             ClientOrganization = p.Project?.ClientOrganization ?? string.Empty,

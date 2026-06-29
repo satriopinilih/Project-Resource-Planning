@@ -23,6 +23,7 @@ public class UserDto
 
 public class UserProjectDto
 {
+    public int UserProjectId { get; set; }
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = string.Empty;
     public string ClientOrganization { get; set; } = string.Empty;

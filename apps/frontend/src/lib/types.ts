@@ -10,6 +10,7 @@ export interface Project {
   roleInProject?: string;
   isUnread?: boolean;
   swapReason?: string;
+  userProjectId?: number;
 }
 
 export interface Employee {

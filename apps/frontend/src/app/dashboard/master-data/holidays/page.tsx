@@ -60,7 +60,7 @@ export default function HolidaysPage() {
   const [isAddHolidayModalOpen, setIsAddHolidayModalOpen] = useState(false);
   const [isEditHolidayModalOpen, setIsEditHolidayModalOpen] = useState(false);
   const [isDeleteHolidayModalOpen, setIsDeleteHolidayModalOpen] = useState(false);
-  const [holidayToDelete, setHolidayToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [holidayToDelete, setHolidayToDelete] = useState<{ id: number; name: string; dateStart: string; dateEnd: string; clientId: number | null } | null>(null);
   const [selectedHoliday, setSelectedHoliday] = useState<BackendHoliday | null>(null);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -375,8 +375,12 @@ export default function HolidaysPage() {
     }
   };
 
-  const handleOpenEditHoliday = (holiday: BackendHoliday) => {
-    setSelectedHoliday(holiday);
+  // Bug #4 fix: accept a GroupedHoliday so startDate and endDate reflect the full range,
+  // not just the first raw record's dates (which only span a single day for each DB row).
+  const handleOpenEditHoliday = (holiday: { id: number; name: string; dateStart: string; dateEnd: string; clientId: number | null }) => {
+    // We still need a BackendHoliday reference for the update call (which uses .id).
+    // Build a minimal one from the grouped data.
+    setSelectedHoliday({ id: holiday.id, name: holiday.name, dateStart: holiday.dateStart, dateEnd: holiday.dateEnd, clientId: holiday.clientId, clientName: null });
     setHolidayNameInput(holiday.name);
     setHolidayStartDateInput(holiday.dateStart.split("T")[0]);
     setHolidayEndDateInput(holiday.dateEnd.split("T")[0]);
@@ -413,8 +417,9 @@ export default function HolidaysPage() {
     }
   };
 
-  const handleOpenDeleteHoliday = (id: number, name: string) => {
-    setHolidayToDelete({ id, name });
+  // Bug #5 fix: store full group info (name + date range + clientId) for group delete
+  const handleOpenDeleteHoliday = (group: { id: number; name: string; dateStart: string; dateEnd: string; clientId: number | null }) => {
+    setHolidayToDelete({ id: group.id, name: group.name, dateStart: group.dateStart, dateEnd: group.dateEnd, clientId: group.clientId });
     setIsDeleteHolidayModalOpen(true);
   };
 
@@ -422,7 +427,24 @@ export default function HolidaysPage() {
     if (!holidayToDelete) return;
     setIsSubmitting(true);
     try {
-      await deleteHoliday(holidayToDelete.id);
+      // Bug #5 fix: identify all raw DB records belonging to this group and delete them all.
+      // A group is defined by matching name + clientId with dateStart falling within the group range.
+      const groupStart = holidayToDelete.dateStart.split('T')[0];
+      const groupEnd = holidayToDelete.dateEnd.split('T')[0];
+      const matchingIds = clientHolidays
+        .filter(r =>
+          r.name === holidayToDelete.name &&
+          r.clientId === holidayToDelete.clientId &&
+          r.dateStart.split('T')[0] >= groupStart &&
+          r.dateStart.split('T')[0] <= groupEnd
+        )
+        .map(r => r.id);
+
+      // Delete all matching records sequentially
+      for (const rid of matchingIds) {
+        await deleteHoliday(rid);
+      }
+
       setIsDeleteHolidayModalOpen(false);
       setHolidayToDelete(null);
       setNotification({ type: "success", message: `Holiday "${holidayToDelete.name}" deleted successfully` });
@@ -1178,9 +1200,8 @@ export default function HolidaysPage() {
                           <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => {
-                                // Find and open the first raw record matching this group
-                                const raw = clientHolidays.find(r => r.id === h.id);
-                                if (raw) handleOpenEditHoliday(raw);
+                                // Bug #4 fix: pass the GroupedHoliday directly so dateEnd covers the full range
+                                handleOpenEditHoliday(h);
                               }}
                               className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-all cursor-pointer"
                               title="Edit Holiday"
@@ -1188,7 +1209,7 @@ export default function HolidaysPage() {
                               <Edit2 size={13} />
                             </button>
                             <button
-                              onClick={() => handleOpenDeleteHoliday(h.id, h.name)}
+                              onClick={() => handleOpenDeleteHoliday(h)}
                               className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all cursor-pointer"
                               title="Delete Holiday"
                             >
