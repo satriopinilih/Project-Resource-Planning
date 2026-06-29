@@ -123,7 +123,7 @@ public class ProjectService
             // Sentinel path: no real project — match all unread GM notification rows for this user
             rows = await _db.UserProjects
                 .Where(up => up.UserId == userId
-                          && up.ProjectId == 0
+                          && up.ProjectId == null
                           && up.RoleInProject == "GM Notification"
                           && !up.IsNotificationRead)
                 .ToListAsync();

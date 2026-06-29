@@ -102,7 +102,7 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
   const [error, setError] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
@@ -320,9 +320,27 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
         {!loading && !error && (
           <>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[12px] text-[var(--dash-text-faint)]">
-                Showing {currentEmployees.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredEmployees.length)} of {filteredEmployees.length} employees
-              </p>
+              <div className="flex items-center gap-4">
+                <p className="text-[12px] text-[var(--dash-text-faint)]">
+                  Showing {currentEmployees.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredEmployees.length)} of {filteredEmployees.length} employees
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-[var(--dash-text-faint)]">Show</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-2 py-1 text-[11px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-md hover:text-[var(--dash-text-heading)] transition-colors focus:outline-none cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
 
               {totalPages > 1 && (
                 <div className="flex items-center gap-3">

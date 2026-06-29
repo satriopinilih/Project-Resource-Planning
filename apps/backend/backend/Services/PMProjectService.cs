@@ -94,12 +94,12 @@ public class PMProjectService
         {
             pmProjectIds = await _db.UserProjects
                 .AsNoTracking()
-                .Where(up => up.UserId == currentUserId)
-                .Select(up => up.ProjectId)
+                .Where(up => up.UserId == currentUserId && up.ProjectId.HasValue)
+                .Select(up => up.ProjectId!.Value)
                 .ToListAsync();
 
             userQuery = userQuery.Where(u =>
-                u.UserProjects.Any(up => pmProjectIds.Contains(up.ProjectId)));
+                u.UserProjects.Any(up => up.ProjectId.HasValue && pmProjectIds.Contains(up.ProjectId.Value)));
         }
 
         var userData = await userQuery.ToListAsync();
@@ -109,7 +109,7 @@ public class PMProjectService
             label = u.UserName,
             subLabel = u.UserStaffRoles.Select(usr => usr.StaffRole.RoleName).FirstOrDefault() ?? u.ExperienceYears.ToString() + "yr",
             bars = u.UserProjects
-                .Where(up => !isPM || pmProjectIds.Contains(up.ProjectId))
+                .Where(up => !isPM || (up.ProjectId.HasValue && pmProjectIds.Contains(up.ProjectId.Value)))
                 .Where(up => up.Project.ProjectStatus != ProjectStatus.Deleted)
                 .Select(up => {
                     var statusStr = up.Status == UserProjectStatus.Completed
