@@ -59,7 +59,7 @@ public class SsoController : ControllerBase
 
         // 1. Exchange ticket with AIS BE
         var aisBaseUrl = _configuration["AisConfig:BaseUrl"] ?? "http://localhost:35590";
-        var exchangeUrl = $"{aisBaseUrl.TrimEnd('/')}/api/sso/exchange-ticket";
+        var exchangeUrl = $"{aisBaseUrl.TrimEnd('/')}/api/v1/sso/exchange-ticket";
 
         AisExchangeResultDto? aisData = null;
         try
@@ -89,8 +89,12 @@ public class SsoController : ControllerBase
         }
 
         // 2. Validate Keycloak Access Token against Keycloak
-        var keycloakUrl = _configuration["KeycloakConfig:BaseUrl"] ?? "https://sso.accelist.com/auth";
-        var realm = _configuration["KeycloakConfig:Realm"] ?? "Accelist";
+        var keycloakUrl = _configuration["KeycloakConfig:BaseUrl"];
+        var realm = _configuration["KeycloakConfig:Realm"];
+        if (string.IsNullOrEmpty(keycloakUrl) || string.IsNullOrEmpty(realm))
+        {
+            return BadRequest(ApiResponse<LoginResponseDto>.ErrorResponse("Keycloak configuration is missing or incomplete."));
+        }
         var userinfoUrl = $"{keycloakUrl.TrimEnd('/')}/realms/{realm}/protocol/openid-connect/userinfo";
 
         try
@@ -131,7 +135,6 @@ public class SsoController : ControllerBase
                 UpdatedBy = "SSO"
             };
             _db.Departments.Add(department);
-            await _db.SaveChangesAsync();
         }
 
         // Map AIS Role & Position to PRP RoleName
@@ -162,7 +165,6 @@ public class SsoController : ControllerBase
         {
             roleObj = new Role { RoleName = mappedRole };
             _db.Roles.Add(roleObj);
-            await _db.SaveChangesAsync();
         }
 
         // Map AIS Position to StaffRole name
@@ -207,7 +209,6 @@ public class SsoController : ControllerBase
         {
             staffRoleObj = new StaffRole { RoleName = staffRoleName };
             _db.StaffRoles.Add(staffRoleObj);
-            await _db.SaveChangesAsync();
         }
 
         if (user == null)
@@ -219,7 +220,7 @@ public class SsoController : ControllerBase
                 UserName = aisData.FullName,
                 Email = aisData.Email,
                 Password = Guid.NewGuid().ToString(), // Placeholder password since it's SSO-based
-                DepartmentId = department.DepartementID,
+                Department = department,
                 EmployeeType = EmployeeType.Permanent,
                 ExperienceYears = 0,
                 ContractStart = DateTime.UtcNow,
@@ -231,13 +232,12 @@ public class SsoController : ControllerBase
                 UpdatedBy = "SSO"
             };
             _db.Users.Add(user);
-            await _db.SaveChangesAsync();
 
             // Assign System Role
             var userRole = new UserRole
             {
                 UserId = user.UserId,
-                RoleId = roleObj.RoleId
+                Role = roleObj
             };
             _db.UserRoles.Add(userRole);
 
@@ -245,7 +245,7 @@ public class SsoController : ControllerBase
             var userStaffRole = new UserStaffRole
             {
                 UserId = user.UserId,
-                StaffRoleId = staffRoleObj.StaffRoleId
+                StaffRole = staffRoleObj
             };
             _db.UserStaffRoles.Add(userStaffRole);
 
@@ -263,7 +263,7 @@ public class SsoController : ControllerBase
             var newUserRole = new UserRole
             {
                 UserId = user.UserId,
-                RoleId = roleObj.RoleId
+                Role = roleObj
             };
             _db.UserRoles.Add(newUserRole);
 
@@ -272,7 +272,7 @@ public class SsoController : ControllerBase
             var newUserStaffRole = new UserStaffRole
             {
                 UserId = user.UserId,
-                StaffRoleId = staffRoleObj.StaffRoleId
+                StaffRole = staffRoleObj
             };
             _db.UserStaffRoles.Add(newUserStaffRole);
 

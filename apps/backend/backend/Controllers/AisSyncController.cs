@@ -74,7 +74,6 @@ namespace backend.Controllers
             {
                 roleObj = new Role { RoleName = mappedRole };
                 _db.Roles.Add(roleObj);
-                await _db.SaveChangesAsync();
             }
 
             // Map AIS Position to StaffRole name
@@ -119,7 +118,6 @@ namespace backend.Controllers
             {
                 staffRoleObj = new StaffRole { RoleName = staffRoleName };
                 _db.StaffRoles.Add(staffRoleObj);
-                await _db.SaveChangesAsync();
             }
 
             // 3. Sync User
@@ -159,7 +157,6 @@ namespace backend.Controllers
                         UpdatedBy = "AIS Sync"
                     };
                     _db.Departments.Add(department);
-                    await _db.SaveChangesAsync();
                 }
 
                 user = new User
@@ -168,7 +165,7 @@ namespace backend.Controllers
                     UserName = request.FullName,
                     Email = request.Email.ToLower(),
                     Password = Guid.NewGuid().ToString(), // Placeholder password
-                    DepartmentId = department.DepartementID,
+                    Department = department,
                     EmployeeType = mappedEmployeeType,
                     ExperienceYears = 0,
                     ContractStart = contractStart,
@@ -180,13 +177,12 @@ namespace backend.Controllers
                     UpdatedBy = "AIS Sync"
                 };
                 _db.Users.Add(user);
-                await _db.SaveChangesAsync();
 
                 // Assign System Role
                 var userRole = new UserRole
                 {
                     UserId = user.UserId,
-                    RoleId = roleObj.RoleId
+                    Role = roleObj
                 };
                 _db.UserRoles.Add(userRole);
 
@@ -194,7 +190,7 @@ namespace backend.Controllers
                 var userStaffRole = new UserStaffRole
                 {
                     UserId = user.UserId,
-                    StaffRoleId = staffRoleObj.StaffRoleId
+                    StaffRole = staffRoleObj
                 };
                 _db.UserStaffRoles.Add(userStaffRole);
 
@@ -219,7 +215,7 @@ namespace backend.Controllers
                 var newUserRole = new UserRole
                 {
                     UserId = user.UserId,
-                    RoleId = roleObj.RoleId
+                    Role = roleObj
                 };
                 _db.UserRoles.Add(newUserRole);
 
@@ -230,7 +226,7 @@ namespace backend.Controllers
                 var newUserStaffRole = new UserStaffRole
                 {
                     UserId = user.UserId,
-                    StaffRoleId = staffRoleObj.StaffRoleId
+                    StaffRole = staffRoleObj
                 };
                 _db.UserStaffRoles.Add(newUserStaffRole);
 

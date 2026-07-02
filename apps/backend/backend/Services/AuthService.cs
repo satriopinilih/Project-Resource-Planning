@@ -25,10 +25,16 @@ public class AuthService
     private async Task<bool> VerifyPasswordWithKeycloakAsync(string email, string password)
     {
         var keycloakSettings = _configuration.GetSection("KeycloakConfig");
-        var baseUrl = keycloakSettings["BaseUrl"] ?? "https://sso.accelist.com/auth";
-        var realm = keycloakSettings["Realm"] ?? "Dev";
-        var clientId = keycloakSettings["ClientId"] ?? "prp-dev";
-        var clientSecret = keycloakSettings["ClientSecret"] ?? "95432dfa-84e7-4c93-9a31-e4333ca66ed9";
+        var baseUrl = keycloakSettings["BaseUrl"];
+        var realm = keycloakSettings["Realm"];
+        var clientId = keycloakSettings["ClientId"];
+        var clientSecret = keycloakSettings["ClientSecret"];
+
+        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(realm) || 
+            string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+        {
+            throw new InvalidOperationException("Keycloak configuration is missing or incomplete.");
+        }
 
         var path = $"{baseUrl.TrimEnd('/')}/realms/{realm}/protocol/openid-connect/token";
 
@@ -77,7 +83,16 @@ public class AuthService
             return (false, "Invalid email or password", null);
         }
 
-        var isPasswordValid = await VerifyPasswordWithKeycloakAsync(user.Email, request.Password);
+        bool isPasswordValid;
+        try
+        {
+            isPasswordValid = await VerifyPasswordWithKeycloakAsync(user.Email, request.Password);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return (false, ex.Message, null);
+        }
+
         if (!isPasswordValid)
         {
             // Fallback to local database password check for original PRP accounts
