@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
@@ -21,6 +22,54 @@ public class AuthService
         _configuration = configuration;
     }
 
+    private async Task<bool> VerifyPasswordWithKeycloakAsync(string email, string password)
+    {
+        var keycloakSettings = _configuration.GetSection("KeycloakConfig");
+        var baseUrl = keycloakSettings["BaseUrl"];
+        var realm = keycloakSettings["Realm"];
+        var clientId = keycloakSettings["ClientId"];
+        var clientSecret = keycloakSettings["ClientSecret"];
+
+        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(realm) || 
+            string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+        {
+            throw new InvalidOperationException("Keycloak configuration is missing or incomplete.");
+        }
+
+        var path = $"{baseUrl.TrimEnd('/')}/realms/{realm}/protocol/openid-connect/token";
+
+        try
+        {
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            };
+            using var client = new HttpClient(handler);
+
+            var body = new List<KeyValuePair<string, string>>
+            {
+                new("grant_type", "password"),
+                new("client_id", clientId),
+                new("client_secret", clientSecret),
+                new("username", email),
+                new("password", password)
+            };
+
+            var req = new HttpRequestMessage(HttpMethod.Post, path)
+            {
+                Content = new FormUrlEncodedContent(body)
+            };
+            req.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded");
+
+            var response = await client.SendAsync(req);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     public async Task<(bool Success, string? Error, LoginResponseDto? Data)> LoginAsync(LoginDto request)
     {
         var user = await _db.Users
@@ -29,7 +78,28 @@ public class AuthService
                 .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Email == request.Email || u.UserId == request.Email);
 
-        if (user is null || user.Password != request.Password)
+        if (user is null)
+        {
+            return (false, "Invalid email or password", null);
+        }
+
+        bool isPasswordValid;
+        try
+        {
+            isPasswordValid = await VerifyPasswordWithKeycloakAsync(user.Email, request.Password);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return (false, ex.Message, null);
+        }
+
+        if (!isPasswordValid)
+        {
+            // Fallback to local database password check for original PRP accounts
+            isPasswordValid = user.Password == request.Password;
+        }
+
+        if (!isPasswordValid)
         {
             return (false, "Invalid email or password", null);
         }
@@ -44,7 +114,7 @@ public class AuthService
             UserName = user.UserName,
             Email = user.Email,
             Roles = roles,
-            MustChangePassword = user.Password == BuildTemporaryPassword(user.UserName, user.UserId)
+            MustChangePassword = false // Disabled for Keycloak authentication
         };
 
         return (true, null, response);
@@ -78,40 +148,11 @@ public class AuthService
 
     public async Task<(bool Success, string? Error, int StatusCode)> ForgotPasswordAsync(ForgotPasswordDto request)
     {
-        var identifier = request.Identifier?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(identifier))
-        {
-            return (false, "Email or User ID is required", 400);
-        }
-
-        var normalizedIdentifier = identifier.ToLower();
-        var user = await _db.Users.FirstOrDefaultAsync(u =>
-            u.UserId.ToLower() == normalizedIdentifier ||
-            u.Email.ToLower() == normalizedIdentifier);
-
-        if (user is null)
-        {
-            // Return success to prevent user enumeration
-            return (true, null, 200);
-        }
-
-        var temporaryPassword = BuildTemporaryPassword(user.UserName, user.UserId);
-
-        var (sent, reason) = await TrySendResetEmail(user.Email, user.UserName, temporaryPassword);
-        if (!sent)
-        {
-            return (false, $"Failed to send reset email: {reason}", 400);
-        }
-
-        user.Password = temporaryPassword;
-        user.UpdatedAt = DateTime.UtcNow;
-        user.UpdatedBy = user.UserId;
-        await _db.SaveChangesAsync();
-
-        return (true, null, 200);
+        // Reset password is disabled as passwords are managed by Keycloak.
+        return await Task.FromResult<(bool, string?, int)>((false, "Password reset is disabled as passwords are managed by Keycloak.", 400));
     }
 
-    private string GenerateJwtToken(string userId, string email, string userName, List<string> roles)
+    public string GenerateJwtToken(string userId, string email, string userName, List<string> roles)
     {
         var jwt = _configuration.GetSection("Jwt");
         var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwt["Secret"]!));

@@ -561,7 +561,6 @@ public class ProjectService
     public async Task<(bool Success, string? Error, int StatusCode, ProjectDto? Data)> UpdateAsync(
         int id, UpdateProjectRequest request, string? currentUserId)
     {
-        Console.WriteLine($"[DEBUG] UpdateProject {id} - Roles count: {request.RequiredRoles?.Count ?? -1}");
 
         // Pre-fetch and Pre-validate Role Names
         var project = await _db.Projects

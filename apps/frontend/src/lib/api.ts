@@ -881,3 +881,10 @@ export type RecommendationResponse = {
 export async function getProjectRecommendations(projectId: number): Promise<RecommendationResponse> {
   return fetchJson<RecommendationResponse>(`/api/recommendations/${projectId}`);
 }
+
+export async function ssoLogin(ticket: string): Promise<LoginResponse> {
+  return fetchJson<LoginResponse>('/api/sso/login', {
+    method: 'POST',
+    body: JSON.stringify({ ticket })
+  });
+}

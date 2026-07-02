@@ -56,7 +56,9 @@ builder.Services.AddValidatorsFromAssembly(Assembly.Load("Commons"));
 
 // 3. DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions => npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
 // 4. MediatR
 builder.Services.AddMediatR(cfg =>
