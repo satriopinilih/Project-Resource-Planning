@@ -81,9 +81,9 @@ export default function HRDashboard() {
   });
 
   const loadData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    try {
+      setIsLoading(true);
+      setError(null);
 
       const [allEmployees, requests, hires, history, formOptions] = await Promise.all([
         getRawEmployees(),
@@ -377,312 +377,303 @@ export default function HRDashboard() {
   };
 
   return (
-      <div className="flex-1 flex flex-col min-h-screen">
-        <main className="flex-1 p-8">
-          {isLoading && (
-            <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              Loading data from backend...
-            </div>
-          )}
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">HR Management Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage employee contracts and extension requests</p>
+    <div className="flex-1 flex flex-col min-h-screen">
+      <main className="flex-1 p-8">
+        {isLoading && (
+          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Loading data from backend...
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
-            <button type="button" onClick={() => navigateToSection('/team-members')} className="text-left cursor-pointer">
-              <StatCard value={stats.totalEmployees} label="Total Employees" icon={<Users size={22} />} />
-            </button>
-            <button type="button" onClick={() => navigateToSection('expiring-contracts-section')} className="text-left cursor-pointer">
-              <StatCard value={stats.contractsExpiring} label="Contracts Expiring" variant="warning" icon={<AlertTriangle size={22} />} />
-            </button>
-            <button type="button" onClick={() => navigateToSection('pending-contract-extension-section')} className="text-left cursor-pointer">
-              <StatCard value={stats.pendingRequests} label="Pending Requests" variant="danger" icon={<Hourglass size={22} />} />
-            </button>
-            <button type="button" onClick={() => navigateToSection('hire-requests-section')} className="text-left cursor-pointer">
-              <StatCard value={stats.openHireRequests} label="Open Hire Requests" icon={<UserPlus2 size={22} />} />
-            </button>
-            <button type="button" onClick={() => navigateToSection('request-history-section')} className="text-left cursor-pointer">
-              <StatCard value={stats.approvedThisMonth} label="Approved This Month" variant="success" icon={<CheckCircle2 size={22} />} />
-            </button>
+        )}
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
           </div>
+        )}
 
-          <div id="expiring-contracts-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Employees with Expiring Contracts</h2>
-            {expiringEmployees.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No contracts expiring within 30 days</div>
-            ) : (
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">HR Management Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage employee contracts and extension requests</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+          <button type="button" onClick={() => navigateToSection('/team-members')} className="text-left cursor-pointer">
+            <StatCard value={stats.totalEmployees} label="Total Employees" icon={<Users size={22} />} />
+          </button>
+          <button type="button" onClick={() => navigateToSection('expiring-contracts-section')} className="text-left cursor-pointer">
+            <StatCard value={stats.contractsExpiring} label="Contracts Expiring" variant="warning" icon={<AlertTriangle size={22} />} />
+          </button>
+          <button type="button" onClick={() => navigateToSection('pending-contract-extension-section')} className="text-left cursor-pointer">
+            <StatCard value={stats.pendingRequests} label="Pending Requests" variant="danger" icon={<Hourglass size={22} />} />
+          </button>
+          <button type="button" onClick={() => navigateToSection('hire-requests-section')} className="text-left cursor-pointer">
+            <StatCard value={stats.openHireRequests} label="Open Hire Requests" icon={<UserPlus2 size={22} />} />
+          </button>
+          <button type="button" onClick={() => navigateToSection('request-history-section')} className="text-left cursor-pointer">
+            <StatCard value={stats.approvedThisMonth} label="Approved This Month" variant="success" icon={<CheckCircle2 size={22} />} />
+          </button>
+        </div>
+
+        <div id="expiring-contracts-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Employees with Expiring Contracts</h2>
+          {expiringEmployees.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">No contracts expiring within 30 days</div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Department</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Contract End</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expiringEmployees.map((employee) => {
+                  let status: 'Active' | 'Expiring Soon' | 'Urgent' = 'Active';
+                  if (employee.daysRemaining !== undefined) {
+                    if (employee.daysRemaining < 15) status = 'Urgent';
+                    else if (employee.daysRemaining < 30) status = 'Expiring Soon';
+                  }
+                  return (
+                    <tr key={employee.userId} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.userName}</td>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.departmentName}</td>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.contractEnd}</td>
+                      <td className="py-3 px-4"><StatusBadge status={status} size="sm" /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div id="pending-contract-extension-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pending Contract Extension Requests</h2>
+          {contractExtensionRequests.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending extension requests</div>
+          ) : contractExtensionRequests.map((request) => (
+            <div key={request.id} className="border-2 border-amber-300 dark:border-yellow-600 rounded-lg p-6 bg-amber-50/70 dark:bg-yellow-900/10 mb-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{request.employeeName}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{employees.find((e) => e.userId === request.employeeId)?.role || request.role}</p>
+                </div>
+                <StatusBadge status="Pending" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Current End Date</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {formatDateLabel(employees.find((e) => e.userId === request.employeeId)?.contractEnd) || request.currentEndDate}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Extension Duration</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.extensionDuration}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Requested New End Date</p>
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{request.requestedNewEndDate}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Requested On</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.requestedOn}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4 rounded-md bg-gray-100 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600/40 px-3 py-2">
+                <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">Reason:</p>
+                <p className="text-sm text-gray-700 dark:text-gray-100">{request.reason}</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => { setSelectedRequest(request); setIsApprovalModalOpen(true); }} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Approve</button>
+                <button onClick={() => { setSelectedRequest(request); setIsDeclineModalOpen(true); }} className="px-4 py-2 bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 border border-red-600 dark:border-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium">Decline</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div id="hire-requests-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          {activeHireRequests.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">No hire requests</div>
+          ) : (
+            <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Department</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Contract End</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Role Needed</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Quantity</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Project</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Start Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">End Date</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {expiringEmployees.map((employee) => {
-                    let status: 'Active' | 'Expiring Soon' | 'Urgent' = 'Active';
-                    if (employee.daysRemaining !== undefined) {
-                      if (employee.daysRemaining < 15) status = 'Urgent';
-                      else if (employee.daysRemaining < 30) status = 'Expiring Soon';
+                  {activeHireRequests.map((item) => {
+                    const state = item.status;
+                    let statusClass = 'bg-green-500/15 text-green-600 dark:text-green-400';
+                    if (state === 'Open') {
+                      statusClass = 'bg-red-500/15 text-red-600 dark:text-red-400';
+                    } else if (state === 'Declined') {
+                      statusClass = 'bg-orange-500/15 text-orange-700 dark:text-orange-300';
+                    } else if (
+                      state === 'InProgress' ||
+                      state === 'Preview Interview' ||
+                      state === 'Interviewing' ||
+                      state === 'Offering' ||
+                      state === 'Onboarding'
+                    ) {
+                      statusClass = 'bg-blue-500/15 text-blue-600 dark:text-blue-400';
                     }
+
                     return (
-                      <tr key={employee.userId} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.userName}</td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.departmentName}</td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{employee.contractEnd}</td>
-                        <td className="py-3 px-4"><StatusBadge status={status} size="sm" /></td>
+                      <tr key={item.hireRequestId} className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-4 px-4">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.roleNeeded}</p>
+                          {item.experienceYearsRange && (
+                            <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mt-0.5">Exp: {item.experienceYearsRange}</p>
+                          )}
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{item.notes || 'No additional notes'}</p>
+                        </td>
+                        <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                        <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.projectName}</td>
+                        <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{formatDateLabel(item.startDate)}</td>
+                        <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{formatDateLabel(item.endDate)}</td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>{state === 'InProgress' ? 'In Progress' : state}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            {state !== 'Fulfilled' && state !== 'Declined' ? (
+                              <>
+                                <button onClick={() => openUpdateRecruitmentModal(item)} className="px-3 py-1.5 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">{state === 'Open' ? 'Start' : 'Update Status'}</button>
+                                <button onClick={() => openDeclineHireModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-400 font-medium">—</span>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            )}
-          </div>
-
-          <div id="pending-contract-extension-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pending Contract Extension Requests</h2>
-            {contractExtensionRequests.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No pending extension requests</div>
-            ) : contractExtensionRequests.map((request) => (
-              <div key={request.id} className="border-2 border-amber-300 dark:border-yellow-600 rounded-lg p-6 bg-amber-50/70 dark:bg-yellow-900/10 mb-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{request.employeeName}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{employees.find((e) => e.userId === request.employeeId)?.role || request.role}</p>
-                  </div>
-                  <StatusBadge status="Pending" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Current End Date</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {formatDateLabel(employees.find((e) => e.userId === request.employeeId)?.contractEnd) || request.currentEndDate}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Extension Duration</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.extensionDuration}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Requested New End Date</p>
-                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{request.requestedNewEndDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Requested On</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.requestedOn}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-4 rounded-md bg-gray-100 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600/40 px-3 py-2">
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">Reason:</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-100">{request.reason}</p>
-                </div>
-
-                <div className="flex gap-3">
-                  <button onClick={() => { setSelectedRequest(request); setIsApprovalModalOpen(true); }} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Approve</button>
-                  <button onClick={() => { setSelectedRequest(request); setIsDeclineModalOpen(true); }} className="px-4 py-2 bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 border border-red-600 dark:border-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium">Decline</button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div id="hire-requests-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Hire Requests</h2>
-              <button
-                onClick={openDirectHireModal}
-                className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
-              >
-                Add New Hire
-              </button>
             </div>
-            {activeHireRequests.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No hire requests</div>
-            ) : (
+          )}
+        </div>
+
+        <EmployeeContractTable showExtensionAction={false} />
+
+        <div id="request-history-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Request History</h2>
+          {requestHistory.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">No request history yet</div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Showing {currentHistoryItems.length > 0 ? (historyPage - 1) * historyItemsPerPage + 1 : 0} - {Math.min(historyPage * historyItemsPerPage, requestHistory.length)} of {requestHistory.length} requests
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Show</span>
+                    <select
+                      value={historyItemsPerPage}
+                      onChange={(e) => {
+                        setHistoryItemsPerPage(Number(e.target.value));
+                        setHistoryPage(1);
+                      }}
+                      className="px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+
+                {totalHistoryPages > 1 && (
+                  <div className="flex items-center gap-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Page {historyPage} of {totalHistoryPages}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                        disabled={historyPage === 1}
+                        className="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
+                        disabled={historyPage === totalHistoryPages}
+                        className="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Role Needed</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Quantity</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Project</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Start Date</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">End Date</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reason</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Extension</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Requested Date</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reviewed Date</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {activeHireRequests.map((item) => {
-                      const state = item.status;
-                      let statusClass = 'bg-green-500/15 text-green-600 dark:text-green-400';
-                      if (state === 'Open') {
-                        statusClass = 'bg-red-500/15 text-red-600 dark:text-red-400';
-                      } else if (state === 'Declined') {
-                        statusClass = 'bg-orange-500/15 text-orange-700 dark:text-orange-300';
-                      } else if (
-                        state === 'InProgress' ||
-                        state === 'Preview Interview' ||
-                        state === 'Interviewing' ||
-                        state === 'Offering' ||
-                        state === 'Onboarding'
-                      ) {
-                        statusClass = 'bg-blue-500/15 text-blue-600 dark:text-blue-400';
-                      }
-
-                      return (
-                        <tr key={item.hireRequestId} className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-4 px-4">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.roleNeeded}</p>
-                            {item.experienceYearsRange && (
-                              <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mt-0.5">Exp: {item.experienceYearsRange}</p>
-                            )}
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{item.notes || 'No additional notes'}</p>
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
-                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{item.projectName}</td>
-                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{formatDateLabel(item.startDate)}</td>
-                          <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{formatDateLabel(item.endDate)}</td>
-                          <td className="py-4 px-4">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>{state === 'InProgress' ? 'In Progress' : state}</span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              {state !== 'Fulfilled' && state !== 'Declined' ? (
-                                <>
-                                  <button onClick={() => openUpdateRecruitmentModal(item)} className="px-3 py-1.5 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">{state === 'Open' ? 'Start' : 'Update Status'}</button>
-                                  <button onClick={() => openDeclineHireModal(item.hireRequestId)} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Decline</button>
-                                </>
-                              ) : (
-                                <span className="text-xs text-gray-400 font-medium">—</span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {currentHistoryItems.map((item) => (
+                      <tr key={item.referenceId} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestType}</td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm text-gray-900 dark:text-white">{item.employeeName}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{item.staffRole}</div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.projectName ?? '-'}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white max-w-[320px] truncate" title={item.reason ?? '-'}>{item.reason ?? '-'}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.extension}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestedDate}</td>
+                        <td className="py-3 px-4">
+                          {item.status === 'Pending' ? (
+                            <StatusBadge status="Pending" size="sm" />
+                          ) : item.status === 'Approved' || item.status === 'Completed' ? (
+                            <StatusBadge status="Approved" size="sm" />
+                          ) : (
+                            <StatusBadge status="Declined" size="sm" />
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.reviewedDate ?? '-'}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-
-          <EmployeeContractTable showExtensionAction={false} />
-
-          <div id="request-history-section" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Request History</h2>
-            {requestHistory.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No request history yet</div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Showing {currentHistoryItems.length > 0 ? (historyPage - 1) * historyItemsPerPage + 1 : 0} - {Math.min(historyPage * historyItemsPerPage, requestHistory.length)} of {requestHistory.length} requests
-                    </p>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Show</span>
-                      <select
-                        value={historyItemsPerPage}
-                        onChange={(e) => {
-                          setHistoryItemsPerPage(Number(e.target.value));
-                          setHistoryPage(1);
-                        }}
-                        className="px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {totalHistoryPages > 1 && (
-                    <div className="flex items-center gap-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Page {historyPage} of {totalHistoryPages}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
-                          disabled={historyPage === 1}
-                          className="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Previous
-                        </button>
-                        <button
-                          onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
-                          disabled={historyPage === totalHistoryPages}
-                          className="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Project</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reason</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Extension</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Requested Date</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reviewed Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentHistoryItems.map((item) => (
-                        <tr key={item.referenceId} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestType}</td>
-                          <td className="py-3 px-4">
-                            <div className="text-sm text-gray-900 dark:text-white">{item.employeeName}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{item.staffRole}</div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.projectName ?? '-'}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white max-w-[320px] truncate" title={item.reason ?? '-'}>{item.reason ?? '-'}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.extension}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestedDate}</td>
-                          <td className="py-3 px-4">
-                            {item.status === 'Pending' ? (
-                              <StatusBadge status="Pending" size="sm" />
-                            ) : item.status === 'Approved' || item.status === 'Completed' ? (
-                              <StatusBadge status="Approved" size="sm" />
-                            ) : (
-                              <StatusBadge status="Declined" size="sm" />
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.reviewedDate ?? '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-        </main>
+            </>
+          )}
+        </div>
+      </main>
 
       <Modal isOpen={isApprovalModalOpen} onClose={() => setIsApprovalModalOpen(false)} title="Approve Contract Extension">
         <div className="space-y-4">
@@ -939,7 +930,7 @@ export default function HRDashboard() {
               <label className="text-sm font-semibold text-[var(--dash-text-secondary)]">Role Needed</label>
               <p className="text-base font-bold text-[var(--dash-text-heading)] mt-0.5">{selectedHireRequest.roleNeeded}</p>
             </div>
-            
+
             <div>
               <label className="text-sm font-semibold text-[var(--dash-text-secondary)]">Recruitment Status</label>
               <select

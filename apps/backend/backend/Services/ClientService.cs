@@ -119,9 +119,25 @@ public class ClientService
             return (false, "Another client with this name already exists.", null);
         }
 
+        var oldName = client.Name;
+
         client.Name = nameTrimmed;
         client.Description = request.Description.Trim();
         client.UpdatedAt = DateTime.UtcNow;
+
+        // Cascade update: sync ClientOrganization on all projects that reference the old client name
+        if (!string.Equals(oldName, nameTrimmed, StringComparison.Ordinal))
+        {
+            var affectedProjects = await _db.Projects
+                .Where(p => p.ClientOrganization == oldName)
+                .ToListAsync();
+
+            foreach (var project in affectedProjects)
+            {
+                project.ClientOrganization = nameTrimmed;
+                project.UpdatedAt = DateTime.UtcNow;
+            }
+        }
 
         await _db.SaveChangesAsync();
 
