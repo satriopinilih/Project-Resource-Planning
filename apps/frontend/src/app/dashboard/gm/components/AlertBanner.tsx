@@ -34,17 +34,17 @@ export default function AlertBanner() {
   };
 
   return (
-    <div className="rounded-xl border border-[#f59e0b]/25 bg-[var(--dash-bg-banner)] p-9 transition-colors duration-300">
+    <div className="rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/10 p-9 transition-colors duration-300">
       {/* Header */}
       <div className="flex items-center gap-3 mb-1">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#f59e0b]/15">
-          <AlertTriangle size={18} className="text-[#f59e0b]" strokeWidth={2} />
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-200 dark:bg-amber-500/20">
+          <AlertTriangle size={18} className="text-amber-700 dark:text-amber-400" strokeWidth={2} />
         </div>
-        <h3 className="text-[15px] font-bold text-[var(--dash-text-heading)]">
+        <h3 className="text-[15px] font-bold text-amber-900 dark:text-amber-400">
           {pendingProjects.length} Project{pendingProjects.length !== 1 && "s"} Awaiting Schedule
         </h3>
       </div>
-      <p className="text-[13px] text-[var(--dash-text-muted)] ml-11 mb-4">
+      <p className="text-[13px] text-amber-800 dark:text-amber-300/80 ml-11 mb-4">
         The following projects need timeline assignment and team allocation
       </p>
 
@@ -53,35 +53,35 @@ export default function AlertBanner() {
         {pendingProjects.map((project) => (
           <div
             key={project.projectId}
-            className="flex items-center justify-between px-4 py-3 bg-[var(--dash-bg-banner-inner)] rounded-lg border border-[var(--dash-border)]/60 gap-4"
+            className="flex items-center justify-between px-4 py-3 bg-white dark:bg-black/20 rounded-lg border border-amber-200 dark:border-amber-500/30 gap-4"
           >
             {/* Project name & client */}
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-semibold text-[var(--dash-text-heading)] truncate">
+              <p className="text-[14px] font-semibold text-gray-900 dark:text-white truncate">
                 {project.projectName}
               </p>
-              <p className="text-[12px] text-[var(--dash-text-muted)]">{project.clientOrganization}</p>
+              <p className="text-[12px] text-gray-600 dark:text-gray-400">{project.clientOrganization}</p>
             </div>
 
             {/* Timeline info */}
             <div className="flex items-center gap-5 shrink-0">
               <div className="text-center">
-                <p className="text-[10px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider mb-0.5">Start Date</p>
-                <p className="text-[12px] font-semibold text-[var(--dash-text-primary)]">
+                <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">Start Date</p>
+                <p className="text-[12px] font-semibold text-gray-900 dark:text-white">
                   {formatDate(project.estimatedStartDate)}
                 </p>
               </div>
-              <div className="w-px h-8 bg-[var(--dash-border)]" />
+              <div className="w-px h-8 bg-amber-200 dark:bg-amber-500/30" />
               <div className="text-center">
-                <p className="text-[10px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider mb-0.5">Duration</p>
-                <p className="text-[12px] font-semibold text-[var(--dash-text-primary)]">
+                <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">Duration</p>
+                <p className="text-[12px] font-semibold text-gray-900 dark:text-white">
                   {project.estimatedDuration ? `${project.estimatedDuration} wks` : "TBD"}
                 </p>
               </div>
-              <div className="w-px h-8 bg-[var(--dash-border)]" />
+              <div className="w-px h-8 bg-amber-200 dark:bg-amber-500/30" />
               <div className="text-center">
-                <p className="text-[10px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider mb-0.5">End Date</p>
-                <p className="text-[12px] font-semibold text-[var(--dash-text-primary)]">
+                <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">End Date</p>
+                <p className="text-[12px] font-semibold text-gray-900 dark:text-white">
                   {formatDate(project.estimatedEndDate)}
                 </p>
               </div>

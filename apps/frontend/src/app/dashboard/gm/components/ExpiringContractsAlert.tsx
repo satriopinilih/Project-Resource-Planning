@@ -35,12 +35,12 @@ export default function ExpiringContractsAlert() {
   if (expiringMembers.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 overflow-hidden">
-      <div className="p-4 border-b border-orange-500/20 flex items-start gap-3">
-        <AlertTriangle className="text-orange-400 shrink-0 mt-0.5" size={20} />
+    <div className="rounded-xl border border-orange-300 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/10 overflow-hidden">
+      <div className="p-4 border-b border-orange-300 dark:border-orange-500/20 flex items-start gap-3">
+        <AlertTriangle className="text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" size={20} />
         <div>
-          <h4 className="text-[14px] font-bold text-orange-400 mb-1">Employees with Expiring Contracts</h4>
-          <p className="text-[13px] text-orange-300/80">
+          <h4 className="text-[14px] font-bold text-orange-950 dark:text-orange-400 mb-1">Employees with Expiring Contracts</h4>
+          <p className="text-[13px] text-gray-800 dark:text-orange-300/80">
             The following project members have contracts expiring within 30 days. Please consider requesting an extension or a replacement.
           </p>
         </div>
@@ -48,11 +48,11 @@ export default function ExpiringContractsAlert() {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-orange-500/5">
-              <th className="py-3 px-4 text-[12px] font-semibold text-orange-400">Employee</th>
-              <th className="py-3 px-4 text-[12px] font-semibold text-orange-400">Project</th>
-              <th className="py-3 px-4 text-[12px] font-semibold text-orange-400">Contract End</th>
-              <th className="py-3 px-4 text-[12px] font-semibold text-orange-400">Status</th>
+            <tr className="bg-orange-200/50 dark:bg-orange-500/5 border-b border-orange-300/50 dark:border-orange-500/10">
+              <th className="py-3 px-4 text-[12px] font-semibold text-orange-950 dark:text-orange-400">Employee</th>
+              <th className="py-3 px-4 text-[12px] font-semibold text-orange-950 dark:text-orange-400">Project</th>
+              <th className="py-3 px-4 text-[12px] font-semibold text-orange-950 dark:text-orange-400">Contract End</th>
+              <th className="py-3 px-4 text-[12px] font-semibold text-orange-950 dark:text-orange-400">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -70,10 +70,10 @@ export default function ExpiringContractsAlert() {
               const activeProjects = emp.projects?.filter(p => p.status !== 1).map(p => p.projectName).join(", ") || "-";
 
               return (
-                <tr key={emp.userId} className="border-t border-orange-500/10 hover:bg-orange-500/5 transition-colors">
-                  <td className="py-3 px-4 text-[13px] font-medium text-orange-200">{emp.userName}</td>
-                  <td className="py-3 px-4 text-[13px] text-orange-300/80">{activeProjects}</td>
-                  <td className="py-3 px-4 text-[13px] text-orange-300/80">{dateString}</td>
+                <tr key={emp.userId} className="border-t border-orange-300/50 dark:border-orange-500/10 hover:bg-orange-200/50 dark:hover:bg-orange-500/5 transition-colors">
+                  <td className="py-3 px-4 text-[13px] font-bold text-gray-900 dark:text-orange-200">{emp.userName}</td>
+                  <td className="py-3 px-4 text-[13px] font-medium text-gray-800 dark:text-orange-300/80">{activeProjects}</td>
+                  <td className="py-3 px-4 text-[13px] font-medium text-gray-800 dark:text-orange-300/80">{dateString}</td>
                   <td className="py-3 px-4">
                     <StatusBadge status={status} size="sm" />
                   </td>

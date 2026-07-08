@@ -798,14 +798,14 @@ export default function HolidaysPage() {
               setFormError(null);
               setIsImportModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-800 hover:bg-emerald-900 text-white text-[13px] font-semibold rounded-xl transition-all shadow-md shadow-emerald-500/10 active:scale-95 cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-700 dark:bg-emerald-400 hover:bg-emerald-800 dark:hover:bg-emerald-300 text-white dark:text-emerald-950 text-[13px] font-semibold rounded-xl transition-all shadow-md shadow-emerald-500/10 dark:shadow-emerald-400/20 active:scale-95 cursor-pointer"
           >
             <UploadCloud size={16} />
             Import Excel
           </button>
           <button
             onClick={handleOpenAddClient}
-            className="flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold rounded-xl transition-all shadow-md shadow-indigo-500/10 active:scale-95 cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 dark:bg-indigo-400 hover:bg-indigo-700 dark:hover:bg-indigo-300 text-white dark:text-indigo-950 text-[13px] font-semibold rounded-xl transition-all shadow-md shadow-indigo-500/10 dark:shadow-indigo-400/20 active:scale-95 cursor-pointer"
           >
             <Plus size={16} />
             Add Client
@@ -817,17 +817,17 @@ export default function HolidaysPage() {
       <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-180px)]">
 
         {/* SECTION 1: Client List (Left) */}
-        <aside className="w-full lg:w-80 xl:w-96 shrink-0 bg-white dark:bg-[#242427] border border-gray-200 dark:border-white/5 rounded-3xl p-5 flex flex-col shadow-sm">
+        <aside className="w-full lg:w-80 xl:w-96 shrink-0 bg-white dark:bg-[#242427] border border-gray-900 dark:border-white/5 rounded-3xl p-5 flex flex-col shadow-sm">
 
           {/* Search bar */}
           <div className="relative mb-4">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 " />
             <input
               type="text"
               placeholder="Search Client..."
               value={searchClientQuery}
               onChange={(e) => setSearchClientQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-gray-50 dark:bg-[#1a1b1e] border border-gray-200 dark:border-white/5 rounded-xl text-[13px] outline-none focus:border-indigo-500/50 transition-colors text-gray-900 dark:text-white"
+              className="w-full pl-11 pr-4 py-2.5 bg-gray-50 dark:bg-[#1a1b1e] border border-gray-200 dark:border-white/5 rounded-xl text-[13px] outline-none focus:border-indigo-500/50 transition-colors text-gray-900 dark:text-white border-gray-900"
             />
             {searchClientQuery && (
               <button
@@ -896,7 +896,7 @@ export default function HolidaysPage() {
 
                     {/* J F M A M J J A S O N D Timeline */}
                     <div className="border-t border-gray-100 dark:border-white/5 pt-2.5">
-                      <div className="flex items-center justify-between text-[9px] font-bold text-gray-400 dark:text-gray-500">
+                      <div className="flex items-center justify-between text-[9px] font-bold text-gray-700 dark:text-gray-500">
                         {["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"].map((m, idx) => (
                           <div key={idx} className="flex flex-col items-center flex-1">
                             <span>{m}</span>
@@ -929,7 +929,7 @@ export default function HolidaysPage() {
           {selectedClient ? (
             <>
               {/* Selected Client Card Header */}
-              <div className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-250/30 dark:border-white/5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-900 dark:border-white/5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${getAvatarStyle(selectedClient.name)} flex items-center justify-center font-bold text-[15px] tracking-wider`}>
                     {getClientInitials(selectedClient.name)}
@@ -966,8 +966,8 @@ export default function HolidaysPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
                 {/* Stat 1: Total Holiday */}
-                <div className="bg-white dark:bg-[#242427] border border-gray-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-                  <span className="inline-flex items-center px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-full mb-3">
+                <div className="bg-white dark:bg-[#242427] border border-gray-900 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+                  <span className="inline-flex items-center px-2 py-0.5 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold rounded-full mb-3">
                     Total Holiday
                   </span>
                   <h4 className="text-[20px] font-bold text-gray-900 dark:text-white leading-none">
@@ -976,8 +976,8 @@ export default function HolidaysPage() {
                 </div>
 
                 {/* Stat 2: Upcoming Holiday */}
-                <div className="bg-white dark:bg-[#242427] border border-gray-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-                  <span className="inline-flex items-center px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-full mb-3">
+                <div className="bg-white dark:bg-[#242427] border border-gray-900 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+                  <span className="inline-flex items-center px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded-full mb-3">
                     Upcoming Holiday
                   </span>
                   <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-none truncate" title={selectedClient.upcomingHoliday}>
@@ -986,8 +986,8 @@ export default function HolidaysPage() {
                 </div>
 
                 {/* Stat 3: Longest Holiday */}
-                <div className="bg-white dark:bg-[#242427] border border-gray-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-                  <span className="inline-flex items-center px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold rounded-full mb-3">
+                <div className="bg-white dark:bg-[#242427] border border-gray-900 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+                  <span className="inline-flex items-center px-2 py-0.5 bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 text-[10px] font-bold rounded-full mb-3">
                     Longest Holiday
                   </span>
                   <h4 className="text-[20px] font-bold text-gray-900 dark:text-white leading-none">
@@ -996,8 +996,8 @@ export default function HolidaysPage() {
                 </div>
 
                 {/* Stat 4: Last Updated */}
-                <div className="bg-white dark:bg-[#242427] border border-gray-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-                  <span className="inline-flex items-center px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded-full mb-3">
+                <div className="bg-white dark:bg-[#242427] border border-gray-900 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+                  <span className="inline-flex items-center px-2 py-0.5 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full mb-3">
                     Last Updated
                   </span>
                   <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-none truncate">
@@ -1008,13 +1008,13 @@ export default function HolidaysPage() {
               </div>
 
               {/* Holiday Calendar Component */}
-              <div className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-250/30 dark:border-white/5 shadow-sm flex flex-col gap-6">
+              <div className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-900 dark:border-white/5 shadow-sm flex flex-col gap-6">
 
                 {/* Calendar Navigation and Title */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-white/5 pb-4">
                   <div>
                     <h4 className="text-[17px] font-bold text-gray-900 dark:text-white">Holiday Calendar</h4>
-                    <p className="text-[12px] text-gray-400">View and audit dates for this month</p>
+                    <p className="text-[12px] text-gray-700 dark:text-gray-400">View and audit dates for this month</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
@@ -1038,7 +1038,7 @@ export default function HolidaysPage() {
 
                     <button
                       onClick={handleOpenAddHoliday}
-                      className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-500/10 active:scale-95"
+                      className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 dark:bg-indigo-400 hover:bg-indigo-700 dark:hover:bg-indigo-300 text-white dark:text-indigo-950 text-[12px] font-bold rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-500/10 dark:shadow-indigo-400/20 active:scale-95"
                     >
                       <Plus size={14} />
                       Add Holiday
@@ -1053,7 +1053,7 @@ export default function HolidaysPage() {
                   <div className="flex-1">
                     <div className="grid grid-cols-7 text-center gap-1 mb-2">
                       {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
-                        <div key={idx} className="text-[12px] font-bold text-gray-400 dark:text-gray-500 py-2 uppercase tracking-wide">
+                        <div key={idx} className="text-[12px] font-bold text-gray-700 dark:text-gray-400 py-2 uppercase tracking-wide">
                           {day}
                         </div>
                       ))}
@@ -1066,30 +1066,29 @@ export default function HolidaysPage() {
                         const weekend = checkIsWeekend(cell.date);
                         const today = checkIsToday(cell.date);
 
-                        let cellClass = "bg-transparent text-gray-800 dark:text-gray-200";
-                        if (!isCurrentMonth) {
-                          cellClass = "text-gray-300 dark:text-gray-700 pointer-events-none opacity-40";
-                        }
-
-                        // Determine cell style based on states
                         let borderStyle = "border-transparent";
                         if (today) {
                           borderStyle = "border-indigo-500 ring-2 ring-indigo-500/25";
                         }
 
-                        let bgStyle = "hover:bg-gray-100 dark:hover:bg-white/5";
-                        if (holiday) {
+                        let bgStyle = "";
+                        if (!isCurrentMonth) {
+                          bgStyle = "bg-transparent text-gray-400 dark:text-gray-600 pointer-events-none opacity-60";
+                        } else if (holiday) {
                           // Premium soft coral-rose background for holiday
-                          bgStyle = "bg-rose-500/15 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold hover:bg-rose-500/25";
-                        } else if (weekend && isCurrentMonth) {
+                          bgStyle = "bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold border-rose-200 dark:border-transparent hover:bg-rose-200 dark:hover:bg-rose-500/25";
+                        } else if (weekend) {
                           // Dimmed style for weekend
-                          bgStyle = "bg-gray-50 dark:bg-white/[0.01] hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500";
+                          bgStyle = "bg-gray-200 dark:bg-white/[0.04] hover:bg-gray-300 dark:hover:bg-white/10 text-gray-800 dark:text-gray-300 font-bold border-gray-300 dark:border-transparent";
+                        } else {
+                          // Normal day
+                          bgStyle = "bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 text-gray-800 dark:text-gray-200";
                         }
 
                         return (
                           <div
                             key={idx}
-                            className={`min-h-[52px] flex flex-col justify-between p-1.5 rounded-xl border ${borderStyle} ${bgStyle} ${cellClass} transition-all relative group`}
+                            className={`min-h-[52px] flex flex-col justify-between p-1.5 rounded-xl border ${borderStyle} ${bgStyle} transition-all relative group`}
                           >
                             <span className="text-[12px] font-semibold self-end">
                               {cell.date.getDate()}
@@ -1111,25 +1110,25 @@ export default function HolidaysPage() {
                   </div>
 
                   {/* Legend Panel */}
-                  <div className="w-full xl:w-56 shrink-0 bg-gray-50 dark:bg-white/[0.02] border border-gray-150 dark:border-white/5 rounded-2xl p-5 flex flex-col justify-center gap-4">
-                    <h5 className="text-[12px] font-bold uppercase tracking-wider text-gray-400">Calendar Legend</h5>
+                  <div className="w-full xl:w-56 shrink-0 bg-white dark:bg-white/[0.02] border border-gray-900 dark:border-white/5 rounded-2xl p-5 flex flex-col justify-center gap-4 shadow-sm">
+                    <h5 className="text-[12px] font-bold uppercase tracking-wider text-gray-800 dark:text-gray-400">Calendar Legend</h5>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2.5 text-[13px] font-semibold">
+                      <div className="flex items-center gap-2.5 text-[13px] font-bold text-gray-900 dark:text-gray-200">
                         <div className="w-4 h-4 rounded-md bg-rose-500/20 border border-rose-500/20" />
                         <span>Holiday</span>
                       </div>
-                      <div className="flex items-center gap-2.5 text-[13px] font-semibold text-gray-500 dark:text-gray-400">
-                        <div className="w-4 h-4 rounded-md bg-gray-100 dark:bg-white/5" />
+                      <div className="flex items-center gap-2.5 text-[13px] font-semibold text-gray-700 dark:text-gray-400">
+                        <div className="w-4 h-4 rounded-md bg-gray-200 dark:bg-white/5" />
                         <span>Weekend</span>
                       </div>
-                      <div className="flex items-center gap-2.5 text-[13px] font-semibold">
+                      <div className="flex items-center gap-2.5 text-[13px] font-bold text-gray-900 dark:text-gray-200">
                         <div className="w-4 h-4 rounded-md border border-indigo-500 bg-transparent ring-2 ring-indigo-500/10" />
                         <span>Today</span>
                       </div>
                     </div>
 
-                    <div className="mt-2 text-[11px] font-medium text-gray-400 flex items-start gap-1.5 border-t border-gray-200/50 dark:border-white/5 pt-3">
-                      <Info size={12} className="shrink-0 mt-0.5 text-indigo-500" />
+                    <div className="mt-2 text-[11px] font-medium text-gray-700 dark:text-gray-400 flex items-start gap-1.5 border-t border-gray-200/50 dark:border-white/5 pt-3">
+                      <Info size={12} className="shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-500" />
                       <span>Hover over holiday cells to view their catalog titles.</span>
                     </div>
                   </div>
@@ -1139,10 +1138,10 @@ export default function HolidaysPage() {
               </div>
 
               {/* Holiday List Grid Component */}
-              <div className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-250/30 dark:border-white/5 shadow-sm flex flex-col gap-4">
+              <div className="bg-white dark:bg-[#242427] rounded-3xl p-6 border border-gray-900 dark:border-white/5 shadow-sm flex flex-col gap-4">
                 <div>
                   <h4 className="text-[17px] font-bold text-gray-900 dark:text-white">Holiday List</h4>
-                  <p className="text-[12px] text-gray-400">Catalog of scheduled holiday dates</p>
+                  <p className="text-[12px] text-gray-700 dark:text-gray-400">Catalog of scheduled holiday dates</p>
                 </div>
 
                 <div className="divide-y divide-gray-100 dark:divide-white/5">
@@ -1301,7 +1300,7 @@ export default function HolidaysPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-md shadow-indigo-500/10 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 bg-indigo-600 dark:bg-indigo-400 hover:bg-indigo-700 dark:hover:bg-indigo-300 text-white dark:text-indigo-950 text-[12px] font-bold rounded-xl transition-all shadow-md shadow-indigo-500/10 dark:shadow-indigo-400/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                   Save Client
@@ -1372,7 +1371,7 @@ export default function HolidaysPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-md shadow-indigo-500/10 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 bg-indigo-600 dark:bg-indigo-400 hover:bg-indigo-700 dark:hover:bg-indigo-300 text-white dark:text-indigo-950 text-[12px] font-bold rounded-xl transition-all shadow-md shadow-indigo-500/10 dark:shadow-indigo-400/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                   Save Changes
@@ -1411,7 +1410,7 @@ export default function HolidaysPage() {
                   type="button"
                   onClick={confirmDeleteClient}
                   disabled={isSubmitting}
-                  className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-md shadow-red-500/10 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 px-4 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-400 text-white dark:text-red-950 text-[12px] font-bold rounded-xl transition-all shadow-md shadow-red-500/10 dark:shadow-red-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : "Delete"}
                 </button>
@@ -1509,7 +1508,7 @@ export default function HolidaysPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-md shadow-indigo-500/10 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 bg-indigo-600 dark:bg-indigo-400 hover:bg-indigo-700 dark:hover:bg-indigo-300 text-white dark:text-indigo-950 text-[12px] font-bold rounded-xl transition-all shadow-md shadow-indigo-500/10 dark:shadow-indigo-400/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                   Save Holiday
@@ -1608,7 +1607,7 @@ export default function HolidaysPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-md shadow-indigo-500/10 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 bg-indigo-600 dark:bg-indigo-400 hover:bg-indigo-700 dark:hover:bg-indigo-300 text-white dark:text-indigo-950 text-[12px] font-bold rounded-xl transition-all shadow-md shadow-indigo-500/10 dark:shadow-indigo-400/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                   Save Changes
@@ -1647,7 +1646,7 @@ export default function HolidaysPage() {
                   type="button"
                   onClick={confirmDeleteHoliday}
                   disabled={isSubmitting}
-                  className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-md shadow-red-500/10 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 px-4 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-400 text-white dark:text-red-950 text-[12px] font-bold rounded-xl transition-all shadow-md shadow-red-500/10 dark:shadow-red-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : "Delete"}
                 </button>

@@ -159,19 +159,31 @@ export default function ProjectTimeline() {
   const windowEnd = useMemo(() => addDays(windowStart, 12 * 7 - 1), [windowStart]);
   const TOTAL_DAYS = 12 * 7;
 
-  const { columns, filteredProjects } = useMemo(() => {
+  const { columns, filteredProjects, hiddenPastCount, hiddenFutureCount } = useMemo(() => {
     const cols = Array.from({ length: 12 }).map((_, i) => ({
       label: formatShort(addDays(windowStart, i * 7)),
     }));
 
+    let past = 0;
+    let future = 0;
+
     const filtered = allProjects.filter((p) => {
       if (!activeFilters.has(p.status)) return false;
       if (searchQuery.trim() !== "" && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      
       // Only show if overlaps with the current 12-week window
-      return p.endDate >= windowStart && p.startDate <= windowEnd;
+      if (p.endDate < windowStart) {
+        past++;
+        return false;
+      }
+      if (p.startDate > windowEnd) {
+        future++;
+        return false;
+      }
+      return true;
     });
 
-    return { columns: cols, filteredProjects: filtered };
+    return { columns: cols, filteredProjects: filtered, hiddenPastCount: past, hiddenFutureCount: future };
   }, [allProjects, activeFilters, searchQuery, windowStart, windowEnd]);
 
   return (
@@ -188,23 +200,43 @@ export default function ProjectTimeline() {
         </div>
 
         {/* Prev / Next */}
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={handlePrev}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--dash-border)] px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors"
-          >
-            <ChevronLeft size={14} />
-            Prev
-          </button>
-          <button
-            type="button"
-            onClick={handleNext}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--dash-border)] px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors"
-          >
-            Next
-            <ChevronRight size={14} />
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            {hiddenPastCount > 0 && (
+              <span 
+                className="absolute -top-1.5 -left-1.5 bg-blue-500 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full shadow-sm z-10 pointer-events-none" 
+                title={`${hiddenPastCount} project(s) hidden in past`}
+              >
+                {hiddenPastCount > 9 ? '9+' : hiddenPastCount}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="inline-flex items-center gap-1 rounded-lg border border-[var(--dash-border)] px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors"
+            >
+              <ChevronLeft size={14} />
+              Prev
+            </button>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleNext}
+              className="inline-flex items-center gap-1 rounded-lg border border-[var(--dash-border)] px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors"
+            >
+              Next
+              <ChevronRight size={14} />
+            </button>
+            {hiddenFutureCount > 0 && (
+              <span 
+                className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full shadow-sm z-10 pointer-events-none" 
+                title={`${hiddenFutureCount} project(s) hidden in future`}
+              >
+                {hiddenFutureCount > 9 ? '9+' : hiddenFutureCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
