@@ -564,10 +564,10 @@ export async function resetEmployeePassword(userId: string): Promise<{ temporary
   });
 }
 
-export async function updateEmployeeSkills(userId: string, skillIds: number[]): Promise<void> {
+export async function updateEmployeeSkills(userId: string, skillIds: number[], experienceYears?: number): Promise<void> {
   await fetchJson(`/api/employees/${encodeURIComponent(userId)}/skills`, {
     method: 'PUT',
-    body: JSON.stringify({ skillIds })
+    body: JSON.stringify({ skillIds, experienceYears })
   });
 }
 

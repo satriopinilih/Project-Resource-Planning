@@ -108,12 +108,12 @@ public class EmployeesController : ControllerBase
         }
 
         var actorUserId = CurrentUserId ?? "system";
-        var (success, error, statusCode, data) = await _service.UpdateSkillsAsync(id, request.SkillIds, actorUserId);
+        var (success, error, statusCode, data) = await _service.UpdateSkillsAsync(id, request.SkillIds, request.ExperienceYears, actorUserId);
 
         if (!success)
             return StatusCode(statusCode, ApiResponse<UserDto>.ErrorResponse(error!));
 
-        return Ok(ApiResponse<UserDto>.SuccessResponse(data!, "Skills updated successfully"));
+        return Ok(ApiResponse<UserDto>.SuccessResponse(data!, "Skills and experience updated successfully"));
     }
 
     [HttpGet("{id}/notifications")]

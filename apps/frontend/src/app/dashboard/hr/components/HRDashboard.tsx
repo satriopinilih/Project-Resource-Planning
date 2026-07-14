@@ -59,7 +59,7 @@ export default function HRDashboard() {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [hireFormError, setHireFormError] = useState<string | null>(null);
   const [updateRecruitmentModalOpen, setUpdateRecruitmentModalOpen] = useState(false);
-  const [recruitmentStatus, setRecruitmentStatus] = useState('InProgress');
+  const [recruitmentStatus, setRecruitmentStatus] = useState('Offering');
   const [recruitmentNotes, setRecruitmentNotes] = useState('');
   const [recruitmentHiredName, setRecruitmentHiredName] = useState('');
   const [updatingRecruitment, setUpdatingRecruitment] = useState(false);
@@ -197,7 +197,7 @@ export default function HRDashboard() {
 
   const openUpdateRecruitmentModal = (request: HireRequest) => {
     setSelectedHireRequestId(request.hireRequestId);
-    setRecruitmentStatus(request.status === 'Open' ? 'InProgress' : request.status);
+    setRecruitmentStatus(request.status === 'Open' ? 'Offering' : request.status);
     setRecruitmentNotes(request.notes || '');
     setRecruitmentHiredName(request.hiredEmployeeName || '');
     setUpdateRecruitmentModalOpen(true);
@@ -938,9 +938,6 @@ export default function HRDashboard() {
                 onChange={(e) => setRecruitmentStatus(e.target.value)}
                 className="mt-1 h-11 w-full rounded-lg border border-[var(--dash-border)] bg-[var(--dash-bg-input)] px-3 text-sm text-[var(--dash-text-primary)] outline-none focus:border-blue-500"
               >
-                <option value="InProgress">In Progress</option>
-                <option value="Preview Interview">Preview Interview</option>
-                <option value="Interviewing">Interviewing</option>
                 <option value="Offering">Offering</option>
                 <option value="Onboarding">Onboarding</option>
                 <option value="Fulfilled">Fulfilled</option>

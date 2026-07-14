@@ -117,7 +117,7 @@ function PMSettingsContent() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-[7fr_3fr] gap-6 mb-6">
+            <div className="grid grid-cols-1 gap-6 mb-6">
                 {/* Appearance */}
                 <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm dark:border-gray-700/50 p-6 h-full">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Appearance</h2>
@@ -157,7 +157,7 @@ function PMSettingsContent() {
                     </div>
                 </div>
 
-                {/* Change Password */}
+                {/* Change Password 
                 <div className="bg-white dark:bg-[#292B2F] rounded-2xl shadow-sm dark:border-gray-700/50 p-6 h-full">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Change Password</h2>
                     {forceChange && (
@@ -188,6 +188,7 @@ function PMSettingsContent() {
                     </div>
                     </form>
                 </div>
+                */}
             </div>
 
             {/* System Information */}

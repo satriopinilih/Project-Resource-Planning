@@ -3,10 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
-import { getEmployees, getProjects, createContractExtension, getContractExtensionRequests, resetEmployeePassword } from '@/lib/api';
+import { getEmployees, getProjects, createContractExtension, getContractExtensionRequests, resetEmployeePassword, getSkills, updateEmployeeSkills, SkillDto } from '@/lib/api';
 import { Employee } from '@/lib/types';
 import { getPrimaryRole, getSessionUser } from '@/lib/auth';
 import { Loader2, X, SlidersHorizontal } from 'lucide-react';
+import Modal from '@/components/Modal';
 
 export default function TeamMembersPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -27,6 +28,13 @@ export default function TeamMembersPage() {
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState('');
   const [resetTempPassword, setResetTempPassword] = useState<string | null>(null);
+
+  // Edit Experience & Skills Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editExperienceYears, setEditExperienceYears] = useState(0);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([]);
+  const [allSkills, setAllSkills] = useState<SkillDto[]>([]);
+  const [savingSkills, setSavingSkills] = useState(false);
 
   // Filter & Sorting State
   const [searchTerm, setSearchTerm] = useState("");
@@ -171,6 +179,57 @@ export default function TeamMembersPage() {
     : null;
   const canResetPassword = sessionRoles.includes('HR');
   const hasPendingRequest = selectedEmployee ? requestedEmployeeIds.has(selectedEmployee.id) : false;
+
+  const reloadEmployees = async () => {
+    try {
+      const [data, projects] = await Promise.all([
+        getEmployees(),
+        getProjects()
+      ]);
+      const projectClientMap = new Map(projects.map((p) => [String(p.projectId), p.clientOrganization || 'In-House']));
+      const hydratedEmployees = data.map((emp) => ({
+        ...emp,
+        projects: (emp.projects ?? []).map((proj) => ({
+          ...proj,
+          client: proj.client && proj.client !== 'In-House'
+            ? proj.client
+            : (projectClientMap.get(String(proj.id)) || proj.client)
+        }))
+      }));
+      setEmployees(hydratedEmployees);
+    } catch (e) {
+      console.error("Failed to reload employees:", e);
+    }
+  };
+
+  useEffect(() => {
+    getSkills().then(setAllSkills).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (selectedEmployee && allSkills.length > 0) {
+      const ids = allSkills
+        .filter(s => selectedEmployee.skills?.includes(s.skillName))
+        .map(s => s.skillID);
+      setSelectedSkillIds(ids);
+    } else {
+      setSelectedSkillIds([]);
+    }
+  }, [selectedEmployee, allSkills]);
+
+  const handleSaveSkills = async () => {
+    if (!selectedEmployee) return;
+    setSavingSkills(true);
+    try {
+      await updateEmployeeSkills(selectedEmployee.id, selectedSkillIds, editExperienceYears);
+      setIsEditModalOpen(false);
+      await reloadEmployees();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update employee details");
+    } finally {
+      setSavingSkills(false);
+    }
+  };
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
@@ -418,7 +477,18 @@ export default function TeamMembersPage() {
                         </div>
                       </div>
 
-                      {/* Level logic removed since it doesn't exist on Employee */}
+                      {role === 'GM' && (
+                        <button
+                          onClick={() => {
+                            setEditExperienceYears(selectedEmployee.experienceYears ?? 0);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer"
+                        >
+                          <SlidersHorizontal size={14} />
+                          Edit Experience & Skills
+                        </button>
+                      )}
                     </div>
 
                     {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
@@ -804,6 +874,85 @@ export default function TeamMembersPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Experience & Skills Modal */}
+      {isEditModalOpen && selectedEmployee && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title={`Edit ${selectedEmployee.name}'s Experience & Skills`}
+          maxWidth="md"
+        >
+          <div className="space-y-5 text-gray-900 dark:text-white">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Experience Years
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={editExperienceYears}
+                onChange={(e) => setEditExperienceYears(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-full h-11 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1e2532] px-4 text-sm outline-none focus:border-blue-500 text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Skills Selection
+              </label>
+              {allSkills.length === 0 ? (
+                <p className="text-sm text-gray-500">Loading skills...</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto p-4 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                  {allSkills.map((skill) => {
+                    const isChecked = selectedSkillIds.includes(skill.skillID);
+                    return (
+                      <label
+                        key={skill.skillID}
+                        className="flex items-center gap-2.5 text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSkillIds((prev) => [...prev, skill.skillID]);
+                            } else {
+                              setSelectedSkillIds((prev) => prev.filter((id) => id !== skill.skillID));
+                            }
+                          }}
+                          className="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800"
+                        />
+                        {skill.skillName}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingSkills}
+                onClick={handleSaveSkills}
+                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
+              >
+                {savingSkills ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
