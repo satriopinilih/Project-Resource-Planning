@@ -3,16 +3,22 @@ using Contracts.DTOs.HireRequest;
 using Entities;
 using Entities.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
 
 namespace backend.Services;
 
 public class HireRequestService
 {
     private readonly ApplicationDbContext _db;
+    private readonly IConfiguration _configuration;
 
-    public HireRequestService(ApplicationDbContext db)
+    public HireRequestService(ApplicationDbContext db, IConfiguration configuration)
     {
         _db = db;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -36,9 +42,6 @@ public class HireRequestService
         return rows.Select(Map).ToList();
     }
 
-    /// <summary>
-    /// Creates a new hire request.
-    /// </summary>
     public async Task<HireRequestDto> CreateAsync(CreateHireRequestDto request, string requestedBy)
     {
         var entity = new HireRequest
@@ -62,6 +65,25 @@ public class HireRequestService
         _db.HireRequests.Add(entity);
         await _db.SaveChangesAsync();
 
+        var gmUser = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == requestedBy);
+        var gmName = gmUser?.UserName ?? "GM";
+
+        string aisMessage = $"GM {gmName} requested {entity.Quantity}x {entity.RoleNeeded}";
+        if (!string.IsNullOrWhiteSpace(entity.ProjectName))
+        {
+            aisMessage += $" for project {entity.ProjectName}.";
+        }
+        else
+        {
+            aisMessage += " (General Hiring).";
+        }
+        if (!string.IsNullOrWhiteSpace(entity.Notes))
+        {
+            aisMessage += $" Notes: {entity.Notes}";
+        }
+
+        await SendNotificationToAisAsync("HR", aisMessage, 101);
+
         return Map(entity);
     }
 
@@ -78,6 +100,8 @@ public class HireRequestService
         row.UpdatedAt = DateTime.UtcNow;
         row.UpdatedBy = actorUserId;
         await _db.SaveChangesAsync();
+
+        await NotifyGmsAsync(row, "InProgress", null, null);
 
         return (true, null, 200, Map(row));
     }
@@ -103,6 +127,8 @@ public class HireRequestService
         row.UpdatedBy = actorUserId;
         await _db.SaveChangesAsync();
 
+        await NotifyGmsAsync(row, "Fulfilled", request.HiredEmployeeName, request.Notes);
+
         return (true, null, 200, Map(row));
     }
 
@@ -125,6 +151,8 @@ public class HireRequestService
         row.UpdatedAt = DateTime.UtcNow;
         row.UpdatedBy = actorUserId;
         await _db.SaveChangesAsync();
+
+        await NotifyGmsAsync(row, "Declined", null, request.Notes);
 
         return (true, null, 200, Map(row));
     }
@@ -161,51 +189,9 @@ public class HireRequestService
         row.UpdatedAt = DateTime.UtcNow;
         row.UpdatedBy = actorUserId;
 
-        // Bug #3 fix: notify GMs regardless of whether the hire request is tied to a project.
-        // Previously only fired when ProjectId > 0, so new-hire requests with no project were silent.
-        {
-            var gms = await _db.UserRoles
-                .Include(ur => ur.Role)
-                .Where(ur => ur.Role.RoleName == Commons.Enums.RoleName.GM)
-                .Select(ur => ur.UserId)
-                .ToListAsync();
-
-            string candidateText = !string.IsNullOrWhiteSpace(request.HiredEmployeeName)
-                ? $"**{request.HiredEmployeeName}** ({row.RoleNeeded})"
-                : $"candidate for **{row.RoleNeeded}**";
-
-            int? notifProjectId = row.ProjectId.HasValue && row.ProjectId.Value > 0
-                ? row.ProjectId.Value
-                : null;
-
-            string swapReason;
-            if (row.ProjectId.HasValue && row.ProjectId.Value > 0)
-            {
-                swapReason = $"Hiring update: {candidateText} is now at the **{request.Status}** stage for project **{row.ProjectName}**.";
-            }
-            else
-            {
-                swapReason = $"Hiring update: {candidateText} is now at the **{request.Status}** stage (General Hiring).";
-            }
-
-            foreach (var gmId in gms)
-            {
-                var notif = new UserProject
-                {
-                    UserId = gmId,
-                    ProjectId = notifProjectId,
-                    RoleInProject = "GM Notification",
-                    Status = Commons.Enums.UserProjectStatus.Assigned,
-                    IsNotificationRead = false,
-                    SwapReason = swapReason,
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow
-                };
-                _db.UserProjects.Add(notif);
-            }
-        }
-
         await _db.SaveChangesAsync();
+
+        await NotifyGmsAsync(row, request.Status, request.HiredEmployeeName, request.Notes);
 
         return (true, null, 200, Map(row));
     }
@@ -227,4 +213,98 @@ public class HireRequestService
         CreatedAt = row.CreatedAt,
         FulfilledAt = row.FulfilledAt
     };
+
+    private async Task NotifyGmsAsync(HireRequest row, string status, string? hiredEmployeeName, string? notes)
+    {
+        var gms = await _db.UserRoles
+            .Include(ur => ur.Role)
+            .Where(ur => ur.Role.RoleName == Commons.Enums.RoleName.GM)
+            .Select(ur => ur.UserId)
+            .ToListAsync();
+
+        string candidateText = !string.IsNullOrWhiteSpace(hiredEmployeeName)
+            ? $"**{hiredEmployeeName}** ({row.RoleNeeded})"
+            : $"candidate for **{row.RoleNeeded}**";
+
+        int? notifProjectId = row.ProjectId.HasValue && row.ProjectId.Value > 0
+            ? row.ProjectId.Value
+            : null;
+
+        string swapReason;
+        if (row.ProjectId.HasValue && row.ProjectId.Value > 0)
+        {
+            swapReason = $"Hiring update: {candidateText} is now at the **{status}** stage for project **{row.ProjectName}**.";
+        }
+        else
+        {
+            swapReason = $"Hiring update: {candidateText} is now at the **{status}** stage (General Hiring).";
+        }
+
+        if (!string.IsNullOrWhiteSpace(notes))
+        {
+            swapReason += $" Notes: {notes}";
+        }
+
+        foreach (var gmId in gms)
+        {
+            var notif = new UserProject
+            {
+                UserId = gmId,
+                ProjectId = notifProjectId,
+                RoleInProject = "GM Notification",
+                Status = Commons.Enums.UserProjectStatus.Assigned,
+                IsNotificationRead = false,
+                SwapReason = swapReason,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow
+            };
+            _db.UserProjects.Add(notif);
+        }
+
+        await _db.SaveChangesAsync();
+
+        var plainMessage = swapReason.Replace("**", "");
+        await SendNotificationToAisAsync("GM", plainMessage, 101);
+    }
+
+    private async Task SendNotificationToAisAsync(string recipientRole, string message, int type)
+    {
+        try
+        {
+            var aisBaseUrl = _configuration["AisConfig:BaseUrl"];
+            var aisApiKey = _configuration["AisConfig:ApiKey"];
+            if (string.IsNullOrEmpty(aisBaseUrl) || string.IsNullOrEmpty(aisApiKey))
+            {
+                return;
+            }
+
+            var targetUrl = $"{aisBaseUrl.TrimEnd('/')}/api/v1/notification/receive";
+            
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (msg, cert, chain, errors) => true
+            };
+            using var client = new HttpClient(handler);
+            using var request = new HttpRequestMessage(HttpMethod.Post, targetUrl);
+            request.Headers.Add("ApiKey", aisApiKey);
+            
+            var payload = new
+            {
+                RecipientRole = recipientRole,
+                Message = message,
+                Type = type
+            };
+            request.Content = JsonContent.Create(payload);
+
+            var response = await client.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception)
+        {
+            // Ignore
+        }
+    }
 }

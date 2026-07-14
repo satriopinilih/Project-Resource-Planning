@@ -318,7 +318,7 @@ public class EmployeeService
     /// <summary>
     /// Updates the skills for a specific employee.
     /// </summary>
-    public async Task<(bool Success, string? Error, int StatusCode, UserDto? Data)> UpdateSkillsAsync(string id, List<int> skillIds, string actorUserId)
+    public async Task<(bool Success, string? Error, int StatusCode, UserDto? Data)> UpdateSkillsAsync(string id, List<int> skillIds, int? experienceYears, string actorUserId)
     {
         var user = await _db.Users
             .Include(u => u.UserSkills)
@@ -354,6 +354,11 @@ public class EmployeeService
                 UserId = id,
                 SkillId = skillId
             });
+        }
+
+        if (experienceYears.HasValue)
+        {
+            user.ExperienceYears = experienceYears.Value;
         }
 
         user.UpdatedAt = DateTime.UtcNow;

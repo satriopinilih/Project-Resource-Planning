@@ -3,16 +3,22 @@ using Contracts.DTOs.ContractExtension;
 using Entities;
 using Entities.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
 
 namespace backend.Services;
 
 public class ContractExtensionService
 {
     private readonly ApplicationDbContext _db;
+    private readonly IConfiguration _configuration;
 
-    public ContractExtensionService(ApplicationDbContext db)
+    public ContractExtensionService(ApplicationDbContext db, IConfiguration configuration)
     {
         _db = db;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -73,6 +79,11 @@ public class ContractExtensionService
         if (created == null)
             return (false, "Failed to retrieve created record", 500, null);
 
+        var employeeName = created.User?.UserName ?? created.UserId;
+        var requestedByName = created.RequestedByUser?.UserName ?? created.RequestedBy;
+        var aisMessage = $"GM {requestedByName} has requested to extend contract of {employeeName} for {created.ExtensionDuration} months. Reason: {created.ReasonForExtension}";
+        await SendNotificationToAisAsync("HR", aisMessage, 100);
+
         return (true, null, 200, MapToDto(created));
     }
 
@@ -105,6 +116,13 @@ public class ContractExtensionService
         row.User.UpdatedBy = processedBy;
 
         await _db.SaveChangesAsync();
+
+        var employeeName = row.User?.UserName ?? row.UserId;
+        var hrUser = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == processedBy);
+        var hrName = hrUser?.UserName ?? "HR";
+        var aisMessage = $"{hrName} has APPROVED the contract extension request for {employeeName} ({row.ExtensionDuration} months).";
+        await SendNotificationToAisAsync("GM", aisMessage, 100);
+
         return (true, null, 200, MapToDto(row));
     }
 
@@ -133,6 +151,13 @@ public class ContractExtensionService
         row.UpdatedBy = processedBy;
 
         await _db.SaveChangesAsync();
+
+        var employeeName = row.User?.UserName ?? row.UserId;
+        var hrUser = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == processedBy);
+        var hrName = hrUser?.UserName ?? "HR";
+        var aisMessage = $"{hrName} has DECLINED the contract extension request for {employeeName}. Reason: {row.DeclineReason}";
+        await SendNotificationToAisAsync("GM", aisMessage, 100);
+
         return (true, null, 200, MapToDto(row));
     }
 
@@ -150,5 +175,46 @@ public class ContractExtensionService
             CreatedAt = c.CreatedAt,
             Status = c.Status
         };
+    }
+
+    private async Task SendNotificationToAisAsync(string recipientRole, string message, int type)
+    {
+        try
+        {
+            var aisBaseUrl = _configuration["AisConfig:BaseUrl"];
+            var aisApiKey = _configuration["AisConfig:ApiKey"];
+            if (string.IsNullOrEmpty(aisBaseUrl) || string.IsNullOrEmpty(aisApiKey))
+            {
+                return;
+            }
+
+            var targetUrl = $"{aisBaseUrl.TrimEnd('/')}/api/v1/notification/receive";
+            
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (msg, cert, chain, errors) => true
+            };
+            using var client = new HttpClient(handler);
+            using var request = new HttpRequestMessage(HttpMethod.Post, targetUrl);
+            request.Headers.Add("ApiKey", aisApiKey);
+            
+            var payload = new
+            {
+                RecipientRole = recipientRole,
+                Message = message,
+                Type = type
+            };
+            request.Content = JsonContent.Create(payload);
+
+            var response = await client.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception)
+        {
+            // Ignore
+        }
     }
 }
