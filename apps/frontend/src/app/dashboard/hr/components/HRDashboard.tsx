@@ -40,6 +40,7 @@ export default function HRDashboard() {
   const [contractExtensionRequests, setContractExtensionRequests] = useState<ContractExtensionRequest[]>([]);
   const [hireRequests, setHireRequests] = useState<HireRequest[]>([]);
   const [requestHistory, setRequestHistory] = useState<RequestHistoryItem[]>([]);
+  const [selectedRequestType, setSelectedRequestType] = useState<string>('All');
   const [historyPage, setHistoryPage] = useState(1);
   const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
@@ -135,10 +136,15 @@ export default function HRDashboard() {
     [hireRequests]
   );
 
-  const totalHistoryPages = Math.ceil(requestHistory.length / historyItemsPerPage);
+  const filteredHistory = useMemo(() => {
+    if (selectedRequestType === 'All') return requestHistory;
+    return requestHistory.filter((item) => item.requestType === selectedRequestType);
+  }, [requestHistory, selectedRequestType]);
+
+  const totalHistoryPages = Math.ceil(filteredHistory.length / historyItemsPerPage);
   const currentHistoryItems = useMemo(() => {
-    return requestHistory.slice((historyPage - 1) * historyItemsPerPage, historyPage * historyItemsPerPage);
-  }, [requestHistory, historyPage, historyItemsPerPage]);
+    return filteredHistory.slice((historyPage - 1) * historyItemsPerPage, historyPage * historyItemsPerPage);
+  }, [filteredHistory, historyPage, historyItemsPerPage]);
 
   const stats = useMemo(() => {
     const openHire = activeHireRequests.length;
@@ -584,7 +590,7 @@ export default function HRDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Showing {currentHistoryItems.length > 0 ? (historyPage - 1) * historyItemsPerPage + 1 : 0} - {Math.min(historyPage * historyItemsPerPage, requestHistory.length)} of {requestHistory.length} requests
+                    Showing {currentHistoryItems.length > 0 ? (historyPage - 1) * historyItemsPerPage + 1 : 0} - {Math.min(historyPage * historyItemsPerPage, filteredHistory.length)} of {filteredHistory.length} requests
                   </p>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-gray-500 dark:text-gray-400">Show</span>
@@ -600,6 +606,21 @@ export default function HRDashboard() {
                       <option value={25}>25</option>
                       <option value={50}>50</option>
                       <option value={100}>100</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Type</span>
+                    <select
+                      value={selectedRequestType}
+                      onChange={(e) => {
+                        setSelectedRequestType(e.target.value);
+                        setHistoryPage(1);
+                      }}
+                      className="px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <option value="All">All Types</option>
+                      <option value="Contract Extension">Contract Extension</option>
+                      <option value="Hire New Person">Hire New Person</option>
                     </select>
                   </div>
                 </div>
@@ -629,47 +650,51 @@ export default function HRDashboard() {
                 )}
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Project</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reason</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Extension</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Requested Date</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reviewed Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentHistoryItems.map((item) => (
-                      <tr key={item.referenceId} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestType}</td>
-                        <td className="py-3 px-4">
-                          <div className="text-sm text-gray-900 dark:text-white">{item.employeeName}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{item.staffRole}</div>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.projectName ?? '-'}</td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white max-w-[320px] truncate" title={item.reason ?? '-'}>{item.reason ?? '-'}</td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.extension}</td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestedDate}</td>
-                        <td className="py-3 px-4">
-                          {item.status === 'Pending' ? (
-                            <StatusBadge status="Pending" size="sm" />
-                          ) : item.status === 'Approved' || item.status === 'Completed' ? (
-                            <StatusBadge status="Approved" size="sm" />
-                          ) : (
-                            <StatusBadge status="Declined" size="sm" />
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.reviewedDate ?? '-'}</td>
+              {filteredHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">No matching requests found</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employee</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Project</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reason</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Extension</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Requested Date</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Reviewed Date</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {currentHistoryItems.map((item) => (
+                        <tr key={item.referenceId} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestType}</td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-gray-900 dark:text-white">{item.employeeName}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{item.staffRole}</div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.projectName ?? '-'}</td>
+                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white max-w-[320px] truncate" title={item.reason ?? '-'}>{item.reason ?? '-'}</td>
+                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.extension}</td>
+                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.requestedDate}</td>
+                          <td className="py-3 px-4">
+                            {item.status === 'Pending' ? (
+                              <StatusBadge status="Pending" size="sm" />
+                            ) : item.status === 'Approved' || item.status === 'Completed' || item.status === 'Fulfilled' ? (
+                              <StatusBadge status="Approved" size="sm" />
+                            ) : (
+                              <StatusBadge status="Declined" size="sm" />
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{item.reviewedDate ?? '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </>
           )}
         </div>
