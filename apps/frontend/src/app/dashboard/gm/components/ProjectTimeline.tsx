@@ -31,7 +31,7 @@ const formatFull = (d: Date) =>
   }).format(d);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type ProjectStatus = "pending" | "scheduled" | "running" | "completed" | "deleted";
+type ProjectStatus = "pending" | "scheduled" | "running" | "completed" | "deleted" | "hold";
 
 interface TimelineProject {
   id: string;
@@ -58,6 +58,7 @@ function mapStatus(s: number, startDateStr?: string): ProjectStatus {
   }
   if (s === 3) return "completed";
   if (s === 4) return "deleted";
+  if (s === 5) return "hold";
   return "pending";
 }
 
@@ -79,6 +80,7 @@ const statusBarColors: Record<ProjectStatus, string> = {
   running: "bg-[#22c55e]/90 hover:bg-[#22c55e] border-[#22c55e]/30",
   completed: "bg-[#64748b]/90 hover:bg-[#64748b] border-[#64748b]/30",
   deleted: "bg-red-500/90 hover:bg-red-500 border-red-500/30",
+  hold: "bg-orange-500/90 hover:bg-orange-500 border-orange-500/30",
 };
 
 const filterConfig: {
@@ -117,25 +119,55 @@ const filterConfig: {
       activeClass: "bg-red-500/20 border-red-500/60 text-red-500",
       dotClass: "bg-red-500",
     },
+    {
+      status: "hold",
+      label: "Hold",
+      activeClass: "bg-orange-500/20 border-orange-500/60 text-orange-500",
+      dotClass: "bg-orange-500",
+    },
   ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
+type ViewMode = "Daily" | "Weekly" | "Monthly";
+
 export default function ProjectTimeline() {
   const [allProjects, setAllProjects] = useState<TimelineProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Default: show Pending, Scheduled, Running (hide Completed)
+  // Default: show Pending, Scheduled, Running, Hold (hide Completed)
   const [activeFilters, setActiveFilters] = useState<Set<ProjectStatus>>(
-    new Set(["pending", "scheduled", "running"])
+    new Set(["pending", "scheduled", "running", "hold"])
   );
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Default window: current week Monday
-  const [windowStart, setWindowStart] = useState<Date>(() => toMonday(new Date()));
+  const [viewMode, setViewMode] = useState<ViewMode>("Weekly");
 
-  const handlePrev = () => setWindowStart((prev) => addDays(prev, -12 * 7));
-  const handleNext = () => setWindowStart((prev) => addDays(prev, 12 * 7));
+  const getInitialStart = (mode: ViewMode) => {
+    const now = new Date();
+    if (mode === "Monthly") {
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    return toMonday(now);
+  };
+
+  const [windowStart, setWindowStart] = useState<Date>(() => getInitialStart("Weekly"));
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    setWindowStart(getInitialStart(mode));
+  };
+
+  const handlePrev = () => setWindowStart((prev) => {
+    if (viewMode === "Daily") return addDays(prev, -14);
+    if (viewMode === "Weekly") return addDays(prev, -12 * 7);
+    return new Date(prev.getFullYear(), prev.getMonth() - 6, 1);
+  });
+  const handleNext = () => setWindowStart((prev) => {
+    if (viewMode === "Daily") return addDays(prev, 14);
+    if (viewMode === "Weekly") return addDays(prev, 12 * 7);
+    return new Date(prev.getFullYear(), prev.getMonth() + 6, 1);
+  });
 
   const toggleFilter = (status: ProjectStatus) => {
     setActiveFilters((prev) => {
@@ -156,13 +188,38 @@ export default function ProjectTimeline() {
       .finally(() => setLoading(false));
   }, []);
 
-  const windowEnd = useMemo(() => addDays(windowStart, 12 * 7 - 1), [windowStart]);
-  const TOTAL_DAYS = 12 * 7;
+  const { windowEnd, TOTAL_DAYS } = useMemo(() => {
+    if (viewMode === "Daily") {
+      return { windowEnd: addDays(windowStart, 13), TOTAL_DAYS: 14 };
+    }
+    if (viewMode === "Weekly") {
+      const days = 12 * 7;
+      return { windowEnd: addDays(windowStart, days - 1), TOTAL_DAYS: days };
+    }
+    // Monthly
+    const end = new Date(windowStart.getFullYear(), windowStart.getMonth() + 6, 0); // last day of 6th month
+    const totalDays = diffDays(windowStart, end) + 1;
+    return { windowEnd: end, TOTAL_DAYS: totalDays };
+  }, [windowStart, viewMode]);
 
   const { columns, filteredProjects, hiddenPastCount, hiddenFutureCount } = useMemo(() => {
-    const cols = Array.from({ length: 12 }).map((_, i) => ({
-      label: formatShort(addDays(windowStart, i * 7)),
-    }));
+    let cols: { label: string }[] = [];
+    if (viewMode === "Daily") {
+      cols = Array.from({ length: 14 }).map((_, i) => ({
+        label: formatShort(addDays(windowStart, i)),
+      }));
+    } else if (viewMode === "Weekly") {
+      cols = Array.from({ length: 12 }).map((_, i) => ({
+        label: formatShort(addDays(windowStart, i * 7)),
+      }));
+    } else if (viewMode === "Monthly") {
+      cols = Array.from({ length: 6 }).map((_, i) => {
+        const d = new Date(windowStart.getFullYear(), windowStart.getMonth() + i, 1);
+        return {
+          label: new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(d),
+        };
+      });
+    }
 
     let past = 0;
     let future = 0;
@@ -170,7 +227,7 @@ export default function ProjectTimeline() {
     const filtered = allProjects.filter((p) => {
       if (!activeFilters.has(p.status)) return false;
       if (searchQuery.trim() !== "" && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      
+
       // Only show if overlaps with the current 12-week window
       if (p.endDate < windowStart) {
         past++;
@@ -184,7 +241,7 @@ export default function ProjectTimeline() {
     });
 
     return { columns: cols, filteredProjects: filtered, hiddenPastCount: past, hiddenFutureCount: future };
-  }, [allProjects, activeFilters, searchQuery, windowStart, windowEnd]);
+  }, [allProjects, activeFilters, searchQuery, windowStart, windowEnd, viewMode]);
 
   return (
     <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300">
@@ -195,7 +252,7 @@ export default function ProjectTimeline() {
             Project Timeline
           </h3>
           <p className="text-[12px] text-[var(--dash-text-muted)] mt-0.5">
-            {formatFull(windowStart)} — {formatFull(windowEnd)} (12 Weeks)
+            {formatFull(windowStart)} — {formatFull(windowEnd)}
           </p>
         </div>
 
@@ -203,8 +260,8 @@ export default function ProjectTimeline() {
         <div className="flex items-center gap-2">
           <div className="relative">
             {hiddenPastCount > 0 && (
-              <span 
-                className="absolute -top-1.5 -left-1.5 bg-blue-500 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full shadow-sm z-10 pointer-events-none" 
+              <span
+                className="absolute -top-1.5 -left-1.5 bg-blue-500 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full shadow-sm z-10 pointer-events-none"
                 title={`${hiddenPastCount} project(s) hidden in past`}
               >
                 {hiddenPastCount > 9 ? '9+' : hiddenPastCount}
@@ -229,8 +286,8 @@ export default function ProjectTimeline() {
               <ChevronRight size={14} />
             </button>
             {hiddenFutureCount > 0 && (
-              <span 
-                className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full shadow-sm z-10 pointer-events-none" 
+              <span
+                className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full shadow-sm z-10 pointer-events-none"
                 title={`${hiddenFutureCount} project(s) hidden in future`}
               >
                 {hiddenFutureCount > 9 ? '9+' : hiddenFutureCount}
@@ -269,20 +326,41 @@ export default function ProjectTimeline() {
           );
         })}
 
-        {/* ── Search Bar ── */}
-        <div className="ml-auto relative w-80 ">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]"
-            strokeWidth={1.8}
-          />
-          <input
-            type="text"
-            placeholder="Search projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-9 pl-9 pr-4 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
-          />
+        {/* View toggle & Search */}
+        <div className="ml-auto flex items-center gap-4">
+          {/* View toggle */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg p-0.5">
+              {(["Daily", "Weekly", "Monthly"] as ViewMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => handleViewModeChange(mode)}
+                  className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all ${viewMode === mode
+                      ? "bg-[#3b82f6] text-white shadow-sm"
+                      : "text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]"
+                    }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Search Bar ── */}
+          <div className="relative w-[260px]">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]"
+              strokeWidth={1.8}
+            />
+            <input
+              type="text"
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-9 pl-9 pr-4 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
+            />
+          </div>
         </div>
       </div>
 
@@ -304,7 +382,10 @@ export default function ProjectTimeline() {
             {/* Column headers */}
             <div className="flex mb-2">
               <div className="w-[220px] shrink-0" />
-              <div className="flex-1 grid grid-cols-12">
+              <div
+                className="flex-1 grid"
+                style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
+              >
                 {columns.map((col, i) => (
                   <div
                     key={i}
@@ -346,7 +427,10 @@ export default function ProjectTimeline() {
                   {/* Bar area */}
                   <div className="flex-1 relative h-[36px]">
                     {/* Vertical grid lines */}
-                    <div className="absolute inset-0 grid grid-cols-12 pointer-events-none">
+                    <div
+                      className="absolute inset-0 grid pointer-events-none"
+                      style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
+                    >
                       {columns.map((_, i) => (
                         <div
                           key={i}

@@ -22,6 +22,7 @@ import {
   getProjects,
   BackendProject,
   deleteProject,
+  restoreProject,
   getHireRequests,
   HireRequest,
   updateProject,
@@ -41,6 +42,7 @@ export default function MarketingDashboard() {
 
   const [projects, setProjects] = useState<BackendProject[]>([]);
   const [timelineNotifications, setTimelineNotifications] = useState<HireRequest[]>([]);
+  const [actionRequests, setActionRequests] = useState<HireRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actingRequestId, setActingRequestId] = useState<number | null>(null);
 
@@ -67,6 +69,11 @@ export default function MarketingDashboard() {
         setTimelineNotifications(
           hireRows.filter(
             (h) => h.roleNeeded === "Timeline Edit Request" && (h.status === "Open" || h.status === "InProgress")
+          )
+        );
+        setActionRequests(
+          hireRows.filter(
+            (h) => (h.roleNeeded === "Project Deletion Request" || h.roleNeeded === "Project Restoration Request") && (h.status === "Open" || h.status === "InProgress")
           )
         );
       })
@@ -172,6 +179,36 @@ export default function MarketingDashboard() {
     }
   };
 
+  const handleApproveActionRequest = async (item: HireRequest) => {
+    if (!item.projectId) return;
+    try {
+      setActingRequestId(item.hireRequestId);
+      if (item.roleNeeded === "Project Deletion Request") {
+        await deleteProject(item.projectId);
+      } else if (item.roleNeeded === "Project Restoration Request") {
+        await restoreProject(item.projectId);
+      }
+      await fulfillHireRequest(item.hireRequestId, "Approved by Marketing");
+      refreshData();
+    } catch (e) {
+      alert("Failed to approve request: " + (e instanceof Error ? e.message : "Unknown error"));
+    } finally {
+      setActingRequestId(null);
+    }
+  };
+
+  const handleDeclineActionRequest = async (item: HireRequest) => {
+    try {
+      setActingRequestId(item.hireRequestId);
+      await declineHireRequest(item.hireRequestId, "Declined by Marketing");
+      refreshData();
+    } catch (e) {
+      alert("Failed to decline request: " + (e instanceof Error ? e.message : "Unknown error"));
+    } finally {
+      setActingRequestId(null);
+    }
+  };
+
   const isProjectScheduled = (p: BackendProject) => {
     if (p.projectStatus === 1) return true;
     if (p.projectStatus === 2 && p.estimatedStartDate) {
@@ -258,7 +295,7 @@ export default function MarketingDashboard() {
         <StatCardCustom label="Completed" value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" /> : completedCount} icon={CheckCircle2} iconBg="bg-gray-100 dark:bg-[#34353a]" iconColor="text-gray-600 dark:text-gray-400" valueColor="text-gray-900 dark:text-white" onClick={() => router.push('/project?tab=Completed')} />
       </section>
 
-      <section className="grid grid-cols-1 gap-4 mb-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-white dark:bg-[#242427] rounded-2xl p-5 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-2 mb-3">
             <Bell size={16} className="text-amber-600 dark:text-amber-400" />
@@ -289,20 +326,70 @@ export default function MarketingDashboard() {
                   <div className="mt-3 flex gap-2">
                     <button
                       onClick={(e) => { e.stopPropagation(); openReviewModal(item); }}
-                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[12px] font-semibold rounded-lg transition-colors"
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer"
                     >
                       Approve
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeclineTimelineRequest(item); }}
                       disabled={actingRequestId === item.hireRequestId}
-                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[12px] font-semibold rounded-lg disabled:opacity-50 transition-colors"
+                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[12px] font-semibold rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
                     >
                       Decline
                     </button>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-[#242427] rounded-2xl p-5 border border-gray-200 dark:border-white/5 shadow-sm transition-colors duration-300">
+          <div className="flex items-center gap-2 mb-3">
+            <Bell size={16} className="text-red-600 dark:text-red-400" />
+            <h3 className="text-[15px] font-semibold text-gray-900 dark:text-white">Project Action Requests</h3>
+          </div>
+          {actionRequests.length === 0 ? (
+            <p className="text-[13px] text-gray-500 dark:text-gray-400">No pending action requests.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {actionRequests.slice(0, 4).map((item) => {
+                const isDelete = item.roleNeeded === "Project Deletion Request";
+                return (
+                  <div
+                    key={item.hireRequestId}
+                    className="w-full text-left rounded-xl px-4 py-3 border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#1f2433] hover:bg-gray-100 dark:hover:bg-[#252b3d] transition-all group"
+                  >
+                    <div className="w-full text-left">
+                      <p className="text-[13px] text-gray-900 dark:text-white">
+                        GM requested <span className={`font-semibold ${isDelete ? 'text-red-500' : 'text-green-500'}`}>{isDelete ? "deletion" : "restoration"}</span> for <span className="font-semibold">{item.projectName}</span>
+                      </p>
+                      {item.notes && (
+                        <p className="text-[12px] text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
+                          Note: {item.notes.replace("[PROJECT DELETION REQUEST] ", "").replace("[PROJECT RESTORATION REQUEST] ", "")}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleApproveActionRequest(item); }}
+                        disabled={actingRequestId === item.hireRequestId}
+                        className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[12px] font-semibold rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeclineActionRequest(item); }}
+                        disabled={actingRequestId === item.hireRequestId}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[12px] font-semibold rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

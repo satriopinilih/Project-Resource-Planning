@@ -76,8 +76,8 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
         {candidate.pastProjects && candidate.pastProjects.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider self-center mr-0.5">Projects:</span>
-            {candidate.pastProjects.map((proj) => (
-              <span key={proj.projectName} className="px-2 py-0.5 bg-purple-500/10 text-purple-300 text-[10px] font-semibold rounded-md border border-purple-500/20" title={`Role: ${proj.roleInProject} · Skills: ${proj.projectSkills.join(", ") || "—"}`}>
+            {candidate.pastProjects.map((proj, idx) => (
+              <span key={`${proj.projectName}-${idx}`} className="px-2 py-0.5 bg-purple-500/10 text-purple-300 text-[10px] font-semibold rounded-md border border-purple-500/20" title={`Role: ${proj.roleInProject} · Skills: ${proj.projectSkills.join(", ") || "—"}`}>
                 {proj.projectName}
               </span>
             ))}
@@ -212,22 +212,53 @@ const OptionCard: React.FC<{
   originalStartDate?: string;
   originalEndDate?: string;
   hasRequiredRoles: boolean;
-}> = ({ option, isRecommended, label, originalStartDate, originalEndDate, hasRequiredRoles }) => {
+  customizedAssignments?: { role: string; userId: string; userName: string; matchPercent: number }[];
+  onClearCustomization?: () => void;
+  onStartCustom?: () => void;
+}> = ({ option, isRecommended, label, originalStartDate, originalEndDate, hasRequiredRoles, customizedAssignments, onClearCustomization, onStartCustom }) => {
   const [expanded, setExpanded] = useState(false);
   const [startConfirmOpen, setStartConfirmOpen] = useState(false);
+  const [startCustomConfirmOpen, setStartCustomConfirmOpen] = useState(false);
+
+  const isCustomized = customizedAssignments && customizedAssignments.length > 0;
+
+  // Calculate custom match score as average of individual match %
+  const customMatchScore = isCustomized
+    ? customizedAssignments!.reduce((sum, a) => sum + a.matchPercent, 0) / customizedAssignments!.length
+    : null;
+
+  const displayScore = customMatchScore !== null ? customMatchScore : option.matchScore;
 
   return (
     <div className={`
       flex-1 bg-[#1a1f2e]/50 border rounded-2xl p-6 flex flex-col transition-all duration-300
-      ${isRecommended ? "border-green-500/40 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : "border-[var(--dash-border)] hover:border-gray-700"}
+      ${isCustomized ? "border-purple-500/40 shadow-[0_0_15px_rgba(139,92,246,0.1)]" : isRecommended ? "border-green-500/40 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : "border-[var(--dash-border)] hover:border-gray-700"}
     `}>
       <div className="flex items-center justify-between mb-5">
-        <h4 className="text-[15px] font-bold text-white">{option.title}</h4>
-        {isRecommended && (
-          <span className="px-2.5 py-1 rounded-md bg-green-500/10 text-green-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-            <Star size={10} fill="currentColor" /> Recommended
-          </span>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <h4 className="text-[15px] font-bold text-white">{option.title}</h4>
+          {isCustomized && (
+            <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-purple-500/30">
+              ✎ Customized
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {isRecommended && !isCustomized && (
+            <span className="px-2.5 py-1 rounded-md bg-green-500/10 text-green-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+              <Star size={10} fill="currentColor" /> Recommended
+            </span>
+          )}
+          {isCustomized && onClearCustomization && (
+            <button
+              onClick={onClearCustomization}
+              className="px-2.5 py-1 rounded-md bg-gray-700/60 text-gray-400 hover:text-gray-200 hover:bg-gray-700 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border border-gray-600/40"
+              title="Reset to AI recommendation"
+            >
+              ↺ Reset
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -244,7 +275,7 @@ const OptionCard: React.FC<{
             <div className="p-1.5 bg-gray-800 rounded-md text-gray-400"><Users size={14} /></div>
             <div>
               <p className="text-[10px] text-[var(--dash-text-faint)] uppercase font-bold tracking-tight">Team Size</p>
-              <p className="text-[12px] text-gray-200 mt-0.5">{option.teamSize} members ({option.availableNow} available now)</p>
+              <p className="text-[12px] text-gray-200 mt-0.5">{isCustomized ? customizedAssignments!.length : option.teamSize} members</p>
             </div>
           </div>
         </div>
@@ -253,72 +284,123 @@ const OptionCard: React.FC<{
         <div className="mt-2">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] text-[var(--dash-text-faint)] uppercase font-bold tracking-tight flex items-center gap-1.5">
-              <Award size={12} /> Skill Match Score
+              <Award size={12} /> {isCustomized ? "Custom Match Score" : "Skill Match Score"}
             </span>
-            <span className={`text-[13px] font-black ${option.matchScore >= 70 ? "text-green-400" : option.matchScore >= 40 ? "text-amber-400" : "text-red-400"
+            <span className={`text-[13px] font-black ${displayScore >= 70 ? "text-green-400" : displayScore >= 40 ? "text-amber-400" : "text-red-400"
               }`}>
-              {option.matchScore.toFixed(0)}%
+              {displayScore.toFixed(0)}%
             </span>
           </div>
           <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-1000 ${option.matchScore >= 70 ? "bg-gradient-to-r from-green-600 to-green-400" :
-                option.matchScore >= 40 ? "bg-gradient-to-r from-amber-600 to-amber-400" :
+              className={`h-full rounded-full transition-all duration-1000 ${displayScore >= 70 ? "bg-gradient-to-r from-green-600 to-green-400" :
+                displayScore >= 40 ? "bg-gradient-to-r from-amber-600 to-amber-400" :
                   "bg-gradient-to-r from-red-600 to-red-400"
                 }`}
-              style={{ width: `${option.matchScore}%` }}
+              style={{ width: `${Math.min(displayScore, 100)}%` }}
             />
           </div>
         </div>
 
-        {/* Status Box */}
-        <div className={`
-          mt-3 p-3 rounded-xl border flex flex-col gap-1.5
-          ${option.requiresHiring
-            ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
-            : option.requiresReschedule
-              ? "bg-[#8b5cf6]/5 border-[#8b5cf6]/20 text-[#a78bfa]"
-              : "bg-green-500/5 border-green-500/20 text-green-500"}
-        `}>
-          <div className="flex items-center gap-2">
-            {option.requiresHiring ? <UserPlus size={14} /> : option.requiresReschedule ? <Clock size={14} /> : <CheckCircle2 size={14} />}
-            <span className="text-[12px] font-bold">
-              {option.requiresHiring ? "Request Hiring / Replacement" : option.requiresReschedule ? "Action Needed: Delay Start Date" : "All resources available"}
-            </span>
+        {/* Custom Team Preview */}
+        {isCustomized && (
+          <div className="mt-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">
+            <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider mb-2">Custom Team</p>
+            <div className="space-y-1.5">
+              {customizedAssignments!.map((a, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-500">{a.role}:</span>
+                    <span className="text-[12px] font-semibold text-white">{a.userName}</span>
+                  </div>
+                  <span className={`text-[11px] font-bold ${
+                    a.matchPercent >= 70 ? "text-green-400" : a.matchPercent >= 40 ? "text-amber-400" : "text-red-400"
+                  }`}>{a.matchPercent.toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
           </div>
-          {option.requiresHiring && option.hiringDetail && (
-            <p className="text-[11px] font-medium pl-5 opacity-90">• {option.hiringDetail}</p>
-          )}
-          {option.requiresReschedule && option.rescheduleDetail && (
-            <p className="text-[11px] font-medium pl-5 opacity-90">• {option.rescheduleDetail}</p>
-          )}
-        </div>
+        )}
+
+        {/* Status Box — only show if not customized */}
+        {!isCustomized && (
+          <div className={`
+            mt-3 p-3 rounded-xl border flex flex-col gap-1.5
+            ${option.requiresHiring
+              ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
+              : option.requiresReschedule
+                ? "bg-[#8b5cf6]/5 border-[#8b5cf6]/20 text-[#a78bfa]"
+                : "bg-green-500/5 border-green-500/20 text-green-500"}
+          `}>
+            <div className="flex items-center gap-2">
+              {option.requiresHiring ? <UserPlus size={14} /> : option.requiresReschedule ? <Clock size={14} /> : <CheckCircle2 size={14} />}
+              <span className="text-[12px] font-bold">
+                {option.requiresHiring ? "Request Hiring / Replacement" : option.requiresReschedule ? "Action Needed: Delay Start Date" : "All resources available"}
+              </span>
+            </div>
+            {option.requiresHiring && option.hiringDetail && (
+              <p className="text-[11px] font-medium pl-5 opacity-90">• {option.hiringDetail}</p>
+            )}
+            {option.requiresReschedule && option.rescheduleDetail && (
+              <p className="text-[11px] font-medium pl-5 opacity-90">• {option.rescheduleDetail}</p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Expand Candidates */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="mt-5 w-full py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 text-[12px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all border border-gray-700/50 cursor-pointer"
-      >
-        <Briefcase size={14} />
-        {expanded ? "Hide" : "Show"} Team ({option.candidates.length})
-        <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
-      </button>
+      {/* Expand Candidates — only if not customized */}
+      {!isCustomized && (
+        <>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="mt-5 w-full py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 text-[12px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all border border-gray-700/50 cursor-pointer"
+          >
+            <Briefcase size={14} />
+            {expanded ? "Hide" : "Show"} Team ({option.candidates.length})
+            <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+          </button>
 
-      {expanded && (
-        <div className="mt-4 space-y-2.5 animate-in slide-in-from-top-2 duration-300">
-          {option.candidates.map((c, idx) => (
-            <CandidateCard key={c.userId} candidate={c} rank={idx + 1} />
-          ))}
-          {option.candidates.length === 0 && (
-            <p className="text-center text-[12px] text-[var(--dash-text-faint)] py-4 italic">No candidates matched for this option.</p>
+          {expanded && (
+            <div className="mt-4 space-y-2.5 animate-in slide-in-from-top-2 duration-300">
+              {option.candidates.map((c, idx) => (
+                <CandidateCard key={c.userId} candidate={c} rank={idx + 1} />
+              ))}
+              {option.candidates.length === 0 && (
+                <p className="text-center text-[12px] text-[var(--dash-text-faint)] py-4 italic">No candidates matched for this option.</p>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Option Actions */}
-      <div className="mt-6 flex gap-3">
-        {option.requiresReschedule && !option.requiresHiring ? (
+      <div className="mt-auto pt-5 flex gap-3">
+        {isCustomized ? (
+          // Custom team: show Start with Custom Team button
+          <>
+            <button
+              onClick={() => setStartCustomConfirmOpen(true)}
+              className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 size={14} />
+              Start with Custom Team
+            </button>
+            <ConfirmModal
+              isOpen={startCustomConfirmOpen}
+              onClose={() => setStartCustomConfirmOpen(false)}
+              onConfirm={() => {
+                setStartCustomConfirmOpen(false);
+                onStartCustom && onStartCustom();
+              }}
+              icon={<CheckCircle2 size={28} className="text-white" />}
+              iconBg="bg-gradient-to-br from-purple-600 to-indigo-600"
+              title="Start with Custom Team"
+              message={`Start project with your custom team of ${customizedAssignments!.length} member(s)?`}
+              confirmText="Confirm & Start"
+              confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
+            />
+          </>
+        ) : option.requiresReschedule && !option.requiresHiring ? (
           <button
             disabled={!hasRequiredRoles}
             title={!hasRequiredRoles ? "Add required roles to the project before starting" : undefined}
@@ -358,7 +440,7 @@ const OptionCard: React.FC<{
           onClick={() => window.dispatchEvent(new CustomEvent('customizeOption', { detail: option }))}
           className="px-5 py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 font-bold text-[13px] rounded-xl border border-gray-700/50 transition-all cursor-pointer"
         >
-          Customize
+          {isCustomized ? "Re-Customize" : "Customize"}
         </button>
       </div>
     </div>
@@ -372,9 +454,9 @@ const CustomizeModal: React.FC<{
   employees: Employee[];
   allCandidates: RecommendationCandidate[];
   onClose: () => void;
-  onSave: (assignments: { role: string; userId: string }[]) => void;
+  onPreview: (assignments: { role: string; userId: string; workingType: string }[]) => void;
   isProcessing: boolean;
-}> = ({ option, requiredRoles, employees, allCandidates, onClose, onSave, isProcessing }) => {
+}> = ({ option, requiredRoles, employees, allCandidates, onClose, onPreview, isProcessing }) => {
 
   // Transform needed roles into a flat list of slots
   const initialAssignments: { id: string; role: string; workingType: string; userId: string; originalUserId: string }[] = [];
@@ -401,9 +483,10 @@ const CustomizeModal: React.FC<{
     setExpandedSlot(null);
   };
 
-  const handleSave = () => {
+  const handlePreview = () => {
     const valid = assignments.filter(a => a.userId.trim() !== "");
-    onSave(valid);
+    onPreview(valid);
+    onClose();
   };
 
   const filledCount = assignments.filter(a => a.userId.trim() !== "").length;
@@ -440,11 +523,11 @@ const CustomizeModal: React.FC<{
   // Role-based filtering map: show only employees matching the slot's role
   const getRoleFilter = (roleName: string): string[] => {
     const r = roleName.toLowerCase();
-    if (r === "pm") return ["pm"];
-    if (r === "architect") return ["architect"];
-    if (r === "senior dev") return ["senior dev"];
+    if (r === "pm") return ["pm", "senior ba"];
+    if (r === "architect") return ["architect", "senior dev"];
+    if (r === "senior dev") return ["senior dev", "architect"];
     if (r === "junior dev") return ["senior dev", "junior dev"];
-    if (r === "senior ba") return ["senior ba"];
+    if (r === "senior ba") return ["senior ba", "pm"];
     if (r === "junior ba") return ["senior ba", "junior ba"];
     return []; // empty = no filter, show all
   };
@@ -596,8 +679,8 @@ const CustomizeModal: React.FC<{
                       {selectedEmp.projects && selectedEmp.projects.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider self-center mr-0.5">Proj:</span>
-                          {selectedEmp.projects.slice(0, 4).map((p: any) => (
-                            <span key={p.id || p.name} className="px-1.5 py-0.5 bg-purple-500/10 text-purple-300 text-[9px] font-semibold rounded border border-purple-500/15">
+                          {selectedEmp.projects.slice(0, 4).map((p: any, idx: number) => (
+                            <span key={p.userProjectId || p.id || `${p.name}-${idx}`} className="px-1.5 py-0.5 bg-purple-500/10 text-purple-300 text-[9px] font-semibold rounded border border-purple-500/15">
                               {p.name}
                             </span>
                           ))}
@@ -697,9 +780,9 @@ const CustomizeModal: React.FC<{
                               {/* Projects row */}
                               {emp.projects && emp.projects.length > 0 && (
                                 <div className="flex flex-wrap gap-1 pl-[37px]">
-                                  {emp.projects.slice(0, 3).map((p: any) => (
+                                  {emp.projects.slice(0, 3).map((p: any, idx: number) => (
                                     <span
-                                      key={p.id || p.name}
+                                      key={p.userProjectId || p.id || `${p.name}-${idx}`}
                                       className={`px-1.5 py-0.5 text-[9px] font-semibold rounded border ${!isFree
                                         ? "bg-gray-800/50 text-gray-600 border-gray-700/30"
                                         : isSelected
@@ -793,12 +876,12 @@ const CustomizeModal: React.FC<{
                 Cancel
               </button>
               <button
-                onClick={handleSave}
+                onClick={handlePreview}
                 disabled={!canSave}
-                className="px-4 py-2 rounded-lg font-bold bg-blue-600 text-white hover:bg-blue-500 flex items-center gap-1.5 text-[11px] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-500/20 cursor-pointer"
+                className="px-4 py-2 rounded-lg font-bold bg-purple-600 text-white hover:bg-purple-500 flex items-center gap-1.5 text-[11px] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-purple-500/20 cursor-pointer"
               >
-                {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                {isProcessing ? "Saving..." : "Save Project"}
+                <ChevronRight size={14} />
+                Preview Changes
               </button>
             </div>
 
@@ -818,6 +901,8 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
   // Customization and Batch actions state
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [customizingOption, setCustomizingOption] = useState<OptionType | null>(null);
+  const [customAssignmentsA, setCustomAssignmentsA] = useState<{ role: string; userId: string; userName: string; matchPercent: number; workingType: string }[] | null>(null);
+  const [customAssignmentsB, setCustomAssignmentsB] = useState<{ role: string; userId: string; userName: string; matchPercent: number; workingType: string }[] | null>(null);
   const [adjustingOption, setAdjustingOption] = useState<{ option: OptionType; originalStartDate: string; originalEndDate: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState("");
@@ -1015,6 +1100,9 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             originalStartDate={data.estimatedStartDate}
             originalEndDate={data.estimatedEndDate}
             hasRequiredRoles={data.requiredRoles.length > 0}
+            customizedAssignments={customAssignmentsA || undefined}
+            onClearCustomization={() => setCustomAssignmentsA(null)}
+            onStartCustom={() => processStartProject(customAssignmentsA || [])}
           />
           <OptionCard
             option={data.optionB}
@@ -1023,6 +1111,9 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             originalStartDate={data.estimatedStartDate}
             originalEndDate={data.estimatedEndDate}
             hasRequiredRoles={data.requiredRoles.length > 0}
+            customizedAssignments={customAssignmentsB || undefined}
+            onClearCustomization={() => setCustomAssignmentsB(null)}
+            onStartCustom={() => processStartProject(customAssignmentsB || [])}
           />
         </div>
       </div>
@@ -1037,7 +1128,24 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             ...data.optionB.candidates.filter(c => !data.optionA.candidates.some(a => a.userId === c.userId))
           ]}
           onClose={() => setCustomizingOption(null)}
-          onSave={processStartProject}
+          onPreview={(assignments) => {
+            const mapped = assignments.map(a => {
+              const emp = employees.find(e => e.id === a.userId);
+              const aiCandidate = customizingOption.candidates.find(c => c.userId === a.userId);
+              return {
+                role: a.role,
+                userId: a.userId,
+                workingType: a.workingType,
+                userName: emp ? emp.name : "Unknown",
+                matchPercent: aiCandidate ? aiCandidate.skillMatchPercent : 50 // default fallback
+              };
+            });
+            if (customizingOption.title === data.optionA.title) {
+              setCustomAssignmentsA(mapped);
+            } else {
+              setCustomAssignmentsB(mapped);
+            }
+          }}
           isProcessing={isProcessing}
         />
       )}

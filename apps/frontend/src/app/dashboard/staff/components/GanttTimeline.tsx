@@ -32,6 +32,7 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
   const [windowStart, setWindowStart] = useState(() => getMonday(new Date()));
   const [filterScheduled, setFilterScheduled] = useState(true);
   const [filterRunning, setFilterRunning] = useState(true);
+  const [filterHold, setFilterHold] = useState(true);
 
   const [tooltip, setTooltip] = useState<{
     project: Project;
@@ -82,6 +83,7 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
       .filter(p => {
         if ((p.status === "Scheduled" || p.status === "Upcoming") && !filterScheduled) return false;
         if (p.status === "Running" && !filterRunning) return false;
+        if (p.status === "Hold" && !filterHold) return false;
         if (p.status === "Completed") return false; // never show completed here
         // must overlap with window
         const ps = new Date(p.startDate).getTime();
@@ -89,7 +91,7 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
         return ps <= endMs && pe >= startMs;
       })
       .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-  }, [projects, windowStart, windowEnd, filterScheduled, filterRunning]);
+  }, [projects, windowStart, windowEnd, filterScheduled, filterRunning, filterHold]);
 
   /* ─── render ─────────────────────────────────────────────────────────── */
   return (
@@ -141,6 +143,15 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
             >
               Running
             </button>
+            <button
+              onClick={() => setFilterHold(v => !v)}
+              className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all duration-200 cursor-pointer select-none ${filterHold
+                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                  : "bg-transparent text-[var(--dash-text-muted)] border-[var(--dash-border)] hover:border-amber-500/20 hover:text-amber-500"
+                }`}
+            >
+              Hold
+            </button>
           </div>
         </div>
       </div>
@@ -176,20 +187,22 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
                 No projects match the selected filters or fall within this window.
               </div>
             ) : (
-              filtered.map((project) => {
+              filtered.map((project, index) => {
                 const startPct = toPercent(project.startDate);
                 const endPct = toPercent(project.endDate);
                 const width = Math.max(0.5, endPct - startPct);
                 const color =
                   project.status === "Running"
                     ? "#22c55e"
-                    : project.status === "Scheduled" || project.status === "Upcoming"
-                      ? "#a855f7"
-                      : "#64748b";
+                    : project.status === "Hold"
+                      ? "#f59e0b"
+                      : project.status === "Scheduled" || project.status === "Upcoming"
+                        ? "#a855f7"
+                        : "#64748b";
 
                 return (
                   <div
-                    key={project.id}
+                    key={project.userProjectId ?? `${project.id}-${index}`}
                     className="grid grid-cols-[220px_1fr] items-stretch border-b border-[var(--dash-border-subtle)]/40 group"
                     style={{ minHeight: 64 }}
                   >
@@ -201,9 +214,11 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
                         <span className={
                           project.status === "Running"
                             ? "text-green-400 font-semibold"
-                            : project.status === "Scheduled" || project.status === "Upcoming"
-                              ? "text-purple-400 font-semibold"
-                              : "text-gray-400 font-semibold"
+                            : project.status === "Hold"
+                              ? "text-amber-500 font-semibold"
+                              : project.status === "Scheduled" || project.status === "Upcoming"
+                                ? "text-purple-400 font-semibold"
+                                : "text-gray-400 font-semibold"
                         }>
                           {project.status}
                         </span>
@@ -261,8 +276,9 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
         const p = tooltip.project;
         const fmtDate = (s: string) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
         const isRunning = p.status === "Running";
-        const statusColor = isRunning ? "text-green-400" : "text-purple-400";
-        const dotColor = isRunning ? "bg-green-400" : "bg-purple-400";
+        const isHold = p.status === "Hold";
+        const statusColor = isRunning ? "text-green-400" : isHold ? "text-amber-500" : "text-purple-400";
+        const dotColor = isRunning ? "bg-green-400" : isHold ? "bg-amber-500" : "bg-purple-400";
         return (
           <div
             className="fixed z-[100] pointer-events-none"

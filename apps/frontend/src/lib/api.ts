@@ -202,6 +202,7 @@ const mapProject = (project: BackendUserProject): Project => {
     if (project.projectStatus === 1) finalStatus = 'Scheduled';
     else if (project.projectStatus === 2) finalStatus = 'Running';
     else if (project.projectStatus === 3) finalStatus = 'Completed';
+    else if (project.projectStatus === 5) finalStatus = 'Hold'; 
     else finalStatus = 'Running';
   } else {
     finalStatus = 'Running';
@@ -625,6 +626,35 @@ export async function createTimelineEditRequest(payload: {
   });
 }
 
+export async function createProjectDeletionRequest(projectId: number, projectName: string): Promise<HireRequest> {
+  return fetchJson<HireRequest>('/api/hirerequests', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId,
+      projectName,
+      roleNeeded: 'Project Deletion Request',
+      quantity: 1,
+      startDate: new Date().toISOString(),
+      endDate: new Date().toISOString(),
+      notes: `[PROJECT DELETION REQUEST] Requesting deletion of project ${projectName}`,
+    } satisfies CreateHireRequestPayload)
+  });
+}
+
+export async function createProjectRestorationRequest(projectId: number, projectName: string): Promise<HireRequest> {
+  return fetchJson<HireRequest>('/api/hirerequests', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId,
+      projectName,
+      roleNeeded: 'Project Restoration Request',
+      quantity: 1,
+      startDate: new Date().toISOString(),
+      endDate: new Date().toISOString(),
+      notes: `[PROJECT RESTORATION REQUEST] Requesting restoration of project ${projectName}`,
+    } satisfies CreateHireRequestPayload)
+  });
+}
 
 
 export async function startHireRequest(id: number): Promise<void> {
@@ -886,5 +916,26 @@ export async function ssoLogin(ticket: string): Promise<LoginResponse> {
   return fetchJson<LoginResponse>('/api/sso/login', {
     method: 'POST',
     body: JSON.stringify({ ticket })
+  });
+}
+
+export async function overrideProjectStatus(
+  projectId: number,
+  newStatus: string,
+  notifyPm: boolean
+): Promise<BackendProject> {
+  let enumValue = 2; // Default Running
+  switch (newStatus.toLowerCase()) {
+    case 'pending': enumValue = 0; break;
+    case 'scheduled': enumValue = 1; break;
+    case 'running': enumValue = 2; break;
+    case 'completed': enumValue = 3; break;
+    case 'deleted': enumValue = 4; break;
+    case 'hold': enumValue = 5; break;
+  }
+
+  return fetchJson<BackendProject>(`/api/projects/${projectId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ projectStatus: enumValue, notifyPm })
   });
 }

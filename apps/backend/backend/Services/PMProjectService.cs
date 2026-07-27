@@ -134,7 +134,7 @@ public class PMProjectService
     }
 
     /// <summary>
-    /// Retrieves dashboard statistics (total, on hold, scheduled, running, completed).
+    /// Retrieves dashboard statistics (total, pending, hold, scheduled, running, completed, cancelled).
     /// Uses AsNoTracking since this is a read-only display query.
     /// </summary>
     public async Task<object> GetDashboardStatsAsync(string? currentUserId, bool isPM)
@@ -150,6 +150,7 @@ public class PMProjectService
         var projects = await query.Include(p => p.UserProjects).ToListAsync();
 
         var total = projects.Count;
+        var pending = 0;
         var onHold = 0;
         var scheduled = 0;
         var running = 0;
@@ -164,12 +165,13 @@ public class PMProjectService
 
             var effectiveStatus = isPmSwapped ? ProjectStatus.Completed : p.ProjectStatus;
 
-            if (effectiveStatus == ProjectStatus.Pending) onHold++;
+            if (effectiveStatus == ProjectStatus.Pending) pending++;
+            else if (effectiveStatus == ProjectStatus.Hold) onHold++;
             else if (effectiveStatus == ProjectStatus.Scheduled) scheduled++;
             else if (effectiveStatus == ProjectStatus.Running) running++;
             else if (effectiveStatus == ProjectStatus.Completed) completed++;
         }
 
-        return new { total, onHold, scheduled, running, completed };
+        return new { total, pending, onHold, scheduled, running, completed };
     }
 }

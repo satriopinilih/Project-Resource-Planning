@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { getProjects, getRawEmployees, BackendProject, BackendEmployee } from "@/lib/api";
 
 const toMonday = (d: Date) => {
@@ -36,7 +36,7 @@ interface EmployeeAllocation {
   endDate: Date;
   startDay: number; // days from windowStart
   endDay: number;
-  color: "green" | "blue" | "gray" | "amber";
+  color: "green" | "blue" | "gray" | "amber" | "orange";
 }
 
 interface Employee {
@@ -51,6 +51,7 @@ const allocationColors = {
   blue: "bg-[#3b82f6]/90 hover:bg-[#3b82f6] border-[#3b82f6]/30 text-white",
   amber: "bg-amber-500/90 hover:bg-amber-500 border-amber-500/30 text-white",
   gray: "bg-gray-500/90 hover:bg-gray-500 border-gray-500/30 text-white",
+  orange: "bg-orange-500/90 hover:bg-orange-500 border-orange-500/30 text-white",
 };
 
 const SYSTEM_USER_IDS = ["GM001", "HR123"];
@@ -63,6 +64,7 @@ export default function ResourcePipeline() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Default window starts at the Monday of the current week
   const [windowStart, setWindowStart] = useState<Date>(() => {
@@ -108,9 +110,10 @@ export default function ResourcePipeline() {
     const builtEmployees = (apiEmployees || [])
       .filter((e) => e && !SYSTEM_USER_IDS.includes(e.userId))
       .map((emp) => {
-        const allocations: EmployeeAllocation[] = (emp.projects || [])
+          const allocations: EmployeeAllocation[] = (emp.projects || [])
           .map((p) => {
             if (!p) return null;
+            if (p.roleInProject?.includes("Notification")) return null;
             const proj = projectMap.get(p.projectId);
             if (!proj) return null;
 
@@ -120,10 +123,11 @@ export default function ResourcePipeline() {
             // Check if project overlaps with the 12-week window
             if (pEnd < windowStart || pStart > windowEnd) return null;
 
-            let statusColor: "blue" | "green" | "gray" | "amber" = "gray";
+            let statusColor: "blue" | "green" | "gray" | "amber" | "orange" = "gray";
             if (proj.status === 1) statusColor = "blue";
             if (proj.status === 2) statusColor = "green";
             if (proj.status === 3) statusColor = "gray";
+            if (proj.status === 5) statusColor = "orange";
 
             // If the member's assignment is completed (e.g. they were replaced), override to gray
             if (p.status === 1) { // 1 = Completed
@@ -196,8 +200,26 @@ export default function ResourcePipeline() {
 
   const windowEnd = useMemo(() => addDays(windowStart, 12 * 7 - 1), [windowStart]);
 
-  const totalPages = Math.ceil(employees.length / itemsPerPage);
-  const currentEmployees = employees.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const filteredEmployees = useMemo(() => {
+    if (!searchQuery.trim()) return employees;
+    const lowerQuery = searchQuery.toLowerCase();
+    
+    return employees.filter(emp => {
+      if (emp.name.toLowerCase().includes(lowerQuery)) return true;
+      
+      const hasMatchingProject = emp.tracks.some(track => 
+        track.some(alloc => alloc.projectName.toLowerCase().includes(lowerQuery))
+      );
+      return hasMatchingProject;
+    });
+  }, [employees, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const currentEmployees = filteredEmployees.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300">
@@ -212,6 +234,18 @@ export default function ResourcePipeline() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {!loading && !error && (
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-muted)]" />
+              <input
+                type="text"
+                placeholder="Search employee or project..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-3 py-1.5 text-[12px] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[var(--dash-text-heading)] placeholder:text-[var(--dash-text-faint)] focus:outline-none focus:border-[#3b82f6] transition-colors w-[220px]"
+              />
+            </div>
+          )}
           <div className="flex items-center gap-1">
             <button
               onClick={handlePrev}
@@ -227,8 +261,8 @@ export default function ResourcePipeline() {
             </button>
           </div>
           {!loading && !error && (
-            <span className="px-3 py-1.5 text-[12px] font-semibold text-[#3b82f6] bg-[#3b82f6]/10 border border-[#3b82f6]/20 rounded-lg">
-              Total Employees: {employees.length}
+            <span className="px-3 py-1.5 text-[12px] font-semibold text-[#3b82f6] bg-[#3b82f6]/10 border border-[#3b82f6]/20 rounded-lg whitespace-nowrap">
+              Total Employees: {filteredEmployees.length}
             </span>
           )}
         </div>
@@ -249,6 +283,10 @@ export default function ResourcePipeline() {
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-sm bg-gray-500" />
               Completed
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-orange-500" />
+              Hold
             </div>
           </div>
 
@@ -380,9 +418,9 @@ export default function ResourcePipeline() {
               </div>
             ))}
 
-            {employees.length === 0 && (
+            {filteredEmployees.length === 0 && (
               <p className="text-center text-[13px] text-[var(--dash-text-faint)] py-8">
-                No employees found. Make sure the backend is seeded.
+                No employees or projects found matching your search.
               </p>
             )}
           </div>

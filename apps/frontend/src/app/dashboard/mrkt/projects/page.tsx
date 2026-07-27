@@ -9,7 +9,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Running" | "Scheduled" | "Pending" | "Completed" | "Deleted";
+  status: "Running" | "Scheduled" | "Pending" | "Completed" | "Deleted" | "Hold";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -35,6 +35,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string): Project["statu
     }
     case 3: return "Completed";
     case 4: return "Deleted";
+    case 5: return "Hold";
     default: return "Pending";
   }
 };
@@ -46,7 +47,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Pending", "Scheduled", "Running", "Completed", "Deleted"];
+const tabs = ["All", "Pending", "Scheduled", "Running", "Hold", "Completed", "Deleted"];
 
 function MarketingProjectsContent() {
   const router = useRouter();
@@ -282,11 +283,13 @@ function MarketingProjectsContent() {
                             ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                             : project.status === "Running"
                               ? "bg-green-500/10 text-green-400 border-green-500/20"
-                              : project.status === "Completed"
-                                ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                : project.status === "Deleted"
-                                  ? "bg-red-500/10 text-red-400 border-red-500/20"
-                                  : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                              : project.status === "Hold"
+                                ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                                : project.status === "Completed"
+                                  ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                                  : project.status === "Deleted"
+                                    ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                    : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                           }`}
                       >
                         {project.status}

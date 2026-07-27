@@ -56,7 +56,7 @@ export default function StaffDashboard() {
 
   const activeProjects = useMemo(() => {
     if (!employee?.projects) return [];
-    let projects = employee.projects.filter(p => p.status !== 'Completed');
+    let projects = employee.projects.filter(p => p.status !== 'Completed' && !p.roleInProject?.includes('Notification'));
     if (searchQuery.trim()) {
       projects = projects.filter((p) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,7 +69,7 @@ export default function StaffDashboard() {
 
   const completedProjects = useMemo(() => {
     if (!employee?.projects) return [];
-    let projects = employee.projects.filter(p => p.status === 'Completed');
+    let projects = employee.projects.filter(p => p.status === 'Completed' && !p.roleInProject?.includes('Notification'));
     if (completedSearchQuery.trim()) {
       projects = projects.filter((p) =>
         p.name.toLowerCase().includes(completedSearchQuery.toLowerCase()) ||
@@ -111,10 +111,10 @@ export default function StaffDashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
 
-  const totalCount = employee?.projects?.length ?? 0;
-  const scheduledCount = employee?.projects?.filter(p => p.status === 'Scheduled').length ?? 0;
-  const runningCount = employee?.projects?.filter(p => p.status === 'Running').length ?? 0;
-  const completedCount = employee?.projects?.filter(p => p.status === 'Completed').length ?? 0;
+  const totalCount = employee?.projects?.filter(p => !p.roleInProject?.includes('Notification')).length ?? 0;
+  const scheduledCount = employee?.projects?.filter(p => p.status === 'Scheduled' && !p.roleInProject?.includes('Notification')).length ?? 0;
+  const runningCount = employee?.projects?.filter(p => p.status === 'Running' && !p.roleInProject?.includes('Notification')).length ?? 0;
+  const completedCount = employee?.projects?.filter(p => p.status === 'Completed' && !p.roleInProject?.includes('Notification')).length ?? 0;
 
   return (
     <div className="flex-1 p-6 space-y-6 overflow-y-auto">
@@ -230,9 +230,9 @@ export default function StaffDashboard() {
               </tr>
             </thead>
             <tbody>
-              {activeProjects.map((project: Project) => (
+              {activeProjects.map((project: Project, index: number) => (
                 <tr
-                  key={project.id}
+                  key={project.userProjectId ?? `${project.id}-${index}`}
                   className="border-b border-[var(--dash-border-subtle)] last:border-0 hover:bg-[var(--dash-bg-hover)] transition-colors group"
                 >
                   <td className="py-3 px-4 pl-0 text-[13px] font-semibold text-[var(--dash-text-heading)] hover:text-[#3b82f6] transition-colors ">
@@ -257,10 +257,12 @@ export default function StaffDashboard() {
                       ? 'bg-[#64748b]/20 border-[#64748b]/60 text-[#64748b]'
                       : project.status === 'Scheduled'
                         ? 'bg-[#3b82f6]/20 border-[#3b82f6]/60 text-[#3b82f6]'
-                        : 'bg-[#22c55e]/20 border-[#22c55e]/60 text-[#22c55e]'
+                        : project.status === 'Hold'
+                          ? 'bg-[#f59e0b]/20 border-[#f59e0b]/60 text-[#f59e0b]'
+                          : 'bg-[#22c55e]/20 border-[#22c55e]/60 text-[#22c55e]'
                       }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${project.status === 'Completed' ? 'bg-[#64748b]' :
-                        project.status === 'Scheduled' ? 'bg-[#3b82f6]' : 'bg-[#22c55e]'
+                        project.status === 'Scheduled' ? 'bg-[#3b82f6]' : project.status === 'Hold' ? 'bg-[#f59e0b]' : 'bg-[#22c55e]'
                         }`} />
                       {project.status}
                     </span>
@@ -322,9 +324,9 @@ export default function StaffDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {completedProjects.map((project: Project) => (
+                {completedProjects.map((project: Project, index: number) => (
                   <tr
-                    key={project.id}
+                    key={project.userProjectId ?? `${project.id}-${index}`}
                     className="border-b border-[var(--dash-border-subtle)] last:border-0 hover:bg-[var(--dash-bg-hover)] transition-colors group"
                   >
                     <td className="py-3 px-4 pl-0 text-[13px] font-semibold text-[var(--dash-text-heading)]">
