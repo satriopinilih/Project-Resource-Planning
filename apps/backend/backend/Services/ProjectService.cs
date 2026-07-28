@@ -712,21 +712,19 @@ public class ProjectService
                 .Select(up => up.UserId)
                 .ToList();
 
-            foreach (var pmId in pmAssignments)
+            var notifList = pmAssignments.Select(pmId => new UserProject
             {
-                var notif = new UserProject
-                {
-                    UserId = pmId,
-                    ProjectId = id,
-                    RoleInProject = "PM Notification",
-                    Status = UserProjectStatus.Assigned,
-                    IsNotificationRead = false,
-                    SwapReason = $"Project status for **{project.ProjectName}** has been changed from **{oldStatus}** to **{newStatus}** by the GM.",
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow
-                };
-                _db.UserProjects.Add(notif);
-            }
+                UserId = pmId,
+                ProjectId = id,
+                RoleInProject = "PM Notification",
+                Status = UserProjectStatus.Assigned,
+                IsNotificationRead = false,
+                SwapReason = $"Project status for **{project.ProjectName}** has been changed from **{oldStatus}** to **{newStatus}** by the GM.",
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow
+            }).ToList();
+
+            _db.UserProjects.AddRange(notifList);
             await _db.SaveChangesAsync();
         }
 
