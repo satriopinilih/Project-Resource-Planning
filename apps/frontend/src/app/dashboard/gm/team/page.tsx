@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import {
   Users,
@@ -82,16 +83,36 @@ const getAvatarColor = (name: string) =>
 
 // ─── component ───────────────────────────────────────────────────────────────
 export default function TeamMembersPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--dash-bg-page)] text-gray-500">
+        <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" />
+      </div>
+    }>
+      <TeamMembersContent />
+    </Suspense>
+  );
+}
+
+function TeamMembersContent() {
   const [members, setMembers] = useState<BackendEmployee[]>([]);
   const [selected, setSelected] = useState<BackendEmployee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const nameParam = searchParams.get("name");
 
   useEffect(() => {
     getRawEmployees()
-      .then((data) => setMembers(data))
+      .then((data) => {
+        setMembers(data);
+        if (nameParam) {
+          const found = data.find((m) => m.userName.toLowerCase() === nameParam.toLowerCase());
+          if (found) setSelected(found);
+        }
+      })
       .catch((e) => console.error("Failed to fetch team members:", e))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [nameParam]);
 
   return (
     <>

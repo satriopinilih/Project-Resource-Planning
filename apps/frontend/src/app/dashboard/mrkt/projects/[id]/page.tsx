@@ -26,8 +26,11 @@ import {
   BackendProject,
   updateProject,
   getEmployeeFormOptions,
-  EmployeeFormOptions
+  EmployeeFormOptions,
+  getHolidays,
+  BackendHoliday
 } from "@/lib/api";
+import HolidayWarningModal, { DateConflict, checkDateConflicts } from "./HolidayWarningModal";
 
 const mapStatus = (backendStatus: number, startDateStr?: string) => {
   switch (backendStatus) {
@@ -93,6 +96,12 @@ export default function ProjectDetailsPage() {
   const [formOptions, setFormOptions] = useState<EmployeeFormOptions>({ departments: [], skills: [], roles: [], staffRoles: [] });
   const [hasPendingRescheduleRequest, setHasPendingRescheduleRequest] = useState(false);
   const [rescheduleRequestNote, setRescheduleRequestNote] = useState<string>("");
+
+  // Holiday warning state
+  const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
+  const [holidayConflicts, setHolidayConflicts] = useState<DateConflict[]>([]);
+  const [showHolidayWarning, setShowHolidayWarning] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<object | null>(null);
   const allowedStaffRoles = useMemo(
     () => formOptions.staffRoles.filter((r) => ALLOWED_STAFF_ROLES.includes(r.name)),
     [formOptions.staffRoles]
@@ -135,6 +144,7 @@ export default function ProjectDetailsPage() {
   useEffect(() => {
     fetchProject();
     getEmployeeFormOptions().then(setFormOptions).catch(console.error);
+    getHolidays().then(setHolidays).catch(console.error);
   }, [numericId]);
 
   useEffect(() => {
@@ -159,7 +169,7 @@ export default function ProjectDetailsPage() {
     e.preventDefault();
     if (!project) return;
     setEditSubmitting(true);
-    
+
     // Validate uniqueness of roles
     const selectedRoles = editForm.requiredRoles.map(r => r.role);
     const uniqueRoles = new Set(selectedRoles);
@@ -169,30 +179,58 @@ export default function ProjectDetailsPage() {
       return;
     }
 
+    // Check for weekend / holiday conflicts
+    const conflicts = checkDateConflicts(
+      editForm.estimatedStartDate,
+      editForm.estimatedEndDate,
+      holidays,
+      formatDate
+    );
+
+    const payload = {
+      projectName: editForm.projectName,
+      clientOrganization: editForm.clientOrganization,
+      projectDescription: editForm.projectDescription,
+      estimatedDuration: editForm.estimatedDuration,
+      priorityLevel: editForm.priorityLevel,
+      estimatedStartDate: editForm.estimatedStartDate ? new Date(editForm.estimatedStartDate).toISOString() : project.estimatedStartDate,
+      estimatedEndDate: editForm.estimatedEndDate ? new Date(editForm.estimatedEndDate).toISOString() : project.estimatedEndDate,
+      projectStatus: editForm.projectStatus,
+      requiredRoles: editForm.requiredRoles.map(r => {
+        const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
+        return {
+          id: typeof r.id === 'string' && r.id.includes('.') ? 0 : Number(r.id),
+          staffRoleId: r.staffRoleId || 0,
+          roleName: r.role,
+          count: r.count,
+          workingType: workingTypeMap[r.workingType] ?? 1
+        };
+      }),
+      requiredSkillIds: editForm.requiredSkillIds
+    };
+
+    if (conflicts.length > 0) {
+      // Show warning modal and hold submission
+      setHolidayConflicts(conflicts);
+      setPendingSubmitData(payload);
+      setShowHolidayWarning(true);
+      setEditSubmitting(false);
+      return;
+    }
+
+    // No conflicts — submit directly
+    await doSubmit(payload);
+  };
+
+  const doSubmit = async (payload: object) => {
+    if (!project) return;
+    setEditSubmitting(true);
     try {
-      await updateProject(project.projectId, {
-        projectName: editForm.projectName,
-        clientOrganization: editForm.clientOrganization,
-        projectDescription: editForm.projectDescription,
-        estimatedDuration: editForm.estimatedDuration,
-        priorityLevel: editForm.priorityLevel,
-        estimatedStartDate: editForm.estimatedStartDate ? new Date(editForm.estimatedStartDate).toISOString() : project.estimatedStartDate,
-        estimatedEndDate: editForm.estimatedEndDate ? new Date(editForm.estimatedEndDate).toISOString() : project.estimatedEndDate,
-        projectStatus: editForm.projectStatus,
-        requiredRoles: editForm.requiredRoles.map(r => {
-          const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
-          return {
-            id: typeof r.id === 'string' && r.id.includes('.') ? 0 : Number(r.id),
-            staffRoleId: r.staffRoleId || 0,
-            roleName: r.role,
-            count: r.count,
-            workingType: workingTypeMap[r.workingType] ?? 1
-          };
-        }),
-        requiredSkillIds: editForm.requiredSkillIds
-      });
+      await updateProject(project.projectId, payload);
       await fetchProject();
       setEditModalOpen(false);
+      setShowHolidayWarning(false);
+      setPendingSubmitData(null);
     } catch (err: any) {
       alert("Failed to update project: " + err.message);
     } finally {
@@ -685,6 +723,21 @@ export default function ProjectDetailsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── Holiday / Weekend Warning Modal ── */}
+      {showHolidayWarning && (
+        <HolidayWarningModal
+          conflicts={holidayConflicts}
+          isSubmitting={editSubmitting}
+          onCancel={() => {
+            setShowHolidayWarning(false);
+            setPendingSubmitData(null);
+          }}
+          onConfirm={() => {
+            if (pendingSubmitData) doSubmit(pendingSubmitData);
+          }}
+        />
       )}
     </>
   );

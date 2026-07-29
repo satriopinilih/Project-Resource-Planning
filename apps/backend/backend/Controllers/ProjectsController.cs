@@ -184,6 +184,7 @@ public class ProjectsController : ControllerBase
     }
 
     [HttpPatch("{id}/status")]
+    [Authorize(Roles = "GM")]
     public async Task<IActionResult> UpdateProjectStatus(int id, [FromBody] UpdateProjectStatusRequest request)
     {
         if (!ModelState.IsValid)

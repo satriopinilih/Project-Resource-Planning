@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import HolidayWarningModal, { DateConflict, checkDateConflicts } from "./HolidayWarningModal";
 import StatusBadge from "@/components/StatusBadge";
 import {
   Trash2,
@@ -29,6 +30,7 @@ import {
   getProjectById,
   createHireRequest,
   createTimelineEditRequest,
+  overrideProjectStatus,
   updateProject,
   BackendProject,
   BackendEmployee,
@@ -44,14 +46,30 @@ import {
   getHireRequests,
   swapMember,
   SwapMemberPayload,
+  getHolidays,
+  BackendHoliday,
 } from "../../../../../lib/api";
 
 import SmartRecommendationPanel from "../../components/SmartRecommendationPanel";
 import ProjectGanttChart from "../../components/ProjectGanttChart";
+import OverrideStatusModal from "../../components/OverrideStatusModal";
 
-const mapStatus = (backendStatus: number, startDateStr?: string) => {
+const mapStatus = (backendStatus: number | string, startDateStr?: string) => {
+  // Support string status values returned from backend (stored as string in DB)
+  if (typeof backendStatus === "string") {
+    switch (backendStatus.toLowerCase()) {
+      case "pending":   return { label: "Pending",   class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+      case "scheduled": return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
+      case "running":   return { label: "Running",   class: "bg-green-500/10 text-green-400 border-green-500/20" };
+      case "hold":      return { label: "Hold",      class: "bg-orange-500/10 text-orange-400 border-orange-500/20" };
+      case "completed": return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
+      case "deleted":   return { label: "Deleted",   class: "bg-red-900/10 text-red-500 border-red-900/20" };
+      default:          return { label: backendStatus, class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
+    }
+  }
+  // Numeric fallback (legacy / direct API integer)
   switch (backendStatus) {
-    case 0: return { label: "Pending", class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+    case 0: return { label: "Pending",   class: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
     case 1: return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
     case 2: {
       if (startDateStr) {
@@ -61,11 +79,12 @@ const mapStatus = (backendStatus: number, startDateStr?: string) => {
         today.setHours(0, 0, 0, 0);
         if (startDate > today) return { label: "Scheduled", class: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
       }
-      return { label: "Running", class: "bg-green-500/10 text-green-400 border-green-500/20" };
+      return { label: "Running",   class: "bg-green-500/10 text-green-400 border-green-500/20" };
     }
     case 3: return { label: "Completed", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
-    case 4: return { label: "Deleted", class: "bg-red-500/10 text-red-400 border-red-500/20" };
-    default: return { label: "Unknown", class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
+    case 4: return { label: "Deleted",   class: "bg-red-900/10 text-red-500 border-red-900/20" };
+    case 5: return { label: "Hold",      class: "bg-orange-500/10 text-orange-400 border-orange-500/20" };
+    default: return { label: "Unknown",  class: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
   }
 };
 
@@ -184,11 +203,20 @@ export default function ProjectDetailsPage() {
   const [startingProject, setStartingProject] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Holiday check states
+  const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
+  const [holidayConflicts, setHolidayConflicts] = useState<DateConflict[]>([]);
+  const [showHolidayWarning, setShowHolidayWarning] = useState(false);
+
   // Confirm modal states
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
   const [swapConfirmOpen, setSwapConfirmOpen] = useState(false);
   const [doneEditingConfirmOpen, setDoneEditingConfirmOpen] = useState(false);
+
+  // Override Status state
+  const [overrideModalOpen, setOverrideModalOpen] = useState(false);
+  const [overrideSuccess, setOverrideSuccess] = useState<string | null>(null);
 
   // Swap Member state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
@@ -223,6 +251,7 @@ export default function ProjectDetailsPage() {
 
   useEffect(() => {
     fetchProject();
+    getHolidays().then(setHolidays).catch(console.error);
   }, [numericId]);
 
   // Cek existing hire request
@@ -294,11 +323,11 @@ export default function ProjectDetailsPage() {
   // Role-based filtering map: when assigning from a role card, show only matching employees
   const getRoleFilter = (roleName: string): string[] => {
     const r = roleName.toLowerCase();
-    if (r === "pm") return ["pm"];
-    if (r === "architect") return ["architect"];
-    if (r === "senior dev") return ["senior dev"];
+    if (r === "pm") return ["pm", "senior ba"];
+    if (r === "architect") return ["architect", "senior dev"];
+    if (r === "senior dev") return ["senior dev", "architect"];
     if (r === "junior dev") return ["senior dev", "junior dev"];
-    if (r === "senior ba") return ["senior ba"];
+    if (r === "senior ba") return ["senior ba", "pm"];
     if (r === "junior ba") return ["senior ba", "junior ba"];
     return []; // empty = no filter, show all
   };
@@ -422,6 +451,28 @@ export default function ProjectDetailsPage() {
       alert(e instanceof Error ? e.message : "Failed to send timeline edit request");
     } finally {
       setTimelineEditSubmitting(false);
+    }
+  };
+
+  const handleOverrideStatus = async (newStatus: string, notifyPm: boolean) => {
+    if (!project) return;
+    await overrideProjectStatus(project.projectId, newStatus, notifyPm);
+    await fetchProject();
+  };
+
+  const handlePreStartCheck = () => {
+    if (!project) return;
+    const conflicts = checkDateConflicts(
+      project.estimatedStartDate,
+      project.estimatedEndDate,
+      holidays,
+      formatDate
+    );
+    if (conflicts.length > 0) {
+      setHolidayConflicts(conflicts);
+      setShowHolidayWarning(true);
+    } else {
+      setSubmitConfirmOpen(true);
     }
   };
 
@@ -624,22 +675,36 @@ export default function ProjectDetailsPage() {
                 <p className="text-[14px] text-[var(--dash-text-secondary)] leading-relaxed max-w-4xl">{project.projectDescription}</p>
               </div>
 
-              {project.projectStatus !== 0 && project.projectStatus !== 3 && (
+              {project.projectStatus !== 0 && project.projectStatus !== 4 && (
                 <div className="flex gap-3 shrink-0">
-                  <button
-                    onClick={() => {
-                      if (isEditMode) {
-                        setDoneEditingConfirmOpen(true);
-                      } else {
-                        setIsEditMode(true);
-                      }
-                    }}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
-                      }`}
-                  >
-                    {isEditMode ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
-                    {isEditMode ? "Done Editing" : "Edit Project"}
-                  </button>
+                  {/* Override Status button — directly visible if Completed, otherwise requires isEditMode */}
+                  {(project.projectStatus === 3 || isEditMode) && (
+                    <button
+                      onClick={() => setOverrideModalOpen(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 transition-all"
+                    >
+                      <ShieldAlert size={16} />
+                      Override Status
+                    </button>
+                  )}
+
+                  {/* Edit Project button — not available for Completed projects */}
+                  {project.projectStatus !== 3 && (
+                    <button
+                      onClick={() => {
+                        if (isEditMode) {
+                          setDoneEditingConfirmOpen(true);
+                        } else {
+                          setIsEditMode(true);
+                        }
+                      }}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
+                        }`}
+                    >
+                      {isEditMode ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
+                      {isEditMode ? "Done Editing" : "Edit Project"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -737,7 +802,7 @@ export default function ProjectDetailsPage() {
                   </button>
                   {project.projectStatus === 0 && (
                     <button
-                      onClick={() => setSubmitConfirmOpen(true)}
+                      onClick={handlePreStartCheck}
                       disabled={!allRolesFilled || startingProject}
                       title={!allRolesFilled ? "All required roles must be filled before starting" : "Submit this project"}
                       className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-[13px] font-bold transition-all disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed shadow-lg shadow-green-500/20 disabled:shadow-none"
@@ -1147,7 +1212,9 @@ export default function ProjectDetailsPage() {
               </div>
 
               <div>
-                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Staff Role Needed</label>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">
+                  Staff Role Needed <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={hireForm.roleNeeded}
                   onChange={(e) => setHireForm((p) => ({ ...p, roleNeeded: e.target.value }))}
@@ -1162,7 +1229,9 @@ export default function ProjectDetailsPage() {
               </div>
 
               <div>
-                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Quantity</label>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">
+                  Quantity <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="number"
                   min={1}
@@ -1173,7 +1242,9 @@ export default function ProjectDetailsPage() {
               </div>
 
               <div>
-                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Experience Years Range</label>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">
+                  Experience Years Range <span className="text-red-500">*</span>
+                </label>
                 <div className="flex items-center gap-2">
                   <select
                     value={hireForm.minExperience}
@@ -1199,7 +1270,9 @@ export default function ProjectDetailsPage() {
               </div>
 
               <div>
-                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Notes</label>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">
+                  Notes <span className="text-red-500">*</span>
+                </label>
                 <textarea
                   rows={3}
                   value={hireForm.notes}
@@ -1212,7 +1285,11 @@ export default function ProjectDetailsPage() {
 
             <div className="px-6 py-4 border-t border-[var(--dash-border)] flex justify-end gap-2">
               <button onClick={() => setHireRequestOpen(false)} className="px-4 py-2 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[13px] font-semibold text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)]">Cancel</button>
-              <button onClick={handleRequestHireFromProject} disabled={hireSubmitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-[13px] font-semibold text-white disabled:opacity-50">
+              <button
+                onClick={handleRequestHireFromProject}
+                disabled={hireSubmitting || !hireForm.notes.trim() || hireForm.quantity <= 0}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-[13px] font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 {hireSubmitting ? "Sending..." : "Send Request"}
               </button>
             </div>
@@ -1645,6 +1722,29 @@ export default function ProjectDetailsPage() {
         confirmText="Confirm"
         confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
       />
+
+      {/* ── Override Status Modal ── */}
+      {project && (
+        <OverrideStatusModal
+          isOpen={overrideModalOpen}
+          onClose={() => setOverrideModalOpen(false)}
+          onConfirm={handleOverrideStatus}
+          currentStatusNum={project.projectStatus}
+          projectName={project.projectName}
+        />
+      )}
+
+      {/* ── Holiday / Weekend Warning Modal ── */}
+      {showHolidayWarning && (
+        <HolidayWarningModal
+          conflicts={holidayConflicts}
+          onCancel={() => setShowHolidayWarning(false)}
+          onConfirm={() => {
+            setShowHolidayWarning(false);
+            setSubmitConfirmOpen(true);
+          }}
+        />
+      )}
     </>
   );
 }

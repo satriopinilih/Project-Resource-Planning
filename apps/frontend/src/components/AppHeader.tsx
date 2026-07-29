@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Bell, Sun, Moon, User, Calendar, Check, Briefcase,
-  FileText, ArrowRightCircle, X, AlertCircle
+  FileText, ArrowRightCircle, X, AlertCircle, Trash2, RotateCcw, ShieldAlert
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
@@ -269,7 +269,12 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       }
       if (userRole === "Marketing") {
         const hires = await getHireRequests("Open");
-        setHireNotifications(hires.filter((h) => h.roleNeeded === "Timeline Edit Request"));
+        setHireNotifications(hires.filter((h) => 
+          h.roleNeeded === "Timeline Edit Request" || 
+          h.roleNeeded === "Project Deletion Request" || 
+          h.roleNeeded === "Project Restoration Request" ||
+          h.roleNeeded === "Status Override Notification"
+        ));
       }
     } catch {
       setNotifications([]);
@@ -402,30 +407,36 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       });
     }
 
-    // ── Marketing: timeline edit requests ────────────────────────────────
+    // ── Marketing: timeline edit requests & action requests ────────────────────────────────
     if (userRole === "Marketing") {
       hireNotifications.forEach((item) => {
-        const key = `mrkt-timeline-${item.hireRequestId}`;
+        const isProjectDeletion = item.roleNeeded === "Project Deletion Request";
+        const isProjectRestoration = item.roleNeeded === "Project Restoration Request";
+        const isActionRequest = isProjectDeletion || isProjectRestoration;
+        const isStatusOverride = item.roleNeeded === "Status Override Notification";
+        const key = `mrkt-req-${item.hireRequestId}`;
+        
         feed.push({
           key,
           ts: safeDate(item.createdAt),
-          iconBg: "bg-blue-500/10",
-          iconColor: "text-blue-500",
-          icon: <Calendar size={14} />,
+          iconBg: isActionRequest ? "bg-red-500/10" : isStatusOverride ? "bg-violet-500/10" : "bg-blue-500/10",
+          iconColor: isActionRequest ? "text-red-500" : isStatusOverride ? "text-violet-400" : "text-blue-500",
+          icon: isActionRequest ? (isProjectDeletion ? <Trash2 size={14} /> : <RotateCcw size={14} />) : isStatusOverride ? <ShieldAlert size={14} /> : <Calendar size={14} />,
           message: (
             <>
-              Timeline edit request for{" "}
+              {isActionRequest ? (isProjectDeletion ? "Project deletion" : "Project restoration") : isStatusOverride ? "Status override" : "Timeline edit"} request for{" "}
               <span className="font-semibold text-[var(--dash-text-heading)]">
                 {item.projectName}
               </span>
             </>
           ),
-          meta: item.notes?.replace("[TIMELINE EDIT REQUEST] ", "") || undefined,
+          meta: item.notes?.replace("[TIMELINE EDIT REQUEST] ", "").replace("[PROJECT DELETION REQUEST] ", "").replace("[PROJECT RESTORATION REQUEST] ", "").replace("[STATUS OVERRIDE] ", "") || undefined,
           dateLabel: fmtDate(item.createdAt),
           actionLabel: "Click to review request",
           onAction: async () => {
             setIsNotificationOpen(false);
-            router.push("/dashboard#timeline-edit-requests-section");
+            // In a real app we might scroll to the exact section, but /dashboard works (auto-redirects to /mrkt)
+            router.push("/dashboard");
           },
         });
       });
@@ -469,11 +480,26 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         const isTimeline = item.roleNeeded === "Timeline Edit Request";
         const isSelfNotif = item.roleNeeded === "GM Notification";
 
+        const isProjectDeletion = item.roleNeeded === "Project Deletion Request";
+        const isProjectRestoration = item.roleNeeded === "Project Restoration Request";
+        const isActionRequest = isProjectDeletion || isProjectRestoration;
+        const actionLabel = isProjectDeletion ? "deletion" : "restoration";
+
         const message: React.ReactNode = isSelfNotif ? (
           <>{item.notes}</>
         ) : isTimeline ? (
           <>
             Timeline edit for{" "}
+            <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span>{" "}
+            was{" "}
+            <span className={`font-semibold ${item.status === "Fulfilled" ? "text-emerald-500" : "text-red-500"}`}>
+              {item.status === "Fulfilled" ? "Approved" : "Declined"}
+            </span>{" "}
+            by Marketing.
+          </>
+        ) : isActionRequest ? (
+          <>
+            Project {actionLabel} for{" "}
             <span className="font-semibold text-[var(--dash-text-heading)]">{item.projectName}</span>{" "}
             was{" "}
             <span className={`font-semibold ${item.status === "Fulfilled" ? "text-emerald-500" : "text-red-500"}`}>
@@ -495,9 +521,11 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
         const meta =
           item.status === "Declined" && item.notes && !isSelfNotif
-            ? `Note: ${item.notes}`
+            ? `Note: ${item.notes.replace("[PROJECT DELETION REQUEST] ", "").replace("[PROJECT RESTORATION REQUEST] ", "")}`
             : isTimeline
             ? "Timeline Synchronization"
+            : isActionRequest
+            ? "Project Action Request"
             : isSelfNotif
             ? undefined
             : `Role: ${item.roleNeeded}`;
@@ -505,20 +533,20 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         feed.push({
           key,
           ts: safeDate(item.createdAt),
-          iconBg: isTimeline ? "bg-blue-500/10" : isSelfNotif ? "bg-purple-500/10" : item.status === "Fulfilled" ? "bg-emerald-500/10" : "bg-red-500/10",
-          iconColor: isTimeline ? "text-blue-500" : isSelfNotif ? "text-purple-500" : item.status === "Fulfilled" ? "text-emerald-500" : "text-red-500",
-          icon: isTimeline ? <Calendar size={14} /> : <User size={14} />,
+          iconBg: isTimeline || isActionRequest ? "bg-blue-500/10" : isSelfNotif ? "bg-purple-500/10" : item.status === "Fulfilled" ? "bg-emerald-500/10" : "bg-red-500/10",
+          iconColor: isTimeline || isActionRequest ? "text-blue-500" : isSelfNotif ? "text-purple-500" : item.status === "Fulfilled" ? "text-emerald-500" : "text-red-500",
+          icon: isTimeline ? <Calendar size={14} /> : isActionRequest ? (isProjectDeletion ? <Trash2 size={14} /> : <RotateCcw size={14} />) : <User size={14} />,
           message,
           meta,
           dateLabel: fmtDate(item.createdAt),
-          actionLabel: isSelfNotif ? "Click to open project" : isTimeline ? "Click to view" : "Click to open project",
+          actionLabel: isSelfNotif ? "Click to open project" : isTimeline || isActionRequest ? "Click to view" : "Click to open project",
           onAction: async () => {
             setIsNotificationOpen(false);
             if (item.projectId) router.push(`/project/${item.projectId}`);
             else router.push("/project");
           },
           // Regular hire outcomes: also show a separate Dismiss button
-          ...(!isSelfNotif && !isTimeline ? {
+          ...(!isSelfNotif && !isTimeline && !isActionRequest ? {
             secondaryAction: {
               label: "Dismiss",
               onAction: async () => {
@@ -615,7 +643,9 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
           iconBg: isAssigned ? "bg-emerald-500/10" : "bg-amber-500/10",
           iconColor: isAssigned ? "text-emerald-500" : "text-amber-500",
           icon: <Briefcase size={14} />,
-          message: isAssigned ? (
+          message: n.swapReason && n.swapReason !== "Assigned to project" ? (
+            <>{renderFormattedText(n.swapReason)}</>
+          ) : isAssigned ? (
             <>
               Congrats, you have been assigned to Project{" "}
               <span className="font-semibold text-[var(--dash-text-heading)]">{n.name}</span> by the GM.
@@ -676,7 +706,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const currentNotifIds = [
     ...(userRole === "HR" ? notifications.map((n) => `hr-ext-${n.id}`) : []),
     ...(userRole === "HR" ? hireNotifications.map((n) => `hr-hire-${n.hireRequestId}`) : []),
-    ...(userRole === "Marketing" ? hireNotifications.map((n) => `mrkt-timeline-${n.hireRequestId}`) : []),
+    ...(userRole === "Marketing" ? hireNotifications.map((n) => `mrkt-req-${n.hireRequestId}`) : []),
     ...(userRole === "GM" ? gmHireNotifications.map((n) => `gm-hire-${n.hireRequestId}`) : []),
     ...(userRole === "GM" ? gmContractNotifications.map((n) => `gm-ext-${n.referenceId}`) : []),
     ...(userRole === "PM" ? pmNotifications.map((n) => `pm-proj-${n.projectId}`) : []),
@@ -691,10 +721,6 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
   const handleToggleNotifications = () => {
     if (!isNotificationOpen) {
-      if (userRole === "HR" || userRole === "Marketing" || userRole === "GM") loadNotifications();
-      if (userRole === "PM") loadPMNotifications();
-      if (userRole === "Staff" || userRole === "GM") loadStaffNotifications();
-
       if (currentNotifIds.length > 0) {
         const newReadIds = Array.from(new Set([...readNotifIds, ...currentNotifIds]));
         setReadNotifIds(newReadIds);

@@ -5,13 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Search, Filter, Loader2, ArrowRight, Users, Trash2, RotateCcw } from "lucide-react";
-import { getProjects, deleteProject, restoreProject } from "../../../../lib/api";
+import { getProjects, deleteProject, restoreProject, createProjectDeletionRequest, createProjectRestorationRequest } from "../../../../lib/api";
 
 interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Running" | "Scheduled" | "Pending" | "Completed" | "Deleted";
+  status: "Running" | "Scheduled" | "Pending" | "Completed" | "Deleted" | "Hold";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -21,7 +21,7 @@ interface Project {
 }
 
 const mapStatus = (backendStatus: number, startDateStr?: string): Project["status"] => {
-  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted
+  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted, 5=Hold
   switch (backendStatus) {
     case 0: return "Pending";    // Belum di-assign
     case 1: return "Scheduled";  // Sudah assign, belum mulai
@@ -37,6 +37,7 @@ const mapStatus = (backendStatus: number, startDateStr?: string): Project["statu
     }
     case 3: return "Completed";
     case 4: return "Deleted";
+    case 5: return "Hold";
     default: return "Pending";
   }
 };
@@ -48,7 +49,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Pending", "Scheduled", "Running", "Completed", "Deleted"];
+const tabs = ["All", "Pending", "Scheduled", "Running", "Hold", "Completed", "Deleted"];
 
 function GMProjectsContent() {
   const router = useRouter();
@@ -120,10 +121,10 @@ function GMProjectsContent() {
     setActionLoading(true);
     try {
       const numId = parseInt(targetProjectId.replace("proj", ""), 10);
-      await deleteProject(numId);
-      await fetchProjects();
+      const projName = projectsData.find(p => p.id === targetProjectId)?.name || "Unknown Project";
+      await createProjectDeletionRequest(numId, projName);
     } catch (error: any) {
-      alert("Failed to delete project: " + error.message);
+      alert("Failed to request project deletion: " + error.message);
     } finally {
       setActionLoading(false);
       setDeleteConfirmOpen(false);
@@ -142,10 +143,10 @@ function GMProjectsContent() {
     setActionLoading(true);
     try {
       const numId = parseInt(targetProjectId.replace("proj", ""), 10);
-      await restoreProject(numId);
-      await fetchProjects();
+      const projName = projectsData.find(p => p.id === targetProjectId)?.name || "Unknown Project";
+      await createProjectRestorationRequest(numId, projName);
     } catch (error: any) {
-      alert("Failed to restore project: " + error.message);
+      alert("Failed to request project restoration: " + error.message);
     } finally {
       setActionLoading(false);
       setRestoreConfirmOpen(false);
@@ -338,11 +339,13 @@ function GMProjectsContent() {
                                 ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                                 : project.status === "Running"
                                   ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                  : project.status === "Completed"
-                                    ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                    : project.status === "Deleted"
-                                      ? "bg-red-500/10 text-red-500 border-red-500/20"
-                                      : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                                  : project.status === "Hold"
+                                    ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                                    : project.status === "Completed"
+                                      ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                                      : project.status === "Deleted"
+                                        ? "bg-red-500/10 text-red-500 border-red-500/20"
+                                        : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                             }`}
                         >
                           {project.status}
@@ -398,10 +401,10 @@ function GMProjectsContent() {
         icon={<Trash2 size={28} className="text-white" />}
         iconBg="bg-gradient-to-br from-red-700 to-red-500"
         title="Delete Project"
-        message="Do you want to delete this project?"
-        warningText="This action cannot be undone."
-        confirmText="Delete"
-        confirmLoadingText="Deleting..."
+        message="Request to delete this project? This will require MKT approval."
+        warningText=""
+        confirmText="Send Request"
+        confirmLoadingText="Sending..."
         confirmClass="bg-red-600 hover:bg-red-500 shadow-lg shadow-red-500/20"
       />
 
@@ -414,9 +417,9 @@ function GMProjectsContent() {
         icon={<RotateCcw size={28} className="text-white" />}
         iconBg="bg-gradient-to-br from-green-600 to-emerald-500"
         title="Restore Project"
-        message="Do you want to restore this project?"
-        confirmText="Restore"
-        confirmLoadingText="Restoring..."
+        message="Request to restore this project? This will require MKT approval."
+        confirmText="Send Request"
+        confirmLoadingText="Sending..."
         confirmClass="bg-green-600 hover:bg-green-500 shadow-lg shadow-green-500/20"
       />
     </>

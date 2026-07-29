@@ -9,6 +9,7 @@ import ProjectTimeline from './gm/components/ProjectTimeline';
 import ResourcePipeline from './gm/components/ResourcePipeline';
 import EmployeeContractTable from './gm/components/EmployeeContractTable';
 import ExpiringContractsAlert from './gm/components/ExpiringContractsAlert';
+import HireRequestMonitor from './gm/components/HireRequestMonitor';
 import HRDashboard from './hr/components/HRDashboard';
 import PMDashboard from './pm/page';
 import MarketingDashboard from './mrkt/page';
@@ -53,6 +54,7 @@ export default function DashboardPage() {
         <ProjectTimeline />
         <ResourcePipeline />
         <EmployeeContractTable />
+        <HireRequestMonitor />
       </div>
     );
   }

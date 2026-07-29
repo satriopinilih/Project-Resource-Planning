@@ -683,17 +683,69 @@ public class ProjectService
 
     /// <summary>
     /// Updates only the status of a project.
+    /// Optionally notifies the assigned PM, and always notifies Marketing.
     /// </summary>
     public async Task<(bool Success, string? Error, int StatusCode, ProjectDto? Data)> UpdateStatusAsync(
         int id, UpdateProjectStatusRequest request, string? currentUserId)
     {
-        var project = await _db.Projects.FindAsync(id);
+        var project = await _db.Projects
+            .Include(p => p.UserProjects).ThenInclude(up => up.User)
+            .Include(p => p.ProjectRequiredRoles).ThenInclude(pr => pr.StaffRole)
+            .Include(p => p.ProjectRequiredSkills).ThenInclude(ps => ps.Skill)
+            .FirstOrDefaultAsync(p => p.ProjectID == id);
         if (project == null)
             return (false, "Project not found", 404, null);
+
+        var oldStatus = project.ProjectStatus.ToString();
+        var newStatus = request.ProjectStatus.ToString();
 
         project.ProjectStatus = request.ProjectStatus;
         project.UpdatedAt = DateTime.UtcNow;
         project.UpdatedBy = currentUserId ?? "SystemUser";
+        await _db.SaveChangesAsync();
+
+        // ── Notify assigned PM (if requested) ────────────────────────────
+        if (request.NotifyPm)
+        {
+            var pmAssignments = project.UserProjects
+                .Where(up => up.RoleInProject == "PM" && up.Status == UserProjectStatus.Assigned)
+                .Select(up => up.UserId)
+                .ToList();
+
+            var notifList = pmAssignments.Select(pmId => new UserProject
+            {
+                UserId = pmId,
+                ProjectId = id,
+                RoleInProject = "PM Notification",
+                Status = UserProjectStatus.Assigned,
+                IsNotificationRead = false,
+                SwapReason = $"Project status for **{project.ProjectName}** has been changed from **{oldStatus}** to **{newStatus}** by the GM.",
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow
+            }).ToList();
+
+            _db.UserProjects.AddRange(notifList);
+            await _db.SaveChangesAsync();
+        }
+
+        // ── Always notify Marketing via HireRequest (same pattern as Timeline Edit) ──
+        var marketingNotif = new HireRequest
+        {
+            RequestedBy = currentUserId ?? "SystemUser",
+            ProjectId = id,
+            ProjectName = project.ProjectName,
+            RoleNeeded = "Status Override Notification",
+            Quantity = 1,
+            StartDate = DateTime.UtcNow,
+            EndDate = DateTime.UtcNow,
+            Notes = $"[STATUS OVERRIDE] Project \"{project.ProjectName}\" status changed from {oldStatus} to {newStatus} by GM.",
+            Status = "Open",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedBy = currentUserId ?? "SystemUser",
+            UpdatedBy = currentUserId ?? "SystemUser"
+        };
+        _db.HireRequests.Add(marketingNotif);
         await _db.SaveChangesAsync();
 
         var updatedProject = await _db.Projects
@@ -705,6 +757,7 @@ public class ProjectService
 
         return (true, null, 200, MapToDto(updatedProject));
     }
+
 
     /// <summary>
     /// Soft Deletes a project (Sets status to Deleted and saves previous status).
