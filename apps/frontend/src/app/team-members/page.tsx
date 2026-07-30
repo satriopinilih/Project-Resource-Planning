@@ -44,6 +44,9 @@ export default function TeamMembersPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  // Contract History Toggle State
+  const [showContractHistory, setShowContractHistory] = useState(false);
+
   // Get distinct roles
   const roles = Array.from(new Set(employees.map((emp) => emp.role))).filter(Boolean).sort();
 
@@ -424,7 +427,7 @@ export default function TeamMembersPage() {
                     return (
                       <button
                         key={employee.id}
-                        onClick={() => setSelectedMember(employee.id)}
+                        onClick={() => { setSelectedMember(employee.id); setShowContractHistory(false); }}
                         className={`w-full text-left p-4 rounded-xl transition-all border ${selectedMember === employee.id
                           ? 'border-[#3b82f6] bg-[#1e3a8a]/10 shadow-sm'
                           : 'border-transparent bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)]'
@@ -616,16 +619,86 @@ export default function TeamMembersPage() {
                         )}
                       </div>
                     )}
-                  </div>
+                    {/* Contract History Accordion */}
+                  {selectedEmployee.contractHistory && selectedEmployee.contractHistory.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-[var(--dash-border)]">
+                      <button
+                        type="button"
+                        onClick={() => setShowContractHistory(!showContractHistory)}
+                        className="flex items-center gap-2 text-[13px] font-semibold text-[var(--dash-text-secondary)] hover:text-[var(--dash-text-heading)] transition-colors cursor-pointer group"
+                      >
+                        <svg
+                          className={`w-4 h-4 transition-transform duration-200 ${showContractHistory ? 'rotate-180' : ''}`}
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                        {showContractHistory ? 'Hide' : 'View'} Contract History
+                        <span className="ml-1 text-[11px] font-bold bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-full px-2 py-0.5 text-[var(--dash-text-muted)]">
+                          {selectedEmployee.contractHistory.length}
+                        </span>
+                      </button>
+
+                      {showContractHistory && (
+                        <div className="mt-4 relative">
+                          {/* Vertical line */}
+                          <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[var(--dash-border)]" />
+
+                          <div className="space-y-4">
+                            {selectedEmployee.contractHistory.map((item, idx) => {
+                              const startLabel = new Date(item.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                              const endLabel = item.endDate
+                                ? new Date(item.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : 'Present';
+                              return (
+                                <div key={idx} className="relative flex gap-4 pl-6">
+                                  {/* Node dot */}
+                                  <div className={`absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
+                                    item.isActive
+                                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
+                                      : 'bg-[var(--dash-bg-card)] border-[var(--dash-border)]'
+                                  }`} />
+
+                                  {/* Content */}
+                                  <div className={`flex-1 rounded-xl p-3.5 border transition-all ${
+                                    item.isActive
+                                      ? 'bg-emerald-500/5 border-emerald-500/25'
+                                      : 'bg-[var(--dash-bg-input)] border-[var(--dash-border)] opacity-70'
+                                  }`}>
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div>
+                                        <p className={`text-[13px] font-semibold ${
+                                          item.isActive ? 'text-emerald-400' : 'text-[var(--dash-text-heading)]'
+                                        }`}>{item.role}</p>
+                                        <p className="text-[12px] text-[var(--dash-text-muted)] mt-0.5">
+                                          {startLabel} &rarr; {endLabel}
+                                        </p>
+                                      </div>
+                                      {item.isActive && (
+                                        <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2 py-0.5">
+                                          Active
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                   {/* Card 3: Resource Pipeline */}
                   {selectedEmployee.projects && selectedEmployee.projects.length > 0 && (
                   <div className="bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] p-6">
                       <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)] mb-4">Resource Pipeline</h3>
                       <div className="space-y-4">
-                        {selectedEmployee.projects.map((project) => (
+                        {selectedEmployee.projects.map((project, idx) => (
                           <div
-                            key={project.id}
+                            key={project.userProjectId ?? `${project.id}-${idx}`}
                             className="bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl p-5"
                           >
                             <div className="flex items-start justify-between mb-3">

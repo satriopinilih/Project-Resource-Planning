@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Entities.Entities;
@@ -18,6 +18,7 @@ public class ContractExtension
     public int ExtensionDuration { get; set; }   // In months
 
     public string ReasonForExtension { get; set; } = string.Empty;
+
 
     [StringLength(20)]
     public string Status { get; set; } = "Pending"; // Pending, Approved, Declined

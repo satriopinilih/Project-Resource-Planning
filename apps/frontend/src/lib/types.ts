@@ -13,6 +13,13 @@ export interface Project {
   userProjectId?: number;
 }
 
+export interface ContractHistoryItem {
+  startDate: string;
+  endDate: string | null;
+  role: string;
+  isActive: boolean;
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -27,6 +34,7 @@ export interface Employee {
   experienceYears: number;
   skills?: string[];
   projects?: Project[];
+  contractHistory?: ContractHistoryItem[];
 }
 
 export interface ContractExtensionRequest {

@@ -22,6 +22,8 @@ export interface ConfirmModalProps {
   confirmText: string;
   confirmLoadingText?: string;
   confirmClass: string; // e.g. "bg-red-600 hover:bg-red-500" or "bg-gradient-to-r from-purple-600 to-indigo-600 ..."
+
+  children?: React.ReactNode;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -38,6 +40,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   confirmText,
   confirmLoadingText,
   confirmClass,
+  children
 }) => {
   if (!isOpen) return null;
 
@@ -73,6 +76,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <p className="text-[13px] text-gray-400 leading-relaxed mb-1">{message}</p>
           {warningText && (
             <p className="text-[13px] font-semibold text-red-400 mt-1">{warningText}</p>
+          )}
+
+          {children && (
+            <div className="mt-4 text-left">
+              {children}
+            </div>
           )}
         </div>
 

@@ -212,7 +212,7 @@ const OptionCard: React.FC<{
   originalStartDate?: string;
   originalEndDate?: string;
   hasRequiredRoles: boolean;
-  customizedAssignments?: { role: string; userId: string; userName: string; matchPercent: number }[];
+  customizedAssignments?: RecommendationCandidate[];
   onClearCustomization?: () => void;
   onStartCustom?: () => void;
 }> = ({ option, isRecommended, label, originalStartDate, originalEndDate, hasRequiredRoles, customizedAssignments, onClearCustomization, onStartCustom }) => {
@@ -224,7 +224,7 @@ const OptionCard: React.FC<{
 
   // Calculate custom match score as average of individual match %
   const customMatchScore = isCustomized
-    ? customizedAssignments!.reduce((sum, a) => sum + a.matchPercent, 0) / customizedAssignments!.length
+    ? customizedAssignments!.reduce((sum, a) => sum + a.skillMatchPercent, 0) / customizedAssignments!.length
     : null;
 
   const displayScore = customMatchScore !== null ? customMatchScore : option.matchScore;
@@ -302,140 +302,147 @@ const OptionCard: React.FC<{
           </div>
         </div>
 
-        {/* Custom Team Preview */}
-        {isCustomized && (
-          <div className="mt-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">
-            <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider mb-2">Custom Team</p>
-            <div className="space-y-1.5">
-              {customizedAssignments!.map((a, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-500">{a.role}:</span>
-                    <span className="text-[12px] font-semibold text-white">{a.userName}</span>
-                  </div>
-                  <span className={`text-[11px] font-bold ${
-                    a.matchPercent >= 70 ? "text-green-400" : a.matchPercent >= 40 ? "text-amber-400" : "text-red-400"
-                  }`}>{a.matchPercent.toFixed(0)}%</span>
-                </div>
-              ))}
-            </div>
+        {/* Status Box */}
+        <div className={`
+          mt-3 p-3 rounded-xl border flex flex-col gap-1.5
+          ${option.requiresHiring
+            ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
+            : option.requiresReschedule
+              ? "bg-[#8b5cf6]/5 border-[#8b5cf6]/20 text-[#a78bfa]"
+              : "bg-green-500/5 border-green-500/20 text-green-500"}
+        `}>
+          <div className="flex items-center gap-2">
+            {option.requiresHiring ? <UserPlus size={14} /> : option.requiresReschedule ? <Clock size={14} /> : <CheckCircle2 size={14} />}
+            <span className="text-[12px] font-bold">
+              {option.requiresHiring ? "Request Hiring / Replacement" : option.requiresReschedule ? "Action Needed: Delay Start Date" : "All resources available"}
+            </span>
           </div>
-        )}
-
-        {/* Status Box — only show if not customized */}
-        {!isCustomized && (
-          <div className={`
-            mt-3 p-3 rounded-xl border flex flex-col gap-1.5
-            ${option.requiresHiring
-              ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
-              : option.requiresReschedule
-                ? "bg-[#8b5cf6]/5 border-[#8b5cf6]/20 text-[#a78bfa]"
-                : "bg-green-500/5 border-green-500/20 text-green-500"}
-          `}>
-            <div className="flex items-center gap-2">
-              {option.requiresHiring ? <UserPlus size={14} /> : option.requiresReschedule ? <Clock size={14} /> : <CheckCircle2 size={14} />}
-              <span className="text-[12px] font-bold">
-                {option.requiresHiring ? "Request Hiring / Replacement" : option.requiresReschedule ? "Action Needed: Delay Start Date" : "All resources available"}
-              </span>
-            </div>
-            {option.requiresHiring && option.hiringDetail && (
-              <p className="text-[11px] font-medium pl-5 opacity-90">• {option.hiringDetail}</p>
-            )}
-            {option.requiresReschedule && option.rescheduleDetail && (
-              <p className="text-[11px] font-medium pl-5 opacity-90">• {option.rescheduleDetail}</p>
-            )}
-          </div>
-        )}
+          {option.requiresHiring && option.hiringDetail && (
+            <p className="text-[11px] font-medium pl-5 opacity-90">• {option.hiringDetail}</p>
+          )}
+          {option.requiresReschedule && option.rescheduleDetail && (
+            <p className="text-[11px] font-medium pl-5 opacity-90">• {option.rescheduleDetail}</p>
+          )}
+        </div>
       </div>
 
-      {/* Expand Candidates — only if not customized */}
-      {!isCustomized && (
-        <>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="mt-5 w-full py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 text-[12px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all border border-gray-700/50 cursor-pointer"
-          >
-            <Briefcase size={14} />
-            {expanded ? "Hide" : "Show"} Team ({option.candidates.length})
-            <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
-          </button>
+      {/* Expand Candidates */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="mt-5 w-full py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 text-[12px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all border border-gray-700/50 cursor-pointer"
+      >
+        <Briefcase size={14} />
+        {expanded ? "Hide" : "Show"} Team ({isCustomized ? customizedAssignments!.length : option.candidates.length})
+        <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
 
-          {expanded && (
-            <div className="mt-4 space-y-2.5 animate-in slide-in-from-top-2 duration-300">
-              {option.candidates.map((c, idx) => (
-                <CandidateCard key={c.userId} candidate={c} rank={idx + 1} />
-              ))}
-              {option.candidates.length === 0 && (
-                <p className="text-center text-[12px] text-[var(--dash-text-faint)] py-4 italic">No candidates matched for this option.</p>
-              )}
-            </div>
+      {expanded && (
+        <div className="mt-4 space-y-2.5 animate-in slide-in-from-top-2 duration-300">
+          {isCustomized ? (
+            customizedAssignments!.map((c, idx) => (
+              <CandidateCard key={`${c.userId}-${idx}`} candidate={c} rank={idx + 1} />
+            ))
+          ) : (
+            option.candidates.map((c, idx) => (
+              <CandidateCard key={c.userId} candidate={c} rank={idx + 1} />
+            ))
           )}
-        </>
+          {!isCustomized && option.candidates.length === 0 && (
+            <p className="text-center text-[12px] text-[var(--dash-text-faint)] py-4 italic">No candidates matched for this option.</p>
+          )}
+        </div>
       )}
 
       {/* Option Actions */}
       <div className="mt-auto pt-5 flex gap-3">
-        {isCustomized ? (
-          // Custom team: show Start with Custom Team button
-          <>
-            <button
-              onClick={() => setStartCustomConfirmOpen(true)}
-              className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 size={14} />
-              Start with Custom Team
-            </button>
-            <ConfirmModal
-              isOpen={startCustomConfirmOpen}
-              onClose={() => setStartCustomConfirmOpen(false)}
-              onConfirm={() => {
-                setStartCustomConfirmOpen(false);
-                onStartCustom && onStartCustom();
-              }}
-              icon={<CheckCircle2 size={28} className="text-white" />}
-              iconBg="bg-gradient-to-br from-purple-600 to-indigo-600"
-              title="Start with Custom Team"
-              message={`Start project with your custom team of ${customizedAssignments!.length} member(s)?`}
-              confirmText="Confirm & Start"
-              confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
-            />
-          </>
-        ) : option.requiresReschedule && !option.requiresHiring ? (
+        {option.requiresReschedule && !option.requiresHiring ? (
           <button
             disabled={!hasRequiredRoles}
             title={!hasRequiredRoles ? "Add required roles to the project before starting" : undefined}
-            onClick={() => hasRequiredRoles && window.dispatchEvent(new CustomEvent('adjustDatesAndStart', { detail: { option, originalStartDate, originalEndDate } }))}
+            onClick={() => {
+              if (!hasRequiredRoles) return;
+              if (isCustomized) setStartCustomConfirmOpen(true);
+              else window.dispatchEvent(new CustomEvent('adjustDatesAndStart', { detail: { option, originalStartDate, originalEndDate } }));
+            }}
             className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/20 disabled:shadow-none flex items-center justify-center gap-2"
           >
             <CalendarCheck size={14} />
             Adjust Dates &amp; Start
           </button>
         ) : (
-          <>
-            <button
-              disabled={option.requiresHiring || option.requiresReschedule || !hasRequiredRoles}
-              title={!hasRequiredRoles ? "Add required roles to the project before starting" : undefined}
-              onClick={() => !option.requiresHiring && !option.requiresReschedule && hasRequiredRoles && setStartConfirmOpen(true)}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
-            >
-              {!hasRequiredRoles ? "Add Roles First" : option.requiresHiring ? "Unavailable to Start" : "Start Project"}
-            </button>
-            <ConfirmModal
-              isOpen={startConfirmOpen}
-              onClose={() => setStartConfirmOpen(false)}
-              onConfirm={() => {
-                setStartConfirmOpen(false);
-                window.dispatchEvent(new CustomEvent('startProject', { detail: option }));
-              }}
-              icon={<CheckCircle2 size={28} className="text-white" />}
-              iconBg="bg-gradient-to-br from-blue-600 to-indigo-600"
-              title={`Start with ${option.title}`}
-              message={`Do you want to start the project using ${option.title}? This will assign ${option.teamSize} team member(s) and set the project to Running.`}
-              confirmText="Confirm"
-              confirmClass="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/20"
-            />
-          </>
+          <button
+            disabled={!hasRequiredRoles || option.requiresHiring || option.requiresReschedule}
+            title={!hasRequiredRoles ? "Add required roles to the project before starting" : undefined}
+            onClick={() => {
+              if (!hasRequiredRoles || option.requiresHiring || option.requiresReschedule) return;
+              if (isCustomized) setStartCustomConfirmOpen(true);
+              else setStartConfirmOpen(true);
+            }}
+            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
+          >
+            {!hasRequiredRoles ? "Add Roles First" : option.requiresHiring ? "Unavailable to Start" : "Start Project"}
+          </button>
         )}
+
+        <ConfirmModal
+          isOpen={startCustomConfirmOpen}
+          onClose={() => setStartCustomConfirmOpen(false)}
+          onConfirm={() => {
+            setStartCustomConfirmOpen(false);
+            onStartCustom && onStartCustom();
+          }}
+          icon={<CheckCircle2 size={28} className="text-white" />}
+          iconBg="bg-gradient-to-br from-purple-600 to-indigo-600"
+          title="Start with Custom Team"
+          message={`Start project with your custom team of ${customizedAssignments?.length || 0} member(s)?`}
+          confirmText="Confirm & Start"
+          confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
+        >
+          {(() => {
+            const startDateToCheck = option.startDate || originalStartDate || "";
+            const dayOfWeek = new Date(startDateToCheck).getDay();
+            const isWeekendStart = dayOfWeek === 0 || dayOfWeek === 6;
+            return isWeekendStart && (
+              <div className="mt-2 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3 text-amber-400">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <div className="text-[12px] leading-relaxed font-medium">
+                  <span className="font-bold block mb-1">Weekend Start Date</span>
+                  You selected a weekend as the project start date. The system usually expects projects to start on a working day.
+                </div>
+              </div>
+            );
+          })()}
+        </ConfirmModal>
+
+        <ConfirmModal
+          isOpen={startConfirmOpen}
+          onClose={() => setStartConfirmOpen(false)}
+          onConfirm={() => {
+            setStartConfirmOpen(false);
+            window.dispatchEvent(new CustomEvent('startProject', { detail: option }));
+          }}
+          icon={<CheckCircle2 size={28} className="text-white" />}
+          iconBg="bg-gradient-to-br from-blue-600 to-indigo-600"
+          title={`Start with ${option.title}`}
+          message={`Do you want to start the project using ${option.title}? This will assign ${option.teamSize} team member(s) and set the project to Running.`}
+          confirmText="Confirm"
+          confirmClass="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/20"
+        >
+          {(() => {
+            const startDateToCheck = option.startDate || originalStartDate || "";
+            const dayOfWeek = new Date(startDateToCheck).getDay();
+            const isWeekendStart = dayOfWeek === 0 || dayOfWeek === 6;
+            return isWeekendStart && (
+              <div className="mt-2 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3 text-amber-400">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <div className="text-[12px] leading-relaxed font-medium">
+                  <span className="font-bold block mb-1">Weekend Start Date</span>
+                  You selected a weekend as the project start date. The system usually expects projects to start on a working day.
+                </div>
+              </div>
+            );
+          })()}
+        </ConfirmModal>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('customizeOption', { detail: option }))}
           className="px-5 py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 font-bold text-[13px] rounded-xl border border-gray-700/50 transition-all cursor-pointer"
@@ -456,7 +463,8 @@ const CustomizeModal: React.FC<{
   onClose: () => void;
   onPreview: (assignments: { role: string; userId: string; workingType: string }[]) => void;
   isProcessing: boolean;
-}> = ({ option, requiredRoles, employees, allCandidates, onClose, onPreview, isProcessing }) => {
+  existingCustomizations?: RecommendationCandidate[] | null;
+}> = ({ option, requiredRoles, employees, allCandidates, onClose, onPreview, isProcessing, existingCustomizations }) => {
 
   // Transform needed roles into a flat list of slots
   const initialAssignments: { id: string; role: string; workingType: string; userId: string; originalUserId: string }[] = [];
@@ -465,11 +473,12 @@ const CustomizeModal: React.FC<{
   requiredRoles.forEach(rr => {
     for (let i = 0; i < rr.requiredCount; i++) {
       const existingRec = option.candidates.filter(c => c.targetRole === rr.roleName && c.targetWorkingType === rr.workingType)[i];
+      const existingCustom = existingCustomizations?.filter(c => c.targetRole === rr.roleName && c.targetWorkingType === rr.workingType)[i];
       initialAssignments.push({
         id: `slot_${slotIdx++}`,
         role: rr.roleName,
         workingType: rr.workingType,
-        userId: existingRec ? existingRec.userId : "",
+        userId: existingCustom ? existingCustom.userId : (existingRec ? existingRec.userId : ""),
         originalUserId: existingRec ? existingRec.userId : ""
       });
     }
@@ -901,8 +910,8 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
   // Customization and Batch actions state
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [customizingOption, setCustomizingOption] = useState<OptionType | null>(null);
-  const [customAssignmentsA, setCustomAssignmentsA] = useState<{ role: string; userId: string; userName: string; matchPercent: number; workingType: string }[] | null>(null);
-  const [customAssignmentsB, setCustomAssignmentsB] = useState<{ role: string; userId: string; userName: string; matchPercent: number; workingType: string }[] | null>(null);
+  const [customAssignmentsA, setCustomAssignmentsA] = useState<RecommendationCandidate[] | null>(null);
+  const [customAssignmentsB, setCustomAssignmentsB] = useState<RecommendationCandidate[] | null>(null);
   const [adjustingOption, setAdjustingOption] = useState<{ option: OptionType; originalStartDate: string; originalEndDate: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState("");
@@ -948,15 +957,15 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
     };
   }, [projectId]);
 
-  const processStartProject = async (assignments: { role: string, userId: string, workingType?: string }[]) => {
+  const processStartProject = async (assignments: any[]) => {
     setIsProcessing(true);
     try {
       setProcessStatus("Assigning members...");
       for (const assign of assignments) {
         await assignMemberToProject(projectId, {
           userId: assign.userId,
-          roleInProject: assign.role,
-          workingType: assign.workingType,
+          roleInProject: assign.role || assign.targetRole,
+          workingType: assign.workingType || assign.targetWorkingType,
         });
       }
       setProcessStatus("Starting project...");
@@ -1127,17 +1136,40 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             ...data.optionA.candidates,
             ...data.optionB.candidates.filter(c => !data.optionA.candidates.some(a => a.userId === c.userId))
           ]}
+          existingCustomizations={customizingOption.title === data.optionA.title ? customAssignmentsA : customAssignmentsB}
           onClose={() => setCustomizingOption(null)}
           onPreview={(assignments) => {
+            const combinedCandidates = [
+              ...data.optionA.candidates,
+              ...data.optionB.candidates.filter(c => !data.optionA.candidates.some(a => a.userId === c.userId))
+            ];
             const mapped = assignments.map(a => {
+              const aiCandidate = customizingOption.candidates.find(c => c.userId === a.userId) 
+                || combinedCandidates.find(c => c.userId === a.userId);
+                
+              if (aiCandidate) {
+                return {
+                  ...aiCandidate,
+                  targetRole: a.role,
+                  targetWorkingType: a.workingType
+                };
+              }
+              
               const emp = employees.find(e => e.id === a.userId);
-              const aiCandidate = customizingOption.candidates.find(c => c.userId === a.userId);
               return {
-                role: a.role,
                 userId: a.userId,
-                workingType: a.workingType,
                 userName: emp ? emp.name : "Unknown",
-                matchPercent: aiCandidate ? aiCandidate.skillMatchPercent : 50 // default fallback
+                staffRole: emp ? emp.role : "Unknown",
+                experienceYears: emp ? emp.experienceYears : 0,
+                skillMatchPercent: 50,
+                targetRole: a.role,
+                targetWorkingType: a.workingType,
+                isAvailable: !emp?.projects || emp.projects.length === 0,
+                availabilityNote: (!emp?.projects || emp.projects.length === 0) ? "Available now" : "Currently busy",
+                currentProjects: emp?.projects ? emp.projects.map(p => p.name) : [],
+                pastProjects: [],
+                skills: emp?.skills || [],
+                matchedSkills: []
               };
             });
             if (customizingOption.title === data.optionA.title) {

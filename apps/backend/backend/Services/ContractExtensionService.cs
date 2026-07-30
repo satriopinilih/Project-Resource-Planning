@@ -54,12 +54,18 @@ public class ContractExtensionService
             return (false, "Employee not found", 400, null);
         }
 
+        var reason = request.ReasonForExtension;
+        if (request.ExpectedEndDate.HasValue)
+        {
+            reason = $"[TARGET_DATE:{request.ExpectedEndDate.Value:yyyy-MM-dd}] {reason}";
+        }
+
         var row = new ContractExtension
         {
             UserId = request.UserId,
             RequestedBy = requestedBy,
             ExtensionDuration = request.ExtensionDuration,
-            ReasonForExtension = request.ReasonForExtension,
+            ReasonForExtension = reason,
             Status = "Pending",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -110,7 +116,24 @@ public class ContractExtensionService
         row.UpdatedAt = DateTime.UtcNow;
         row.UpdatedBy = processedBy;
 
-        row.User.ContractEnd = row.User.ContractEnd.AddMonths(row.ExtensionDuration);
+        // Check if exact target date was encoded in the reason (Auto-rec mode)
+        DateTime? targetDate = null;
+        if (row.ReasonForExtension.StartsWith("[TARGET_DATE:"))
+        {
+            var endIdx = row.ReasonForExtension.IndexOf(']');
+            if (endIdx > 13)
+            {
+                var dateStr = row.ReasonForExtension.Substring(13, endIdx - 13);
+                if (DateTime.TryParse(dateStr, out var parsed))
+                    targetDate = parsed;
+            }
+        }
+
+        // Auto-rec mode: use the exact target date supplied by the GM.
+        // Manual mode: add the month count to the current contract end.
+        row.User.ContractEnd = targetDate.HasValue
+            ? targetDate.Value.Date
+            : row.User.ContractEnd.AddMonths(row.ExtensionDuration);
         row.User.ContractStatus = ContractStatus.Active;
         row.User.UpdatedAt = DateTime.UtcNow;
         row.User.UpdatedBy = processedBy;
@@ -161,8 +184,99 @@ public class ContractExtensionService
         return (true, null, 200, MapToDto(row));
     }
 
+    /// <summary>
+    /// Builds a smart recommendation for the contract extension modal.
+    /// Finds all active (Running = 2) projects the user is assigned to and checks if any end later than the user's contract.
+    /// Duration is ceiled to the nearest whole month; the recommended end date is the exact latest project end date.
+    /// </summary>
+    public async Task<ContractExtensionRecommendationDto> GetRecommendationAsync(string userId)
+    {
+        var user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == userId);
+
+        if (user is null)
+            return new ContractExtensionRecommendationDto { HasRecommendation = false };
+
+        // Fetch active (Running) UserProject entries with their project
+        var userProjects = await _db.Set<Entities.Entities.UserProject>()
+            .AsNoTracking()
+            .Include(up => up.Project)
+            .Where(up => up.UserId == userId && up.Project != null)
+            .ToListAsync();
+
+        var activeProjects = userProjects
+            .Where(up => up.Project!.ProjectStatus == Commons.Enums.ProjectStatus.Running)
+            .Select(up => up.Project!)
+            .DistinctBy(p => p.ProjectID)
+            .ToList();
+
+        if (activeProjects.Count == 0)
+            return new ContractExtensionRecommendationDto
+            {
+                HasRecommendation = false,
+                ActiveProjects = new List<ActiveProjectInfo>(),
+                CurrentContractEnd = user.ContractEnd
+            };
+
+        // Find the project with the latest estimated end date
+        var latestProject = activeProjects.OrderByDescending(p => p.EstimatedEndDate).First();
+        var contractEnd = user.ContractEnd.Date;
+
+        // Check if any project's end date exceeds the current contract end
+        bool hasRecommendation = latestProject.EstimatedEndDate.Date > contractEnd;
+
+        // Build project info list (mark the one with the latest end date)
+        var projectInfos = activeProjects
+            .OrderByDescending(p => p.EstimatedEndDate)
+            .Select(p => new ActiveProjectInfo
+            {
+                ProjectName = p.ProjectName,
+                EstEndDate = p.EstimatedEndDate,
+                IsLatest = p.ProjectID == latestProject.ProjectID
+            })
+            .ToList();
+
+        if (!hasRecommendation)
+            return new ContractExtensionRecommendationDto
+            {
+                HasRecommendation = false,
+                ActiveProjects = projectInfos,
+                CurrentContractEnd = user.ContractEnd
+            };
+
+        // Calculate duration in months (Math.Ceiling to full months)
+        var latestEnd = latestProject.EstimatedEndDate.Date;
+        double totalDays = (latestEnd - contractEnd).TotalDays;
+        double months = totalDays / 30.4375; // Average days per month
+        int recommendedMonths = (int)Math.Ceiling(months);
+
+        // Build auto-generated justification text
+        var projectList = string.Join("; ", projectInfos
+            .Select(p => $"{p.ProjectName} ({p.EstEndDate!.Value.ToString("MMM d, yyyy")})"));
+        var justification = $"Extension recommended to cover active project commitments: {projectList}. Aligned with latest delivery milestone.";
+
+        return new ContractExtensionRecommendationDto
+        {
+            HasRecommendation = true,
+            ActiveProjects = projectInfos,
+            RecommendedDurationMonths = recommendedMonths,
+            RecommendedEndDate = latestProject.EstimatedEndDate,
+            JustificationText = justification,
+            CurrentContractEnd = user.ContractEnd
+        };
+    }
+
     private static ContractExtensionDto MapToDto(ContractExtension c)
     {
+        var cleanReason = c.ReasonForExtension;
+        if (cleanReason.StartsWith("[TARGET_DATE:"))
+        {
+            var endIdx = cleanReason.IndexOf(']');
+            if (endIdx > -1 && cleanReason.Length > endIdx + 1)
+                cleanReason = cleanReason.Substring(endIdx + 1).TrimStart();
+        }
+
         return new ContractExtensionDto
         {
             ContractExtensionRequestID = c.ContractExtensionRequestID,
@@ -171,7 +285,7 @@ public class ContractExtensionService
             UserId = c.UserId,
             UserName = c.User?.UserName ?? c.UserId,
             ExtensionDuration = c.ExtensionDuration,
-            ReasonForExtension = c.ReasonForExtension,
+            ReasonForExtension = cleanReason,
             CreatedAt = c.CreatedAt,
             Status = c.Status
         };

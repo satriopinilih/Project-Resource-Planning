@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Search, Filter, Loader2, ArrowRight, Users, Trash2, RotateCcw } from "lucide-react";
-import { getProjects, deleteProject, restoreProject, createProjectDeletionRequest, createProjectRestorationRequest } from "../../../../lib/api";
+import { getProjects, deleteProject, restoreProject, createProjectDeletionRequest, createProjectRestorationRequest, getHireRequests } from "../../../../lib/api";
 
 interface Project {
   id: string;
@@ -58,6 +58,7 @@ function GMProjectsContent() {
 
   const [activeTab, setActiveTab] = useState(tabs.includes(tabQuery || "") ? tabQuery! : "All");
   const [projectsData, setProjectsData] = useState<Project[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<Record<string, "Delete" | "Restore">>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -91,7 +92,24 @@ function GMProjectsContent() {
           budgetValue: 0,
         };
       });
+      
+      const hireReqs = await getHireRequests();
+      const openRequests = hireReqs.filter(r => 
+        (r.status === 'Open' || r.status === 'InProgress') && 
+        (r.roleNeeded === 'Project Deletion Request' || r.roleNeeded === 'Project Restoration Request')
+      );
+      
+      const pendingMap: Record<string, "Delete" | "Restore"> = {};
+      openRequests.forEach(req => {
+          if (req.projectId) {
+              const formattedId = `proj${String(req.projectId).padStart(3, "0")}`;
+              pendingMap[formattedId] = req.roleNeeded === 'Project Deletion Request' ? 'Delete' : 'Restore';
+          }
+      });
+      
+      setPendingRequests(pendingMap);
       setProjectsData(mappedData);
+
     } catch (error) {
       console.error("Error fetching projects:", error);
     } finally {
@@ -123,6 +141,7 @@ function GMProjectsContent() {
       const numId = parseInt(targetProjectId.replace("proj", ""), 10);
       const projName = projectsData.find(p => p.id === targetProjectId)?.name || "Unknown Project";
       await createProjectDeletionRequest(numId, projName);
+      fetchProjects(); // Refresh UI to hide button
     } catch (error: any) {
       alert("Failed to request project deletion: " + error.message);
     } finally {
@@ -145,6 +164,7 @@ function GMProjectsContent() {
       const numId = parseInt(targetProjectId.replace("proj", ""), 10);
       const projName = projectsData.find(p => p.id === targetProjectId)?.name || "Unknown Project";
       await createProjectRestorationRequest(numId, projName);
+      fetchProjects(); // Refresh UI to hide button
     } catch (error: any) {
       alert("Failed to request project restoration: " + error.message);
     } finally {
@@ -364,7 +384,11 @@ function GMProjectsContent() {
                         </div>
                       </td>
                       <td className="py-4 pr-6 pl-4 text-right">
-                        {project.status === "Deleted" ? (
+                        {pendingRequests[project.id] === 'Delete' ? (
+                          <span className="inline-block px-2 py-1 text-[11px] font-bold rounded-lg border bg-red-500/10 text-red-500 border-red-500/20 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">Pending Deletion</span>
+                        ) : pendingRequests[project.id] === 'Restore' ? (
+                          <span className="inline-block px-2 py-1 text-[11px] font-bold rounded-lg border bg-green-500/10 text-green-500 border-green-500/20 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">Pending Restore</span>
+                        ) : project.status === "Deleted" ? (
                           <button
                             onClick={(e) => handleRestore(e, project.id)}
                             className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md transition-colors mr-2 opacity-0 group-hover:opacity-100"
