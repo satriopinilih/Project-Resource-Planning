@@ -21,6 +21,8 @@ public class UserDto
     public List<UserProjectDto> Projects { get; set; } = new();
     /// <summary>Contract history (original + extensions), sorted newest first by StartDate.</summary>
     public List<ContractHistoryDto> ContractHistory { get; set; } = new();
+    /// <summary>Role/position history, sorted newest first. Includes current role.</summary>
+    public List<RoleHistoryDto> RoleHistories { get; set; } = new();
 }
 
 public class UserProjectDto
@@ -48,4 +50,26 @@ public class ContractHistoryDto
     public string Role { get; set; } = string.Empty;
     /// <summary>True if this is the currently active contract.</summary>
     public bool IsActive { get; set; }
+    /// <summary>Human-readable duration, e.g. "2 years", "6 months".</summary>
+    public string Duration { get; set; } = string.Empty;
+    /// <summary>Date when this period was created/extended. Null for the original contract.</summary>
+    public DateTime? ExtendedOn { get; set; }
+    /// <summary>Name of the person who created/extended this contract period. Null for original.</summary>
+    public string? ExtendedBy { get; set; }
+    /// <summary>Days remaining until this period's EndDate. Only meaningful for the active period.</summary>
+    public int? DaysUntilExpiry { get; set; }
+}
+
+public class RoleHistoryDto
+{
+    /// <summary>Role/position name (e.g. "Junior Dev", "Senior BA").</summary>
+    public string RoleName { get; set; } = string.Empty;
+    /// <summary>Date this role became effective.</summary>
+    public DateTime StartDate { get; set; }
+    /// <summary>Date this role ended. Null if this is the current role.</summary>
+    public DateTime? EndDate { get; set; }
+    /// <summary>True if this is the employee's currently active role.</summary>
+    public bool IsCurrentRole { get; set; }
+    /// <summary>Human-readable duration in this role, e.g. "1 year, 3 months".</summary>
+    public string Duration { get; set; } = string.Empty;
 }

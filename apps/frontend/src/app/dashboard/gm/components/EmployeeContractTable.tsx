@@ -20,6 +20,8 @@ import {
   createHireRequest,
   getContractExtensionRecommendation,
   ContractExtensionRecommendation,
+  getEmployeeFormOptions,
+  LookupItem,
 } from "@/lib/api";
 
 interface EmployeeContract {
@@ -139,6 +141,8 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
   const [recommendation, setRecommendation] = useState<ContractExtensionRecommendation | null>(null);
   const [recLoading, setRecLoading] = useState(false);
   const [useAutoRec, setUseAutoRec] = useState(false);
+  const [extensionNewRole, setExtensionNewRole] = useState("");
+  const [staffRoles, setStaffRoles] = useState<LookupItem[]>([]);
 
   useEffect(() => {
     getRawEmployees()
@@ -148,6 +152,11 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
+
+    // Load staff roles for the New Role dropdown
+    getEmployeeFormOptions()
+      .then((opts) => setStaffRoles(opts.staffRoles))
+      .catch(() => {}); // non-critical
 
     try {
       const raw = localStorage.getItem("auth_user");
@@ -159,6 +168,8 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
       setCanRequestHire(false);
     }
   }, []);
+
+  const roles = Array.from(new Set(employeesData.map((emp) => emp.role))).filter(Boolean).sort();
 
   const filteredEmployees = employeesData.filter((emp) => {
     const matchesSearch =
@@ -190,6 +201,7 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
     setSubmitSuccess(false);
     setUseAutoRec(false);
     setRecommendation(null);
+    setExtensionNewRole(emp.role); // default to current role
     setRecLoading(true);
     try {
       const rec = await getContractExtensionRecommendation(emp.id);
@@ -221,7 +233,8 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
         extensionModal.id,
         Math.max(1, parseInt(extensionDuration, 10) || 12),
         extensionReason,
-        expectedEndDate
+        expectedEndDate,
+        extensionNewRole !== extensionModal.role ? extensionNewRole : null
       );
       setSubmitSuccess(true);
       setTimeout(() => {
@@ -679,6 +692,42 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                       <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Current Contract End Date</p>
                       <p className="text-[14px] font-bold text-[#3b82f6]">{extensionModal.contractEnd}</p>
                     </div>
+                  </div>
+
+                  {/* New Role / Update Position */}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#3b82f6] mb-3">Role Update (Optional)</p>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                      New Role / Update Position
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={extensionNewRole}
+                        onChange={(e) => setExtensionNewRole(e.target.value)}
+                        className="w-full h-10 px-3 pr-8 text-[13px] bg-[#141922] border border-[#1e2433] rounded-lg outline-none text-white appearance-none focus:border-[#3b82f6] transition-colors cursor-pointer"
+                      >
+                        {staffRoles.length > 0 ? (
+                          staffRoles.map((sr) => (
+                            <option key={sr.id} value={sr.name}>{sr.name}</option>
+                          ))
+                        ) : roles.length > 0 ? (
+                          roles.map((r) => (
+                            <option key={r} value={r}>{r}</option>
+                          ))
+                        ) : (
+                          <option value={extensionModal.role}>{extensionModal.role}</option>
+                        )}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                    </div>
+                    {extensionNewRole && extensionNewRole !== extensionModal.role && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#22c55e] bg-[#22c55e]/10 border border-[#22c55e]/20 px-2 py-0.5 rounded">Promotion</span>
+                        <span className="text-[11px] text-gray-400">
+                          {extensionModal.role} → <span className="text-white font-semibold">{extensionNewRole}</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Active Projects */}

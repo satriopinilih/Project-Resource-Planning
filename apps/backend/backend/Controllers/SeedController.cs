@@ -38,6 +38,7 @@ DO $$
 DECLARE
     table_name text;
     table_names text[] := ARRAY[
+        'EmployeeRoleHistories',
         'ContractExtensions',
         'UserProjects',
         'UserSkills',
@@ -257,7 +258,8 @@ END $$;");
                 new User { UserId = "EMP010", UserName = "Yuki Tanaka", Email = "yuki.tanaka@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.ProfessionalServices, ExperienceYears = 4, ContractStart = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "EMP999", UserName = "Dummy NoSkills", Email = "noskills@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 1, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
                 new User { UserId = "EMP888", UserName = "Dummy NoSkills2", Email = "noskills2@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 1, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
-                new User { UserId = "EMP011", UserName = "Dummy Test", Email = "noskills3@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 1, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
+                new User { UserId = "EMP011", UserName = "Dummy Test", Email = "noskills3@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.Permanent, ExperienceYears = 1, ContractStart = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" },
+                new User { UserId = "EMP_HIST", UserName = "History Tester", Email = "history@company.com", Password = "password123", DepartmentId = engDept.DepartementID, EmployeeType = EmployeeType.ProfessionalServices, ExperienceYears = 5, ContractStart = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractEnd = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc), ContractStatus = ContractStatus.Active, CreatedAt = now, UpdatedAt = now, CreatedBy = "system", UpdatedBy = "system" }
             };
             _db.Users.AddRange(users);
             await _db.SaveChangesAsync();
@@ -283,7 +285,8 @@ END $$;");
                 new UserRole { UserId = "EMP010", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP999", RoleId = roleStaff.RoleId },
                 new UserRole { UserId = "EMP888", RoleId = roleStaff.RoleId },
-                new UserRole { UserId = "EMP011", RoleId = roleStaff.RoleId }
+                new UserRole { UserId = "EMP011", RoleId = roleStaff.RoleId },
+                new UserRole { UserId = "EMP_HIST", RoleId = roleStaff.RoleId }
             );
 
             // Staff roles (display)
@@ -301,7 +304,8 @@ END $$;");
                 new UserStaffRole { UserId = "EMP010", StaffRoleId = srPm.StaffRoleId },           // Yuki: PM (available)
                 new UserStaffRole { UserId = "EMP999", StaffRoleId = srJuniorDev.StaffRoleId },    // Dummy: For NoSkills testing
                 new UserStaffRole { UserId = "EMP888", StaffRoleId = srJuniorDev.StaffRoleId },    // Dummy: For NoSkills2 testing
-                new UserStaffRole { UserId = "EMP011", StaffRoleId = srSeniorBA.StaffRoleId }     // Dummy: For NoSkills3 testing
+                new UserStaffRole { UserId = "EMP011", StaffRoleId = srSeniorBA.StaffRoleId },     // Dummy: For NoSkills3 testing
+                new UserStaffRole { UserId = "EMP_HIST", StaffRoleId = srSeniorDev.StaffRoleId }
             );
 
             // Skill mapping — collect all items then AddRange for batch efficiency
@@ -373,6 +377,22 @@ END $$;");
                     UpdatedBy = "HR123"
                 }
             );
+
+            _db.ContractExtensions.AddRange(
+                new ContractExtension { RequestedBy = "HR123", UserId = "EMP_HIST", ExtensionDuration = 12, ReasonForExtension = "Annual extension 2022", Status = "Approved", CreatedAt = new DateTime(2021, 12, 1, 0, 0, 0, DateTimeKind.Utc), ProcessedAt = new DateTime(2021, 12, 5, 0, 0, 0, DateTimeKind.Utc), ProcessedBy = "GM001", CreatedBy = "HR123", UpdatedBy = "HR123" },
+                new ContractExtension { RequestedBy = "HR123", UserId = "EMP_HIST", ExtensionDuration = 12, ReasonForExtension = "Annual extension 2023", Status = "Approved", CreatedAt = new DateTime(2022, 12, 1, 0, 0, 0, DateTimeKind.Utc), ProcessedAt = new DateTime(2022, 12, 5, 0, 0, 0, DateTimeKind.Utc), ProcessedBy = "GM001", CreatedBy = "HR123", UpdatedBy = "HR123" },
+                new ContractExtension { RequestedBy = "HR123", UserId = "EMP_HIST", ExtensionDuration = 12, ReasonForExtension = "Annual extension 2024", Status = "Approved", CreatedAt = new DateTime(2023, 12, 1, 0, 0, 0, DateTimeKind.Utc), ProcessedAt = new DateTime(2023, 12, 5, 0, 0, 0, DateTimeKind.Utc), ProcessedBy = "GM001", CreatedBy = "HR123", UpdatedBy = "HR123" },
+                new ContractExtension { RequestedBy = "HR123", UserId = "EMP_HIST", ExtensionDuration = 12, ReasonForExtension = "Annual extension 2025", Status = "Approved", CreatedAt = new DateTime(2024, 12, 1, 0, 0, 0, DateTimeKind.Utc), ProcessedAt = new DateTime(2024, 12, 5, 0, 0, 0, DateTimeKind.Utc), ProcessedBy = "GM001", CreatedBy = "HR123", UpdatedBy = "HR123" },
+                new ContractExtension { RequestedBy = "HR123", UserId = "EMP_HIST", ExtensionDuration = 12, ReasonForExtension = "Annual extension 2026", Status = "Approved", CreatedAt = new DateTime(2025, 12, 1, 0, 0, 0, DateTimeKind.Utc), ProcessedAt = new DateTime(2025, 12, 5, 0, 0, 0, DateTimeKind.Utc), ProcessedBy = "GM001", CreatedBy = "HR123", UpdatedBy = "HR123" }
+            );
+
+            // ── EMP_HIST Role Histories ──
+            _db.EmployeeRoleHistories.AddRange(
+                new EmployeeRoleHistory { UserId = "EMP_HIST", RoleName = "Intern Dev", StartDate = new DateTime(2021, 1, 15, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2022, 1, 14, 0, 0, 0, DateTimeKind.Utc), IsCurrentRole = false, ChangedBy = "HR123" },
+                new EmployeeRoleHistory { UserId = "EMP_HIST", RoleName = "Junior Dev", StartDate = new DateTime(2022, 1, 15, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2025, 1, 14, 0, 0, 0, DateTimeKind.Utc), IsCurrentRole = false, ChangedBy = "HR123" },
+                new EmployeeRoleHistory { UserId = "EMP_HIST", RoleName = "Senior Dev", StartDate = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc), EndDate = null, IsCurrentRole = true, ChangedBy = "HR123" }
+            );
+
 
             // ── ProjectRequiredRoles for Healthcare Management System ──
             // This is what the Smart Recommendation Panel uses to generate team suggestions

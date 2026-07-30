@@ -132,4 +132,23 @@ public class EmployeesController : ControllerBase
 
         return Ok(ApiResponse<Contracts.DTOs.User.NotificationResponseDto>.SuccessResponse(data!));
     }
+
+    /// <summary>
+    /// Returns the authenticated user's full contract history, sorted newest-first.
+    /// Each entry includes Duration, ExtendedOn, ExtendedBy, and DaysUntilExpiry (active period only).
+    /// </summary>
+    [HttpGet("me/contracts")]
+    public async Task<ActionResult<ApiResponse<List<ContractHistoryDto>>>> GetMyContracts()
+    {
+        var userId = CurrentUserId;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(ApiResponse<List<ContractHistoryDto>>.ErrorResponse("Not authenticated"));
+
+        var (success, error, statusCode, data) = await _service.GetContractHistoryAsync(userId);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<List<ContractHistoryDto>>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<List<ContractHistoryDto>>.SuccessResponse(data!));
+    }
 }

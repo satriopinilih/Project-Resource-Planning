@@ -18,6 +18,18 @@ export interface ContractHistoryItem {
   endDate: string | null;
   role: string;
   isActive: boolean;
+  duration: string;
+  extendedOn: string | null;
+  extendedBy: string | null;
+  daysUntilExpiry: number | null;
+}
+
+export interface RoleHistoryItem {
+  roleName: string;
+  startDate: string;
+  endDate: string | null;
+  isCurrentRole: boolean;
+  duration: string;
 }
 
 export interface Employee {
@@ -35,6 +47,7 @@ export interface Employee {
   skills?: string[];
   projects?: Project[];
   contractHistory?: ContractHistoryItem[];
+  roleHistories?: RoleHistoryItem[];
 }
 
 export interface ContractExtensionRequest {

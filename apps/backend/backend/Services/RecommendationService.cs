@@ -405,8 +405,18 @@ public class RecommendationService
                 // Mark all candidates as available under the shifted timeline
                 foreach (var c in unavailableCandidates)
                 {
-                    c.IsAvailable = true;
-                    c.AvailabilityNote = "Available (after date adjustment)";
+                    var parts = c.AvailabilityNote.Replace("Available from ", "");
+                    if (DateTime.TryParse(parts, out var d))
+                    {
+                        var individualDaysDelay = (int)(d.Date - projectStart.Date).TotalDays;
+                        c.IsAvailable = true;
+                        c.AvailabilityNote = $"Delayed by {individualDaysDelay} days (timeline adjusted)";
+                    }
+                    else
+                    {
+                        c.IsAvailable = true;
+                        c.AvailabilityNote = "Timeline adjusted for availability";
+                    }
                 }
                 totalAvailableNow = selectedCandidates.Count;
             }

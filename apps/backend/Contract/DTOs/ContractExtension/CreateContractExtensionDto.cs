@@ -10,6 +10,11 @@ public class CreateContractExtensionDto
     /// instead of computing ContractEnd + ExtensionDuration months.
     /// </summary>
     public DateTime? ExpectedEndDate { get; set; }
+    /// <summary>
+    /// Optional: new role/position for the employee (e.g., promotion).
+    /// If null or matches current role, no role change is processed.
+    /// </summary>
+    public string? NewRole { get; set; }
 }
 
 public class ApproveContractExtensionDto

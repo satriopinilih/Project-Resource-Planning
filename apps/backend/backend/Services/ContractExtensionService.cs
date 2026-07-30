@@ -66,6 +66,7 @@ public class ContractExtensionService
             RequestedBy = requestedBy,
             ExtensionDuration = request.ExtensionDuration,
             ReasonForExtension = reason,
+            NewRole = string.IsNullOrWhiteSpace(request.NewRole) ? null : request.NewRole.Trim(),
             Status = "Pending",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -101,6 +102,8 @@ public class ContractExtensionService
     {
         var row = await _db.ContractExtensions
             .Include(c => c.User)
+                .ThenInclude(u => u.UserStaffRoles)
+                .ThenInclude(usr => usr.StaffRole)
             .Include(c => c.RequestedByUser)
             .FirstOrDefaultAsync(c => c.ContractExtensionRequestID == request.ContractExtensionRequestID);
 
@@ -137,6 +140,79 @@ public class ContractExtensionService
         row.User.ContractStatus = ContractStatus.Active;
         row.User.UpdatedAt = DateTime.UtcNow;
         row.User.UpdatedBy = processedBy;
+
+        // ── Role Change (Opsi B: applied on Approve) ──────────────────────────
+        if (!string.IsNullOrWhiteSpace(row.NewRole))
+        {
+            var currentRoleName = row.User.UserStaffRoles
+                .Select(usr => usr.StaffRole?.RoleName)
+                .FirstOrDefault();
+
+            bool roleChanged = !string.Equals(row.NewRole.Trim(), currentRoleName, StringComparison.OrdinalIgnoreCase);
+            if (roleChanged)
+            {
+                var now = DateTime.UtcNow;
+
+                // 1. Close the current active EmployeeRoleHistory entry (if exists)
+                var activeRoleHistory = await _db.EmployeeRoleHistories
+                    .Where(rh => rh.UserId == row.UserId && rh.IsCurrentRole)
+                    .FirstOrDefaultAsync();
+
+                if (activeRoleHistory != null)
+                {
+                    activeRoleHistory.EndDate = now;
+                    activeRoleHistory.IsCurrentRole = false;
+                }
+                else if (!string.IsNullOrWhiteSpace(currentRoleName))
+                {
+                    // Seed an initial entry for the old role (first-time tracking)
+                    _db.EmployeeRoleHistories.Add(new Entities.Entities.EmployeeRoleHistory
+                    {
+                        UserId = row.UserId,
+                        RoleName = currentRoleName,
+                        StartDate = row.User.ContractStart,
+                        EndDate = now,
+                        IsCurrentRole = false,
+                        ChangedBy = processedBy
+                    });
+                }
+
+                // 2. Insert new EmployeeRoleHistory entry for the new role
+                _db.EmployeeRoleHistories.Add(new Entities.Entities.EmployeeRoleHistory
+                {
+                    UserId = row.UserId,
+                    RoleName = row.NewRole.Trim(),
+                    StartDate = now,
+                    EndDate = null,
+                    IsCurrentRole = true,
+                    ChangedBy = processedBy
+                });
+
+                // 3. Update UserStaffRole to the new role
+                //    Find or create the StaffRole record
+                var staffRole = await _db.StaffRoles
+                    .FirstOrDefaultAsync(sr => sr.RoleName == row.NewRole.Trim());
+
+                if (staffRole == null)
+                {
+                    staffRole = new Entities.Entities.StaffRole { RoleName = row.NewRole.Trim() };
+                    _db.StaffRoles.Add(staffRole);
+                    await _db.SaveChangesAsync(); // flush to get StaffRoleId
+                }
+
+                // Replace existing UserStaffRole entries
+                var existingUserStaffRoles = await _db.UserStaffRoles
+                    .Where(usr => usr.UserId == row.UserId)
+                    .ToListAsync();
+                _db.UserStaffRoles.RemoveRange(existingUserStaffRoles);
+
+                _db.UserStaffRoles.Add(new Entities.Entities.UserStaffRole
+                {
+                    UserId = row.UserId,
+                    StaffRoleId = staffRole.StaffRoleId
+                });
+            }
+        }
 
         await _db.SaveChangesAsync();
 
@@ -286,6 +362,7 @@ public class ContractExtensionService
             UserName = c.User?.UserName ?? c.UserId,
             ExtensionDuration = c.ExtensionDuration,
             ReasonForExtension = cleanReason,
+            NewRole = c.NewRole,
             CreatedAt = c.CreatedAt,
             Status = c.Status
         };
