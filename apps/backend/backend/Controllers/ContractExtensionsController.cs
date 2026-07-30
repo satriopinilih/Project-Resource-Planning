@@ -30,6 +30,13 @@ public class ContractExtensionsController : ControllerBase
         return Ok(ApiResponse<List<ContractExtensionDto>>.SuccessResponse(data));
     }
 
+    [HttpGet("recommendation/{userId}")]
+    public async Task<ActionResult<ApiResponse<ContractExtensionRecommendationDto>>> GetRecommendation(string userId)
+    {
+        var data = await _service.GetRecommendationAsync(userId);
+        return Ok(ApiResponse<ContractExtensionRecommendationDto>.SuccessResponse(data));
+    }
+
     [HttpPost]
     public async Task<ActionResult<ApiResponse<ContractExtensionDto>>> Create([FromBody] CreateContractExtensionDto request)
     {

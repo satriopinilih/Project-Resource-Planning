@@ -30,6 +30,7 @@ public class EmployeeService
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
             .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
             .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+            .Include(u => u.UserExtensions)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -75,6 +76,7 @@ public class EmployeeService
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
             .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
             .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+            .Include(u => u.UserExtensions)
             .FirstOrDefaultAsync(u => u.UserId == id);
 
         return user is null ? null : MapToUserDto(user);
@@ -96,6 +98,7 @@ public class EmployeeService
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
             .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
             .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+            .Include(u => u.UserExtensions)
             .Where(u => u.ContractEnd.Date >= now && u.ContractEnd.Date <= threshold)
             .OrderBy(u => u.ContractEnd)
             .ToListAsync();
@@ -383,6 +386,92 @@ public class EmployeeService
     private static UserDto MapToUserDto(User u)
     {
         var daysRemaining = (u.ContractEnd.Date - DateTime.UtcNow.Date).Days;
+        var staffRole = u.UserStaffRoles.Select(x => x.StaffRole.RoleName).FirstOrDefault()
+                        ?? u.UserRoles.Select(x => x.Role.RoleName.ToString()).FirstOrDefault()
+                        ?? "Staff";
+
+        // Build contract history:
+        // 1. Start with the original contract period as the first (oldest) entry.
+        // 2. Append each Approved extension, each starting where the previous ended.
+        var history = new List<ContractHistoryDto>();
+        var approvedExtensions = u.UserExtensions
+            .Where(e => e.Status == "Approved")
+            .OrderBy(e => e.ProcessedAt ?? e.CreatedAt)
+            .ToList();
+
+        // Reconstruct timeline: walk extensions in chronological order
+        // to determine each period's StartDate and EndDate.
+        DateTime periodStart = u.ContractStart;
+        DateTime currentContractEnd = u.ContractEnd;
+
+        // Re-derive the original contract end (before any extensions)
+        // by subtracting all approved durations from the current ContractEnd.
+        int totalExtendedMonths = approvedExtensions.Sum(e => e.ExtensionDuration);
+        DateTime originalEnd = u.ContractEnd.AddMonths(-totalExtendedMonths);
+
+        if (approvedExtensions.Count == 0)
+        {
+            // No extensions — single entry for the current/original contract
+            history.Add(new ContractHistoryDto
+            {
+                StartDate = u.ContractStart,
+                EndDate = u.EmployeeType == Commons.Enums.EmployeeType.Permanent ? null : u.ContractEnd,
+                Role = staffRole,
+                IsActive = false // will be resolved below
+            });
+        }
+        else
+        {
+            // Original contract period (before first extension)
+            DateTime cursor = originalEnd;
+            history.Add(new ContractHistoryDto
+            {
+                StartDate = u.ContractStart,
+                EndDate = originalEnd,
+                Role = staffRole,
+                IsActive = false // will be resolved below
+            });
+
+            // Each extension period
+            for (int i = 0; i < approvedExtensions.Count; i++)
+            {
+                var ext = approvedExtensions[i];
+                bool isLast = i == approvedExtensions.Count - 1;
+                DateTime extEnd = cursor.AddMonths(ext.ExtensionDuration);
+                history.Add(new ContractHistoryDto
+                {
+                    StartDate = cursor,
+                    // Always use the real end date — last period uses the current ContractEnd
+                    EndDate = isLast ? u.ContractEnd : extEnd,
+                    Role = staffRole,
+                    IsActive = false // will be resolved below
+                });
+                cursor = extEnd;
+            }
+        }
+
+        // Resolve IsActive based on today's date, not position.
+        // A period is active when: startDate <= today AND endDate >= today.
+        var today = DateTime.UtcNow.Date;
+        ContractHistoryDto? activePeriod = history
+            .Where(h => h.StartDate.Date <= today && (h.EndDate == null || h.EndDate.Value.Date >= today))
+            .OrderByDescending(h => h.StartDate)
+            .FirstOrDefault();
+
+        if (activePeriod != null)
+        {
+            activePeriod.IsActive = true;
+        }
+        else
+        {
+            // Fallback: mark the latest entry (by StartDate) as active
+            var latest = history.OrderByDescending(h => h.StartDate).FirstOrDefault();
+            if (latest != null) latest.IsActive = true;
+        }
+
+        // Sort descending by StartDate (newest first)
+        history = history.OrderByDescending(h => h.StartDate).ToList();
+
 
         return new UserDto
         {
@@ -392,7 +481,7 @@ public class EmployeeService
             DepartmentId = u.DepartmentId,
             DepartmentName = u.Department?.DepartmentName ?? string.Empty,
             EmployeeType = u.EmployeeType,
-            Role = u.UserStaffRoles.Select(x => x.StaffRole.RoleName).FirstOrDefault() ?? u.UserRoles.Select(x => x.Role.RoleName.ToString()).FirstOrDefault() ?? "Staff",
+            Role = staffRole,
             ExperienceYears = u.ExperienceYears,
             ContractStart = u.ContractStart,
             ContractEnd = u.ContractEnd,
@@ -413,7 +502,8 @@ public class EmployeeService
                 ProjectStatus = p.Project?.ProjectStatus,
                 IsUnread = !p.IsNotificationRead,
                 SwapReason = p.SwapReason
-            }).ToList()
+            }).ToList(),
+            ContractHistory = history
         };
     }
 

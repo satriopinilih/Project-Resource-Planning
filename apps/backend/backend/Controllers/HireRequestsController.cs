@@ -38,10 +38,15 @@ public class HireRequestsController : ControllerBase
             return StatusCode(403, ApiResponse<HireRequestDto>.ErrorResponse("Only GM can create hire requests"));
 
         var actor = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value ?? "GM001";
-        var data = await _service.CreateAsync(request, actor);
+        
+        var (success, error, statusCode, data) = await _service.CreateAsync(request, actor);
 
-        return Ok(ApiResponse<HireRequestDto>.SuccessResponse(data, "Hire request created"));
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<HireRequestDto>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<HireRequestDto>.SuccessResponse(data!, "Hire request created"));
     }
+
 
     [HttpPost("{id}/start")]
     public async Task<ActionResult<ApiResponse<HireRequestDto>>> Start(int id)

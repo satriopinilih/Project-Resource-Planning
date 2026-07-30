@@ -46,7 +46,7 @@ export default function HireRequestMonitor() {
       .then((data) => {
         // Filter out timeline edit requests and optionally filter by requestedBy
         const filtered = data.filter(
-          (req) => req.roleNeeded !== "Timeline Edit Request"
+          (req) => !["Timeline Edit Request", "Project Deletion Request", "Project Restoration Request", "Status Override Notification"].includes(req.roleNeeded)
         );
         // Sort by date descending
         filtered.sort(

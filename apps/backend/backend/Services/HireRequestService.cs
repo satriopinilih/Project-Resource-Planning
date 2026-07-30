@@ -42,8 +42,24 @@ public class HireRequestService
         return rows.Select(Map).ToList();
     }
 
-    public async Task<HireRequestDto> CreateAsync(CreateHireRequestDto request, string requestedBy)
+    public async Task<(bool Success, string? Error, int StatusCode, HireRequestDto? Data)> CreateAsync(CreateHireRequestDto request, string requestedBy)
     {
+        // Prevent spamming Project Deletion/Restoration requests
+        if (request.RoleNeeded == "Project Deletion Request" || request.RoleNeeded == "Project Restoration Request")
+        {
+            if (request.ProjectId.HasValue)
+            {
+                var existingRequest = await _db.HireRequests
+                    .Where(h => h.ProjectId == request.ProjectId && h.RoleNeeded == request.RoleNeeded && (h.Status == "Open" || h.Status == "InProgress"))
+                    .FirstOrDefaultAsync();
+
+                if (existingRequest != null)
+                {
+                    return (false, $"There is already a pending {request.RoleNeeded} for this project.", 400, null);
+                }
+            }
+        }
+
         var entity = new HireRequest
         {
             RequestedBy = requestedBy,
@@ -84,7 +100,7 @@ public class HireRequestService
 
         await SendNotificationToAisAsync("HR", aisMessage, 101);
 
-        return Map(entity);
+        return (true, null, 201, Map(entity));
     }
 
     /// <summary>
@@ -216,6 +232,14 @@ public class HireRequestService
 
     private async Task NotifyGmsAsync(HireRequest row, string status, string? hiredEmployeeName, string? notes)
     {
+        if (row.RoleNeeded == "Project Deletion Request" || 
+            row.RoleNeeded == "Project Restoration Request" || 
+            row.RoleNeeded == "Status Override Notification" || 
+            row.RoleNeeded == "Timeline Edit Request")
+        {
+            return;
+        }
+
         var gms = await _db.UserRoles
             .Include(ur => ur.Role)
             .Where(ur => ur.Role.RoleName == Commons.Enums.RoleName.GM)

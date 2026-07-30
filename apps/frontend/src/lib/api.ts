@@ -48,6 +48,7 @@ type BackendUser = {
   skills: string[];
   roles: string[];
   projects: BackendUserProject[];
+  contractHistory?: BackendContractHistoryItem[];
 };
 
 type BackendContractExtension = {
@@ -132,6 +133,13 @@ export type SkillDto = {
   skillName: string;
 };
 
+type BackendContractHistoryItem = {
+  startDate: string;
+  endDate: string | null;
+  role: string;
+  isActive: boolean;
+};
+
 export type BackendEmployee = {
   userId: string;
   userName: string;
@@ -148,6 +156,7 @@ export type BackendEmployee = {
   skills: string[];
   roles: string[];
   projects: BackendUserProject[];
+  contractHistory?: BackendContractHistoryItem[];
 };
 
 export type LookupItem = {
@@ -245,7 +254,13 @@ const mapEmployee = (user: BackendUser): Employee => {
     daysRemaining: user.daysRemaining,
     experienceYears: user.experienceYears,
     skills: user.skills,
-    projects: user.projects.map(mapProject)
+    projects: user.projects.map(mapProject),
+    contractHistory: user.contractHistory?.map((h) => ({
+      startDate: h.startDate,
+      endDate: h.endDate,
+      role: h.role,
+      isActive: h.isActive,
+    })) ?? [],
   };
 };
 
@@ -509,12 +524,32 @@ export async function getNextEmployeeUserId(staffRoleId?: number): Promise<strin
 export async function createContractExtension(
   userId: string,
   extensionDuration: number,
-  reasonForExtension: string
+  reasonForExtension: string,
+  expectedEndDate?: string | null
 ): Promise<void> {
   await fetchJson('/api/contractextensions', {
     method: 'POST',
-    body: JSON.stringify({ userId, extensionDuration, reasonForExtension })
+    body: JSON.stringify({ userId, extensionDuration, reasonForExtension, expectedEndDate: expectedEndDate ?? null })
   });
+}
+
+export interface ActiveProjectInfo {
+  projectName: string;
+  estEndDate: string | null;
+  isLatest: boolean;
+}
+
+export interface ContractExtensionRecommendation {
+  hasRecommendation: boolean;
+  activeProjects: ActiveProjectInfo[];
+  recommendedDurationMonths: number | null;
+  recommendedEndDate: string | null;
+  justificationText: string | null;
+  currentContractEnd: string;
+}
+
+export async function getContractExtensionRecommendation(userId: string): Promise<ContractExtensionRecommendation> {
+  return fetchJson<ContractExtensionRecommendation>(`/api/contractextensions/recommendation/${userId}`);
 }
 
 export type CreateEmployeeRequest = {

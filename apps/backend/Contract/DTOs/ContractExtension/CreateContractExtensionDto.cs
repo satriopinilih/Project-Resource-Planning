@@ -5,6 +5,11 @@ public class CreateContractExtensionDto
     public string UserId { get; set; } = string.Empty;
     public int ExtensionDuration { get; set; }
     public string ReasonForExtension { get; set; } = string.Empty;
+    /// <summary>
+    /// When set (auto-rec mode), ApproveAsync will use this exact date as the new ContractEnd
+    /// instead of computing ContractEnd + ExtensionDuration months.
+    /// </summary>
+    public DateTime? ExpectedEndDate { get; set; }
 }
 
 public class ApproveContractExtensionDto

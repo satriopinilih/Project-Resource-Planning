@@ -1675,7 +1675,22 @@ export default function ProjectDetailsPage() {
         confirmText="Submit"
         confirmLoadingText="Submitting..."
         confirmClass="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-lg shadow-green-500/20"
-      />
+      >
+        {(() => {
+          if (!project) return null;
+          const dayOfWeek = new Date(project.estimatedStartDate).getDay();
+          const isWeekendStart = dayOfWeek === 0 || dayOfWeek === 6;
+          return isWeekendStart && (
+            <div className="mt-2 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3 text-amber-400">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <div className="text-[12px] leading-relaxed font-medium">
+                <span className="font-bold block mb-1">Weekend Start Date</span>
+                This project's estimated start date falls on a weekend. The system usually expects projects to start on a working day.
+              </div>
+            </div>
+          );
+        })()}
+      </ConfirmModal>
 
       {/* ── Add Resource Confirm Modal ── */}
       <ConfirmModal

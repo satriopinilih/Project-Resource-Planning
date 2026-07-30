@@ -52,6 +52,7 @@ interface UnifiedNotif {
     label: string;
     onAction: () => Promise<void> | void;
   };
+  autoDismiss?: boolean; // default true
 }
 
 // ─── Role styling maps ────────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ function NotificationItem({
     setError(false);
     try {
       await notif.onAction();
-      if (onDismiss) onDismiss(notif.key);
+      if (notif.autoDismiss !== false && onDismiss) onDismiss(notif.key);
     } catch (err) {
       console.error("Notification dismiss failed:", err);
       setError(true);
@@ -545,17 +546,15 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
             if (item.projectId) router.push(`/project/${item.projectId}`);
             else router.push("/project");
           },
-          // Regular hire outcomes: also show a separate Dismiss button
-          ...(!isSelfNotif && !isTimeline && !isActionRequest ? {
-            secondaryAction: {
-              label: "Dismiss",
-              onAction: async () => {
-                setGmHireNotifications((prev) =>
-                  prev.filter((r) => r.hireRequestId !== item.hireRequestId)
-                );
-              },
+          autoDismiss: false,
+          secondaryAction: {
+            label: "Dismiss",
+            onAction: async () => {
+              setGmHireNotifications((prev) =>
+                prev.filter((r) => r.hireRequestId !== item.hireRequestId)
+              );
             },
-          } : {}),
+          },
         });
       });
 
@@ -605,6 +604,15 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
       // GM: staff project assignment / completion notifications (via UserProject)
       staffNotifications.forEach((n) => {
+        if (n.swapReason && (
+          n.swapReason.includes("(Project Restoration Request)") ||
+          n.swapReason.includes("(Project Deletion Request)") ||
+          n.swapReason.includes("(Timeline Edit Request)") ||
+          n.swapReason.includes("(Status Override Notification)")
+        )) {
+          return;
+        }
+
         const uniqueId = n.userProjectId ?? n.id;
         const key = `staff-notif-${uniqueId}-${n.swapReason}`;
         feed.push({

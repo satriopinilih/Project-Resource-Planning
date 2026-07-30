@@ -19,6 +19,8 @@ public class UserDto
     public List<string> Skills { get; set; } = new();
     public List<string> Roles { get; set; } = new();
     public List<UserProjectDto> Projects { get; set; } = new();
+    /// <summary>Contract history (original + extensions), sorted newest first by StartDate.</summary>
+    public List<ContractHistoryDto> ContractHistory { get; set; } = new();
 }
 
 public class UserProjectDto
@@ -34,4 +36,16 @@ public class UserProjectDto
     public ProjectStatus? ProjectStatus { get; set; }
     public bool IsUnread { get; set; }
     public string? SwapReason { get; set; }
+}
+
+public class ContractHistoryDto
+{
+    /// <summary>Start date of this contract period.</summary>
+    public DateTime StartDate { get; set; }
+    /// <summary>End date of this contract period. Null for an active/open-ended contract.</summary>
+    public DateTime? EndDate { get; set; }
+    /// <summary>Staff role during this period (e.g. "Junior Dev").</summary>
+    public string Role { get; set; } = string.Empty;
+    /// <summary>True if this is the currently active contract.</summary>
+    public bool IsActive { get; set; }
 }

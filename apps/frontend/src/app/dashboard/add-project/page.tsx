@@ -1034,6 +1034,22 @@ export default function AddProjectPage() {
               Please double-check the project scope and team requirements before sending it for approval.
             </p>
 
+            {(() => {
+              const dayOfWeek = new Date(startDate).getDay();
+              const isWeekendStart = dayOfWeek === 0 || dayOfWeek === 6;
+              return isWeekendStart && (
+                <div className="mb-4 p-5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 rounded-2xl">
+                  <div className="flex items-center gap-2.5 text-amber-700 dark:text-amber-400 font-bold text-[14px] mb-2 px-1">
+                    <AlertCircle size={18} />
+                    Weekend Start Date
+                  </div>
+                  <p className="text-[13px] text-amber-600/80 dark:text-amber-400/70 leading-relaxed px-1">
+                    You selected a weekend as the project start date. The system usually expects projects to start on a working day.
+                  </p>
+                </div>
+              );
+            })()}
+
             {missingRoles.length > 0 && (
               <div className="mb-8 p-5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 rounded-2xl">
                 <div className="flex items-center gap-2.5 text-amber-700 dark:text-amber-400 font-bold text-[14px] mb-2 px-1">
