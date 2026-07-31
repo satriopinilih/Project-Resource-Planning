@@ -178,24 +178,52 @@ public class ProjectService
         // --- Validate role constraints ---
         if (request.RequiredRoles != null && request.RequiredRoles.Any())
         {
-            // 1. Max technical roles (excluding PM)
-            var technicalRoles = request.RequiredRoles
-                .Where(r => !string.Equals(NormalizeStaffRole(r.RoleName), "PM", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            if (technicalRoles.Count > MaxTechnicalRoles)
+            var rolesByPhase = request.RequiredRoles.GroupBy(r => r.Phase ?? "Main");
+            foreach (var phaseGroup in rolesByPhase)
             {
-                return (false, $"Maximum {MaxTechnicalRoles} technical roles allowed (excluding PM). You submitted {technicalRoles.Count}.", 400, null);
-            }
+                var technicalRoles = phaseGroup
+                    .Where(r => !string.Equals(NormalizeStaffRole(r.RoleName), "PM", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (technicalRoles.Count > MaxTechnicalRoles)
+                {
+                    return (false, $"Maximum {MaxTechnicalRoles} technical roles allowed per phase (excluding PM). Phase '{phaseGroup.Key}' has {technicalRoles.Count}.", 400, null);
+                }
 
-            // 2. Prevent duplicate technical roles
-            var duplicateRoles = technicalRoles
-                .GroupBy(r => NormalizeStaffRole(r.RoleName), StringComparer.OrdinalIgnoreCase)
-                .Where(g => g.Count() > 1)
-                .Select(g => g.Key)
-                .ToList();
-            if (duplicateRoles.Any())
+                var duplicateRoles = technicalRoles
+                    .GroupBy(r => NormalizeStaffRole(r.RoleName), StringComparer.OrdinalIgnoreCase)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToList();
+                if (duplicateRoles.Any())
+                {
+                    return (false, $"Duplicate roles detected in phase '{phaseGroup.Key}': {string.Join(", ", duplicateRoles)}. Each role must be unique within a phase.", 400, null);
+                }
+            }
+        }
+
+        // --- Validate date constraints ---
+        if (request.BabysittingDuration > 0 && request.BabysittingStartDate.HasValue)
+        {
+            if (request.BabysittingStartDate.Value.Date <= request.EstimatedEndDate.Date)
             {
-                return (false, $"Duplicate roles detected: {string.Join(", ", duplicateRoles)}. Each role must be unique.", 400, null);
+                return (false, $"Babysitting Start Date ({request.BabysittingStartDate.Value.ToShortDateString()}) cannot be before or on the Project End Date ({request.EstimatedEndDate.ToShortDateString()}).", 400, null);
+            }
+        }
+        if (request.WarrantyDuration > 0 && request.WarrantyStartDate.HasValue)
+        {
+            if (request.BabysittingDuration > 0 && request.BabysittingEndDate.HasValue)
+            {
+                if (request.WarrantyStartDate.Value.Date <= request.BabysittingEndDate.Value.Date)
+                {
+                    return (false, $"Warranty Start Date ({request.WarrantyStartDate.Value.ToShortDateString()}) cannot be before or on the Babysitting End Date ({request.BabysittingEndDate.Value.ToShortDateString()}).", 400, null);
+                }
+            }
+            else
+            {
+                if (request.WarrantyStartDate.Value.Date <= request.EstimatedEndDate.Date)
+                {
+                    return (false, $"Warranty Start Date ({request.WarrantyStartDate.Value.ToShortDateString()}) cannot be before or on the Project End Date ({request.EstimatedEndDate.ToShortDateString()}).", 400, null);
+                }
             }
         }
 
@@ -222,7 +250,8 @@ public class ProjectService
                 {
                     RoleName = normalizedRoleName,
                     Count = roleDto.Count,
-                    WorkingType = roleDto.WorkingType
+                    WorkingType = roleDto.WorkingType,
+                    Phase = roleDto.Phase
                 }, staffRole.StaffRoleId));
             }
         }
@@ -234,8 +263,14 @@ public class ProjectService
             ProjectDescription = request.ProjectDescription,
             EstimatedDuration = request.EstimatedDuration,
             PriorityLevel = request.PriorityLevel,
-            EstimatedStartDate = request.EstimatedStartDate,
-            EstimatedEndDate = request.EstimatedEndDate,
+            EstimatedStartDate = DateTime.SpecifyKind(request.EstimatedStartDate, DateTimeKind.Utc),
+            EstimatedEndDate = DateTime.SpecifyKind(request.EstimatedEndDate, DateTimeKind.Utc),
+            BabysittingDuration = request.BabysittingDuration,
+            WarrantyDuration = request.WarrantyDuration,
+            BabysittingStartDate = request.BabysittingStartDate.HasValue ? DateTime.SpecifyKind(request.BabysittingStartDate.Value, DateTimeKind.Utc) : null,
+            BabysittingEndDate = request.BabysittingEndDate.HasValue ? DateTime.SpecifyKind(request.BabysittingEndDate.Value, DateTimeKind.Utc) : null,
+            WarrantyStartDate = request.WarrantyStartDate.HasValue ? DateTime.SpecifyKind(request.WarrantyStartDate.Value, DateTimeKind.Utc) : null,
+            WarrantyEndDate = request.WarrantyEndDate.HasValue ? DateTime.SpecifyKind(request.WarrantyEndDate.Value, DateTimeKind.Utc) : null,
             ProjectStatus = ProjectStatus.Pending,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -256,7 +291,8 @@ public class ProjectService
                     ProjectID = project.ProjectID,
                     StaffRoleId = mapping.StaffRoleId,
                     RequiredCount = mapping.Dto.Count,
-                    WorkingType = mapping.Dto.WorkingType
+                    WorkingType = mapping.Dto.WorkingType,
+                    Phase = mapping.Dto.Phase
                 }).ToList();
                 _db.ProjectRequiredRoles.AddRange(requiredRoles);
 
@@ -309,14 +345,18 @@ public class ProjectService
         if (user is null)
             return (false, "User not found", 404, null);
 
+        var targetStartDate = request.StartDate ?? project.EstimatedStartDate;
         var existing = await _db.UserProjects
-            .FirstOrDefaultAsync(up => up.ProjectId == projectId && up.UserId == request.UserId);
+            .FirstOrDefaultAsync(up => up.ProjectId == projectId 
+                                    && up.UserId == request.UserId 
+                                    && up.RoleInProject == request.RoleInProject
+                                    && up.StartDate == targetStartDate);
 
         if (existing is not null)
         {
             existing.RoleInProject = request.RoleInProject;
             existing.WorkingType = request.WorkingType;
-            existing.StartDate = request.StartDate ?? project.EstimatedStartDate;
+            existing.StartDate = targetStartDate;
             existing.EndDate = request.EndDate ?? project.EstimatedEndDate;
             existing.Status = UserProjectStatus.Assigned;
             existing.IsNotificationRead = false;
@@ -330,7 +370,7 @@ public class ProjectService
                 ProjectId = projectId,
                 RoleInProject = request.RoleInProject,
                 WorkingType = request.WorkingType,
-                StartDate = request.StartDate ?? project.EstimatedStartDate,
+                StartDate = targetStartDate,
                 EndDate = request.EndDate ?? project.EstimatedEndDate,
                 Status = UserProjectStatus.Assigned,
                 IsNotificationRead = false,
@@ -365,11 +405,23 @@ public class ProjectService
     /// <summary>
     /// Removes a member assignment from a project.
     /// </summary>
-    public async Task<(bool Success, string? Error, int StatusCode)> UnassignMemberAsync(int projectId, string userId)
+    public async Task<(bool Success, string? Error, int StatusCode)> UnassignMemberAsync(
+        int projectId, string userId, string? role = null, DateTime? startDate = null)
     {
-        var assignment = await _db.UserProjects
+        var query = _db.UserProjects
             .Include(up => up.Project)
-            .FirstOrDefaultAsync(up => up.ProjectId == projectId && up.UserId == userId);
+            .Where(up => up.ProjectId == projectId && up.UserId == userId);
+
+        if (!string.IsNullOrEmpty(role))
+        {
+            query = query.Where(up => up.RoleInProject == role);
+        }
+        if (startDate.HasValue)
+        {
+            query = query.Where(up => up.StartDate == startDate.Value);
+        }
+
+        var assignment = await query.FirstOrDefaultAsync();
 
         if (assignment is null)
             return (false, "Assignment not found", 404);
@@ -600,8 +652,42 @@ public class ProjectService
                 {
                     RoleName = staffRole.RoleName,
                     Count = roleDto.Count > 0 ? roleDto.Count : 1,
-                    WorkingType = wt
+                    WorkingType = wt,
+                    Phase = roleDto.Phase
                 }, staffRole.StaffRoleId));
+            }
+        }
+
+        // Validate dates if they are being updated
+        var estEndDate = request.EstimatedEndDate ?? project.EstimatedEndDate;
+        var bsDur = request.BabysittingDuration ?? project.BabysittingDuration;
+        var bsStart = request.BabysittingStartDate ?? project.BabysittingStartDate;
+        var bsEnd = request.BabysittingEndDate ?? project.BabysittingEndDate;
+        var wrDur = request.WarrantyDuration ?? project.WarrantyDuration;
+        var wrStart = request.WarrantyStartDate ?? project.WarrantyStartDate;
+
+        if (bsDur > 0 && bsStart.HasValue)
+        {
+            if (bsStart.Value.Date <= estEndDate.Date)
+            {
+                return (false, $"Babysitting Start Date ({bsStart.Value.ToShortDateString()}) cannot be before or on the Project End Date ({estEndDate.ToShortDateString()}).", 400, null);
+            }
+        }
+        if (wrDur > 0 && wrStart.HasValue)
+        {
+            if (bsDur > 0 && bsEnd.HasValue)
+            {
+                if (wrStart.Value.Date <= bsEnd.Value.Date)
+                {
+                    return (false, $"Warranty Start Date ({wrStart.Value.ToShortDateString()}) cannot be before or on the Babysitting End Date ({bsEnd.Value.ToShortDateString()}).", 400, null);
+                }
+            }
+            else
+            {
+                if (wrStart.Value.Date <= estEndDate.Date)
+                {
+                    return (false, $"Warranty Start Date ({wrStart.Value.ToShortDateString()}) cannot be before or on the Project End Date ({estEndDate.ToShortDateString()}).", 400, null);
+                }
             }
         }
 
@@ -613,6 +699,12 @@ public class ProjectService
         if (request.PriorityLevel.HasValue) project.PriorityLevel = request.PriorityLevel.Value;
         if (request.EstimatedStartDate.HasValue) project.EstimatedStartDate = DateTime.SpecifyKind(request.EstimatedStartDate.Value, DateTimeKind.Utc);
         if (request.EstimatedEndDate.HasValue) project.EstimatedEndDate = DateTime.SpecifyKind(request.EstimatedEndDate.Value, DateTimeKind.Utc);
+        if (request.BabysittingDuration.HasValue) project.BabysittingDuration = request.BabysittingDuration.Value;
+        if (request.WarrantyDuration.HasValue) project.WarrantyDuration = request.WarrantyDuration.Value;
+        if (request.BabysittingStartDate.HasValue) project.BabysittingStartDate = DateTime.SpecifyKind(request.BabysittingStartDate.Value, DateTimeKind.Utc);
+        if (request.BabysittingEndDate.HasValue) project.BabysittingEndDate = DateTime.SpecifyKind(request.BabysittingEndDate.Value, DateTimeKind.Utc);
+        if (request.WarrantyStartDate.HasValue) project.WarrantyStartDate = DateTime.SpecifyKind(request.WarrantyStartDate.Value, DateTimeKind.Utc);
+        if (request.WarrantyEndDate.HasValue) project.WarrantyEndDate = DateTime.SpecifyKind(request.WarrantyEndDate.Value, DateTimeKind.Utc);
         if (request.ProjectStatus.HasValue) project.ProjectStatus = request.ProjectStatus.Value;
         project.UpdatedAt = DateTime.UtcNow;
         project.UpdatedBy = currentUserId ?? "SystemUser";
@@ -652,7 +744,8 @@ public class ProjectService
                         ProjectID = id,
                         StaffRoleId = mapping.StaffRoleId,
                         RequiredCount = mapping.Dto.Count,
-                        WorkingType = mapping.Dto.WorkingType
+                        WorkingType = mapping.Dto.WorkingType,
+                        Phase = mapping.Dto.Phase
                     }).ToList();
                     _db.ProjectRequiredRoles.AddRange(newRoles);
                 }
@@ -925,6 +1018,7 @@ public class ProjectService
             RoleName = pr.StaffRole?.RoleName ?? "Unknown",
             RequiredCount = pr.RequiredCount,
             WorkingType = pr.WorkingType.ToString(),
+            Phase = pr.Phase,
             // Only count Assigned members matching both role name AND working type
             FilledCount = members.Count(m =>
                 string.Equals(m.Role, pr.StaffRole?.RoleName, StringComparison.OrdinalIgnoreCase)
@@ -955,6 +1049,12 @@ public class ProjectService
             PriorityLevel = p.PriorityLevel,
             EstimatedStartDate = p.EstimatedStartDate,
             EstimatedEndDate = p.EstimatedEndDate,
+            BabysittingDuration = p.BabysittingDuration,
+            WarrantyDuration = p.WarrantyDuration,
+            BabysittingStartDate = p.BabysittingStartDate,
+            BabysittingEndDate = p.BabysittingEndDate,
+            WarrantyStartDate = p.WarrantyStartDate,
+            WarrantyEndDate = p.WarrantyEndDate,
             ProjectStatus = p.ProjectStatus,
             IsUnread = currentUserId != null && p.UserProjects.Any(up => up.UserId == currentUserId && !up.IsNotificationRead),
             CreatedAt = p.CreatedAt,

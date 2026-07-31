@@ -36,7 +36,7 @@ interface EmployeeAllocation {
   endDate: Date;
   startDay: number; // days from windowStart
   endDay: number;
-  color: "green" | "blue" | "gray" | "amber" | "orange";
+  color: "green" | "blue" | "gray" | "amber" | "orange" | "indigo" | "teal";
 }
 
 interface Employee {
@@ -52,6 +52,8 @@ const allocationColors = {
   amber: "bg-amber-500/90 hover:bg-amber-500 border-amber-500/30 text-white",
   gray: "bg-gray-500/90 hover:bg-gray-500 border-gray-500/30 text-white",
   orange: "bg-orange-500/90 hover:bg-orange-500 border-orange-500/30 text-white",
+  indigo: "bg-[#4f46e5]/90 hover:bg-[#4f46e5] border-[#4f46e5]/30 text-white",
+  teal: "bg-[#0284c7]/90 hover:bg-[#0284c7] border-[#0284c7]/30 text-white",
 };
 
 const SYSTEM_USER_IDS = ["GM001", "HR123"];
@@ -95,7 +97,19 @@ export default function ResourcePipeline() {
       };
     });
 
-    const projectMap = new Map<number, { name: string; start: Date; end: Date; status: number }>();
+    const projectMap = new Map<
+      number,
+      {
+        name: string;
+        start: Date;
+        end: Date;
+        status: number;
+        babysittingStart: Date | null;
+        babysittingEnd: Date | null;
+        warrantyStart: Date | null;
+        warrantyEnd: Date | null;
+      }
+    >();
     (apiProjects || []).forEach((p) => {
       if (p && p.projectId && p.projectStatus !== 0) {
         projectMap.set(p.projectId, {
@@ -103,6 +117,10 @@ export default function ResourcePipeline() {
           start: new Date(p.estimatedStartDate),
           end: new Date(p.estimatedEndDate),
           status: p.projectStatus,
+          babysittingStart: p.babysittingStartDate ? new Date(p.babysittingStartDate) : null,
+          babysittingEnd: p.babysittingEndDate ? new Date(p.babysittingEndDate) : null,
+          warrantyStart: p.warrantyStartDate ? new Date(p.warrantyStartDate) : null,
+          warrantyEnd: p.warrantyEndDate ? new Date(p.warrantyEndDate) : null,
         });
       }
     });
@@ -123,11 +141,40 @@ export default function ResourcePipeline() {
             // Check if project overlaps with the 12-week window
             if (pEnd < windowStart || pStart > windowEnd) return null;
 
-            let statusColor: "blue" | "green" | "gray" | "amber" | "orange" = "gray";
+            let isBabysittingPhase = false;
+            let isWarrantyPhase = false;
+
+            if (proj.babysittingStart && proj.babysittingEnd) {
+              const bStartMs = proj.babysittingStart.getTime();
+              const bEndMs = proj.babysittingEnd.getTime();
+              const pStartMs = pStart.getTime();
+              if (pStartMs >= bStartMs - 12 * 3600 * 1000 && pStartMs < bEndMs) {
+                isBabysittingPhase = true;
+              }
+            }
+
+            if (!isBabysittingPhase && proj.warrantyStart && proj.warrantyEnd) {
+              const wStartMs = proj.warrantyStart.getTime();
+              const wEndMs = proj.warrantyEnd.getTime();
+              const pStartMs = pStart.getTime();
+              if (pStartMs >= wStartMs - 12 * 3600 * 1000 && pStartMs < wEndMs) {
+                isWarrantyPhase = true;
+              }
+            }
+
+            let statusColor: "blue" | "green" | "gray" | "amber" | "orange" | "indigo" | "teal" = "gray";
             if (proj.status === 1) statusColor = "blue";
             if (proj.status === 2) statusColor = "green";
             if (proj.status === 3) statusColor = "gray";
             if (proj.status === 5) statusColor = "orange";
+            if (proj.status === 6) statusColor = "indigo";
+            if (proj.status === 7) statusColor = "teal";
+
+            if (isBabysittingPhase) {
+              statusColor = "indigo";
+            } else if (isWarrantyPhase) {
+              statusColor = "teal";
+            }
 
             // If the member's assignment is completed (e.g. they were replaced), override to gray
             if (p.status === 1) { // 1 = Completed
@@ -137,9 +184,16 @@ export default function ResourcePipeline() {
             const startDay = diffDays(windowStart, pStart);
             const endDay = diffDays(windowStart, pEnd);
 
+            let displayName = proj.name;
+            if (isBabysittingPhase) {
+              displayName = `${proj.name} (Babysitting)`;
+            } else if (isWarrantyPhase) {
+              displayName = `${proj.name} (Warranty)`;
+            }
+
             return {
               projectId: String(p.projectId),
-              projectName: proj.name,
+              projectName: displayName,
               startDate: pStart,
               endDate: pEnd,
               startDay,
@@ -279,6 +333,14 @@ export default function ResourcePipeline() {
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-sm bg-[#22c55e]" />
               Running
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-[#4f46e5]" />
+              Babysitting
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-[#0284c7]" />
+              Warranty
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-sm bg-gray-500" />

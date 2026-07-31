@@ -99,6 +99,7 @@ export type BackendRequiredRole = {
   requiredCount: number;
   workingType: string | number;
   filledCount?: number;
+  phase: string;
 };
 
 export type BackendProject = {
@@ -110,7 +111,13 @@ export type BackendProject = {
   priorityLevel: number;
   estimatedStartDate: string;
   estimatedEndDate: string;
-  projectStatus: number; // 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted
+  babysittingDuration: number;
+  warrantyDuration: number;
+  babysittingStartDate?: string;
+  babysittingEndDate?: string;
+  warrantyStartDate?: string;
+  warrantyEndDate?: string;
+  projectStatus: number; // 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted, 5=Hold, 6=Babysitting, 7=Warranty
   members: BackendProjectMember[];
   requiredRoles: BackendRequiredRole[];
   requiredSkills: string[]; // Project-level skill requirements
@@ -211,7 +218,10 @@ const mapProject = (project: BackendUserProject): Project => {
     if (project.projectStatus === 1) finalStatus = 'Scheduled';
     else if (project.projectStatus === 2) finalStatus = 'Running';
     else if (project.projectStatus === 3) finalStatus = 'Completed';
-    else if (project.projectStatus === 5) finalStatus = 'Hold'; 
+    else if (project.projectStatus === 4) finalStatus = 'Deleted';
+    else if (project.projectStatus === 5) finalStatus = 'Hold';
+    else if (project.projectStatus === 6) finalStatus = 'Babysitting';
+    else if (project.projectStatus === 7) finalStatus = 'Warranty';
     else finalStatus = 'Running';
   } else {
     finalStatus = 'Running';
@@ -448,8 +458,12 @@ export async function assignMemberToProject(projectId: number, payload: AssignMe
   });
 }
 
-export async function unassignMemberFromProject(projectId: number, userId: string): Promise<void> {
-  await fetchJson(`/api/projects/${projectId}/assign/${encodeURIComponent(userId)}`, {
+export async function unassignMemberFromProject(projectId: number, userId: string, role?: string, startDate?: string): Promise<void> {
+  const params = new URLSearchParams();
+  if (role) params.append("role", role);
+  if (startDate) params.append("startDate", startDate);
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+  await fetchJson(`/api/projects/${projectId}/assign/${encodeURIComponent(userId)}${queryString}`, {
     method: 'DELETE'
   });
 }
@@ -730,6 +744,8 @@ export interface TimelineStats {
   scheduled: number;
   running: number;
   completed: number;
+  babysitting: number;
+  warranty: number;
 }
 
 export interface TimelineItem {

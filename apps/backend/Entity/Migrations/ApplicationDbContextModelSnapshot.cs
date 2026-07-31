@@ -337,6 +337,15 @@ namespace Entities.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ProjectID"));
 
+                    b.Property<int>("BabysittingDuration")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("BabysittingEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("BabysittingStartDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ClientOrganization")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -389,6 +398,15 @@ namespace Entities.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("WarrantyDuration")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("WarrantyEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("WarrantyStartDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("ProjectID");
 
                     b.ToTable("Projects");
@@ -401,6 +419,11 @@ namespace Entities.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Phase")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<int>("ProjectID")
                         .HasColumnType("integer");

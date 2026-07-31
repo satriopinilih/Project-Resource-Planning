@@ -12,6 +12,12 @@ public class ProjectDto
     public PriorityLevel PriorityLevel { get; set; }
     public DateTime EstimatedStartDate { get; set; }
     public DateTime EstimatedEndDate { get; set; }
+    public int BabysittingDuration { get; set; }
+    public int WarrantyDuration { get; set; }
+    public DateTime? BabysittingStartDate { get; set; }
+    public DateTime? BabysittingEndDate { get; set; }
+    public DateTime? WarrantyStartDate { get; set; }
+    public DateTime? WarrantyEndDate { get; set; }
     public ProjectStatus ProjectStatus { get; set; }
     public bool IsUnread { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -45,4 +51,5 @@ public class ProjectRequiredRoleDto
     public int RequiredCount { get; set; }
     public string WorkingType { get; set; } = "Dedicated";
     public int FilledCount { get; set; }
+    public string Phase { get; set; } = "Main";
 }

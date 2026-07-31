@@ -112,9 +112,9 @@ public class ProjectsController : ControllerBase
     }
 
     [HttpDelete("{id}/assign/{userId}")]
-    public async Task<IActionResult> UnassignMember(int id, string userId)
+    public async Task<IActionResult> UnassignMember(int id, string userId, [FromQuery] string? role, [FromQuery] DateTime? startDate)
     {
-        var (success, error, statusCode) = await _service.UnassignMemberAsync(id, userId);
+        var (success, error, statusCode) = await _service.UnassignMemberAsync(id, userId, role, startDate);
 
         if (!success)
             return StatusCode(statusCode, ApiResponse<string>.ErrorResponse(error!));

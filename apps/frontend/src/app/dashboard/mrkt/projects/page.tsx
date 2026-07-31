@@ -9,7 +9,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Running" | "Scheduled" | "Pending" | "Completed" | "Deleted" | "Hold";
+  status: "Running" | "Scheduled" | "Pending" | "Completed" | "Deleted" | "Hold" | "Babysitting" | "Warranty";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -19,11 +19,11 @@ interface Project {
 }
 
 const mapStatus = (backendStatus: number, startDateStr?: string): Project["status"] => {
-  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed
+  // Backend enum: 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted, 5=Hold, 6=Babysitting, 7=Warranty
   switch (backendStatus) {
-    case 0: return "Pending";    // Belum di-assign
-    case 1: return "Scheduled";  // Sudah assign, belum mulai
-    case 2: {                    // Running
+    case 0: return "Pending";
+    case 1: return "Scheduled";
+    case 2: {
       if (startDateStr) {
         const startDate = new Date(startDateStr);
         const today = new Date();
@@ -36,6 +36,8 @@ const mapStatus = (backendStatus: number, startDateStr?: string): Project["statu
     case 3: return "Completed";
     case 4: return "Deleted";
     case 5: return "Hold";
+    case 6: return "Babysitting";
+    case 7: return "Warranty";
     default: return "Pending";
   }
 };
@@ -47,7 +49,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Pending", "Scheduled", "Running", "Hold", "Completed", "Deleted"];
+const tabs = ["All", "Pending", "Scheduled", "Running", "Hold", "Babysitting", "Warranty", "Completed", "Deleted"];
 
 function MarketingProjectsContent() {
   const router = useRouter();
@@ -285,11 +287,15 @@ function MarketingProjectsContent() {
                               ? "bg-green-500/10 text-green-400 border-green-500/20"
                               : project.status === "Hold"
                                 ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
-                                : project.status === "Completed"
-                                  ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                  : project.status === "Deleted"
-                                    ? "bg-red-500/10 text-red-400 border-red-500/20"
-                                    : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                                : project.status === "Babysitting"
+                                  ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                  : project.status === "Warranty"
+                                    ? "bg-teal-500/10 text-teal-400 border-teal-500/20"
+                                    : project.status === "Completed"
+                                      ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                                      : project.status === "Deleted"
+                                        ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                        : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                           }`}
                       >
                         {project.status}

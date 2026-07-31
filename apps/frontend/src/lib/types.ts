@@ -4,7 +4,7 @@ export interface Project {
   client: string;
   startDate: string;
   endDate: string;
-  status: 'Completed' | 'Running' | 'Scheduled' | 'Upcoming' | 'Hold';
+  status: 'Completed' | 'Running' | 'Scheduled' | 'Upcoming' | 'Hold' | 'Babysitting' | 'Warranty' | 'Deleted';
   startWeek?: string;
   endWeek?: string;
   roleInProject?: string;

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Bell, Sun, Moon, User, Calendar, Check, Briefcase,
-  FileText, ArrowRightCircle, X, AlertCircle, Trash2, RotateCcw, ShieldAlert
+  FileText, ArrowRightCircle, X, AlertCircle, Trash2, RotateCcw, ShieldAlert, Award
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
@@ -51,6 +51,9 @@ interface UnifiedNotif {
   secondaryAction?: {
     label: string;
     onAction: () => Promise<void> | void;
+    // When true the notification is NOT dismissed after the secondary action fires.
+    // Use this when the secondary action opens a modal (e.g. "No → timeline edit").
+    keepAlive?: boolean;
   };
   autoDismiss?: boolean; // default true
 }
@@ -125,7 +128,8 @@ function NotificationItem({
     setSecLoading(true);
     try {
       await notif.secondaryAction.onAction();
-      if (onDismiss) onDismiss(notif.key);
+      // Only auto-dismiss if the secondary action does NOT want to keep the notification alive
+      if (!notif.secondaryAction.keepAlive && onDismiss) onDismiss(notif.key);
     } catch (err) {
       console.error("Secondary action failed:", err);
     } finally {
@@ -205,12 +209,92 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const [userRole, setUserRole] = useState<string>(role ?? "Staff");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
+  const [timelineEditProject, setTimelineEditProject] = useState<any | null>(null);
+  const [newEndDate, setNewEndDate] = useState("");           // main project end date
+  const [newBabysittingEndDate, setNewBabysittingEndDate] = useState("");
+  const [newWarrantyEndDate, setNewWarrantyEndDate] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const handleSubmitTimelineEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!timelineEditProject) return;
+    if (!newEndDate) {
+      setEditError("Please select a new proposed main project end date.");
+      return;
+    }
+    setSubmittingEdit(true);
+    setEditError(null);
+    try {
+      const { createTimelineEditRequest, createHireRequest } = await import("@/lib/api");
+
+      // Build a detailed note including whichever dates were provided
+      const dateParts: string[] = [];
+      dateParts.push(`Main Project End Date: ${new Date(newEndDate).toLocaleDateString()}`);
+      if (newBabysittingEndDate)
+        dateParts.push(`Babysitting End Date: ${new Date(newBabysittingEndDate).toLocaleDateString()}`);
+      if (newWarrantyEndDate)
+        dateParts.push(`Warranty End Date: ${new Date(newWarrantyEndDate).toLocaleDateString()}`);
+
+      const requestedDateInfo = `\n` + dateParts.join(" | ");
+      const fullNotes = (editNotes || `GM requesting timeline review for project ${timelineEditProject.projectName}`) + requestedDateInfo;
+
+      // The overall proposed end date is the latest of all provided dates
+      const proposedDates = [newEndDate, newBabysittingEndDate, newWarrantyEndDate]
+        .filter(Boolean)
+        .map((d) => new Date(d).getTime());
+      const latestEndDate = new Date(Math.max(...proposedDates)).toISOString().split("T")[0];
+
+      await createTimelineEditRequest({
+        projectId: timelineEditProject.projectId,
+        projectName: timelineEditProject.projectName,
+        notes: fullNotes,
+        currentStartDate: timelineEditProject.estimatedStartDate,
+        currentEndDate: latestEndDate,
+      });
+
+      await createHireRequest({
+        projectId: timelineEditProject.projectId,
+        projectName: timelineEditProject.projectName,
+        roleNeeded: "GM Notification",
+        quantity: 1,
+        startDate: timelineEditProject.estimatedStartDate,
+        endDate: latestEndDate,
+        notes: `[GM ACTION] Timeline edit requested for ${timelineEditProject.projectName}`,
+      });
+
+      // Dismiss the completion notification once the revision request is submitted
+      const key = `gm-complete-${timelineEditProject.projectId}`;
+      setDismissed((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+
+      setTimelineEditProject(null);
+      setNewEndDate("");
+      setNewBabysittingEndDate("");
+      setNewWarrantyEndDate("");
+      setEditNotes("");
+      setIsNotificationOpen(false);
+      window.location.reload();
+    } catch (err: any) {
+      console.error(err);
+      setEditError(err.message || "Failed to submit request.");
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
   // Raw notification state per role
   const [notifications, setNotifications] = useState<ContractExtensionRequest[]>([]);
   const [hireNotifications, setHireNotifications] = useState<HireRequest[]>([]);
   const [gmHireNotifications, setGmHireNotifications] = useState<HireRequest[]>([]);
   const [gmContractNotifications, setGmContractNotifications] = useState<any[]>([]);
+  const [gmPendingCompletions, setGmPendingCompletions] = useState<any[]>([]);
   const [pmNotifications, setPmNotifications] = useState<PMNotification[]>([]);
+  const [pmPendingCompletions, setPmPendingCompletions] = useState<any[]>([]);
   const [staffNotifications, setStaffNotifications] = useState<Project[]>([]);
 
   // Optimistic dismiss tracking — initialized from localStorage SYNCHRONOUSLY via lazy
@@ -248,9 +332,10 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         setHireNotifications(hires.filter((h) => h.roleNeeded !== "Timeline Edit Request"));
       }
       if (userRole === "GM") {
-        const [reviewed, extensions] = await Promise.all([
+        const [reviewed, extensions, allProjects] = await Promise.all([
           getHireRequests(),
           getRequestHistory("HR"),
+          getProjects(),
         ]);
         const filteredHire = reviewed
           .filter((h) => h.status === "Fulfilled" || h.status === "Declined")
@@ -267,6 +352,12 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
             safeDate(b.reviewedDate || b.requestedDate) - safeDate(a.reviewedDate || a.requestedDate)
           );
         setGmContractNotifications(processed);
+
+        // Filter projects for completion checking (Running, Babysitting, Warranty, Scheduled)
+        const activeProjects = (allProjects || []).filter(
+          (p) => p && (p.projectStatus === 1 || p.projectStatus === 2 || p.projectStatus === 6 || p.projectStatus === 7)
+        );
+        setGmPendingCompletions(activeProjects);
       }
       if (userRole === "Marketing") {
         const hires = await getHireRequests("Open");
@@ -282,20 +373,48 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       setHireNotifications([]);
       setGmHireNotifications([]);
       setGmContractNotifications([]);
+      setGmPendingCompletions([]);
     }
   }, [userRole]);
 
   const loadPMNotifications = useCallback(async () => {
-    if (userRole !== "PM") return;
+    if (userRole !== "PM" || !userId) return;
     try {
       const projects = await getProjects();
       setPmNotifications(
         projects.filter((p) => p.isUnread).map((p) => ({ projectId: p.projectId, projectName: p.projectName }))
       );
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const endedProjects = projects.filter((p) => {
+        if (p.projectStatus === 3 || p.projectStatus === 4) return false;
+
+        const isPM = p.members?.some(
+          (m) => m.userId === userId && 
+          (m.role?.toLowerCase() === "pm" || m.role?.toLowerCase().includes("manager")) && 
+          m.status === "Assigned"
+        );
+        if (!isPM) return false;
+
+        let overallEndDate = new Date(p.estimatedEndDate);
+        if (p.warrantyDuration > 0 && p.warrantyEndDate) {
+          overallEndDate = new Date(p.warrantyEndDate);
+        } else if (p.babysittingDuration > 0 && p.babysittingEndDate) {
+          overallEndDate = new Date(p.babysittingEndDate);
+        }
+        overallEndDate.setHours(0, 0, 0, 0);
+
+        return overallEndDate.getTime() <= today.getTime();
+      });
+
+      setPmPendingCompletions(endedProjects);
     } catch {
       setPmNotifications([]);
+      setPmPendingCompletions([]);
     }
-  }, [userRole]);
+  }, [userRole, userId]);
 
   const loadStaffNotifications = useCallback(async () => {
     if ((userRole !== "Staff" && userRole !== "GM") || !userId) return;
@@ -472,6 +591,50 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
           },
         });
       });
+
+      pmPendingCompletions.forEach((p) => {
+        const key = `pm-complete-${p.projectId}`;
+        if (dismissed.has(key)) return;
+
+        let overallEndDate = new Date(p.estimatedEndDate);
+        if (p.warrantyDuration > 0 && p.warrantyEndDate) {
+          overallEndDate = new Date(p.warrantyEndDate);
+        } else if (p.babysittingDuration > 0 && p.babysittingEndDate) {
+          overallEndDate = new Date(p.babysittingEndDate);
+        }
+        overallEndDate.setHours(0, 0, 0, 0);
+
+        feed.push({
+          key,
+          ts: overallEndDate.getTime(),
+          iconBg: "bg-red-500/10",
+          iconColor: "text-red-500",
+          icon: <AlertCircle size={14} />,
+          message: (
+            <>
+              Project{" "}
+              <span className="font-semibold text-[var(--dash-text-heading)]">
+                {p.projectName}
+              </span>{" "}
+              warranty timeline has concluded. GM has not marked it as completed.
+            </>
+          ),
+          meta: `Client: ${p.clientOrganization || "Internal"} • Ended On: ${overallEndDate.toLocaleDateString()}`,
+          dateLabel: fmtDate(overallEndDate.toISOString()),
+          actionLabel: "View details",
+          onAction: async () => {
+            setIsNotificationOpen(false);
+            router.push(`/project/${p.projectId}`);
+          },
+          autoDismiss: false,
+          secondaryAction: {
+            label: "Dismiss",
+            onAction: () => {
+              setDismissed((prev) => new Set([...prev, key]));
+            },
+          },
+        });
+      });
     }
 
     // ── GM: fulfilled/declined hire requests ─────────────────────────────
@@ -602,6 +765,64 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       });
 
 
+      // GM: pending project completion checks (End Date <= Today)
+      gmPendingCompletions.forEach((p) => {
+        const key = `gm-complete-${p.projectId}`;
+        if (dismissed.has(key)) return;
+
+        let overallEndDate = new Date(p.estimatedEndDate);
+        if (p.warrantyDuration > 0 && p.warrantyEndDate) {
+          overallEndDate = new Date(p.warrantyEndDate);
+        } else if (p.babysittingDuration > 0 && p.babysittingEndDate) {
+          overallEndDate = new Date(p.babysittingEndDate);
+        }
+
+        overallEndDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (overallEndDate.getTime() <= today.getTime()) {
+          feed.push({
+            key,
+            ts: overallEndDate.getTime(),
+            iconBg: "bg-emerald-500/10",
+            iconColor: "text-emerald-500",
+            icon: <Award size={14} />,
+            message: (
+              <>
+                Project{" "}
+                <span className="font-semibold text-[var(--dash-text-heading)]">
+                  {p.projectName}
+                </span>{" "}
+                has reached overall end date. Confirm completion?
+              </>
+            ),
+            meta: `Client: ${p.clientOrganization || "Internal"} • End Date: ${overallEndDate.toLocaleDateString()}`,
+            dateLabel: fmtDate(overallEndDate.toISOString()),
+            actionLabel: "Yes, Complete",
+            onAction: async () => {
+              const { overrideProjectStatus } = await import("@/lib/api");
+              await overrideProjectStatus(p.projectId, "completed", false);
+              setGmPendingCompletions((prev) => prev.filter((proj) => proj.projectId !== p.projectId));
+              window.location.reload();
+            },
+            autoDismiss: false,
+            secondaryAction: {
+              label: "No",
+              keepAlive: true, // keep the notification visible — the modal handles dismissal after submit
+              onAction: () => {
+                setTimelineEditProject(p);
+                // Pre-fill existing dates so the GM sees what is currently set
+                setNewEndDate(p.estimatedEndDate ? p.estimatedEndDate.split("T")[0] : "");
+                setNewBabysittingEndDate(p.babysittingEndDate ? p.babysittingEndDate.split("T")[0] : "");
+                setNewWarrantyEndDate(p.warrantyEndDate ? p.warrantyEndDate.split("T")[0] : "");
+                setEditNotes(`GM declined completion of project "${p.projectName}" after warranty concluded and requested a timeline edit.`);
+              },
+            },
+          });
+        }
+      });
+
       // GM: staff project assignment / completion notifications (via UserProject)
       staffNotifications.forEach((n) => {
         if (n.swapReason && (
@@ -694,6 +915,8 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     gmContractNotifications,
     pmNotifications,
     staffNotifications,
+    gmPendingCompletions,
+    pmPendingCompletions,
     dismissed,
     router,
   ]);
@@ -717,7 +940,28 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
     ...(userRole === "Marketing" ? hireNotifications.map((n) => `mrkt-req-${n.hireRequestId}`) : []),
     ...(userRole === "GM" ? gmHireNotifications.map((n) => `gm-hire-${n.hireRequestId}`) : []),
     ...(userRole === "GM" ? gmContractNotifications.map((n) => `gm-ext-${n.referenceId}`) : []),
-    ...(userRole === "PM" ? pmNotifications.map((n) => `pm-proj-${n.projectId}`) : []),
+    ...(userRole === "GM"
+      ? gmPendingCompletions
+          .filter((p) => {
+            let overallEndDate = new Date(p.estimatedEndDate);
+            if (p.warrantyDuration > 0 && p.warrantyEndDate) {
+              overallEndDate = new Date(p.warrantyEndDate);
+            } else if (p.babysittingDuration > 0 && p.babysittingEndDate) {
+              overallEndDate = new Date(p.babysittingEndDate);
+            }
+            overallEndDate.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return overallEndDate.getTime() <= today.getTime();
+          })
+          .map((p) => `gm-complete-${p.projectId}`)
+      : []),
+    ...(userRole === "PM"
+      ? [
+          ...pmNotifications.map((n) => `pm-proj-${n.projectId}`),
+          ...pmPendingCompletions.map((p) => `pm-complete-${p.projectId}`),
+        ]
+      : []),
     ...((userRole === "Staff" || userRole === "GM")
       ? staffNotifications.map((n) => `staff-notif-${n.userProjectId ?? n.id}-${n.swapReason}`)
       : []),
@@ -745,6 +989,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
+    <>
     <header className="sticky top-0 z-50 flex items-center justify-between h-[80px] px-8 bg-[var(--dash-bg-header)] backdrop-blur-xl border-b border-[var(--dash-border)] transition-colors duration-300">
       {/* Page Title */}
       <h2 className="text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight">
@@ -858,5 +1103,125 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         </div>
       </div>
     </header>
+
+      {timelineEditProject && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
+        >
+          <div className="relative bg-[#13151a] border border-[#2a2d36] rounded-2xl w-full max-w-lg shadow-2xl p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-[18px] font-bold text-white mb-1 tracking-tight">Request Timeline Revision</h3>
+            <p className="text-[13px] text-gray-400 mb-4 leading-relaxed">
+              Since you chose not to complete{" "}
+              <span className="text-[#3b82f6] font-semibold">{timelineEditProject.projectName}</span>, please propose
+              updated end dates and submit a revision request to Marketing.
+            </p>
+
+            {editError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[12px] font-medium">
+                {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitTimelineEdit} className="space-y-4">
+              {/* ── Main project end date ── */}
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                  New Main Project End Date <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={newEndDate}
+                  onChange={(e) => setNewEndDate(e.target.value)}
+                  className="w-full h-11 px-4 rounded-xl bg-[#1e2028] border border-[#2a2d36] text-white text-[13px] focus:border-[#3b82f6] focus:outline-none transition-all"
+                />
+              </div>
+
+              {/* ── Babysitting end date (only shown when project has babysitting) ── */}
+              {(timelineEditProject.babysittingDuration > 0 || timelineEditProject.babysittingEndDate) && (
+                <div>
+                  <label className="block text-[12px] font-semibold text-indigo-400 uppercase tracking-wider mb-1.5">
+                    New Babysitting End Date
+                    <span className="ml-1 text-[10px] text-gray-500 normal-case">(optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={newBabysittingEndDate}
+                    onChange={(e) => setNewBabysittingEndDate(e.target.value)}
+                    min={newEndDate || undefined}
+                    className="w-full h-11 px-4 rounded-xl bg-[#1e2028] border border-indigo-900/50 text-white text-[13px] focus:border-indigo-500 focus:outline-none transition-all"
+                  />
+                  {timelineEditProject.babysittingEndDate && (
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Current: {new Date(timelineEditProject.babysittingEndDate).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Warranty end date (only shown when project has warranty) ── */}
+              {(timelineEditProject.warrantyDuration > 0 || timelineEditProject.warrantyEndDate) && (
+                <div>
+                  <label className="block text-[12px] font-semibold text-blue-400 uppercase tracking-wider mb-1.5">
+                    New Warranty End Date
+                    <span className="ml-1 text-[10px] text-gray-500 normal-case">(optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={newWarrantyEndDate}
+                    onChange={(e) => setNewWarrantyEndDate(e.target.value)}
+                    min={newBabysittingEndDate || newEndDate || undefined}
+                    className="w-full h-11 px-4 rounded-xl bg-[#1e2028] border border-blue-900/50 text-white text-[13px] focus:border-blue-500 focus:outline-none transition-all"
+                  />
+                  {timelineEditProject.warrantyEndDate && (
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Current: {new Date(timelineEditProject.warrantyEndDate).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Notes ── */}
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Revision Reason / Notes</label>
+                <textarea
+                  required
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Explain why the timeline needs to be extended..."
+                  className="w-full p-4 rounded-xl bg-[#1e2028] border border-[#2a2d36] text-white text-[13px] focus:border-[#3b82f6] focus:outline-none h-24 resize-none transition-all placeholder:text-gray-600"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTimelineEditProject(null);
+                    setNewEndDate("");
+                    setNewBabysittingEndDate("");
+                    setNewWarrantyEndDate("");
+                    setEditNotes("");
+                    setEditError(null);
+                  }}
+                  disabled={submittingEdit}
+                  className="flex-1 py-2.5 rounded-xl bg-[#1e2028] hover:bg-[#252830] text-[13px] font-bold text-gray-200 border border-[#2a2d36] transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEdit}
+                  className="flex-1 py-2.5 rounded-xl bg-[#3b82f6] hover:bg-blue-500 text-[13px] font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {submittingEdit ? "Submitting..." : "Send Request"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

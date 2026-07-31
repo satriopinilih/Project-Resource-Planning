@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   AlertCircle,
   RefreshCcw,
+  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getTimelineStats, TimelineStats } from "@/lib/api";
@@ -23,6 +25,8 @@ export default function PMDashboard() {
     scheduled: 0,
     running: 0,
     completed: 0,
+    babysitting: 0,
+    warranty: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,10 +69,12 @@ export default function PMDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,2fr)_repeat(3,1fr)] gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
         <PMStatCard title="Total Projects" value={stats.total} icon={<FolderKanban />} variant="premium" onClick={() => router.push("/project?filter=All")} />
         <PMStatCard title="Scheduled" value={stats.scheduled} icon={<CalendarClock />} variant="scheduled" onClick={() => router.push("/project?filter=Scheduled")} />
         <PMStatCard title="Running" value={stats.running} icon={<Users />} variant="running" onClick={() => router.push("/project?filter=Running")} />
+        <PMStatCard title="Babysitting" value={stats.babysitting} icon={<Sparkles />} variant="babysitting" onClick={() => router.push("/project?filter=Babysitting")} />
+        <PMStatCard title="Warranty" value={stats.warranty} icon={<ShieldCheck />} variant="warranty" onClick={() => router.push("/project?filter=Warranty")} />
         <PMStatCard title="Completed" value={stats.completed} icon={<CheckCircle2 />} variant="green" onClick={() => router.push("/project?filter=Completed")} />
       </div>
 

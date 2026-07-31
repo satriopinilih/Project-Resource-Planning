@@ -5,7 +5,7 @@ interface PMStatCardProps {
   title: string;
   value: string | number;
   icon: ReactNode;
-  variant: "running" | "scheduled" | "green"  | "premium";
+  variant: "running" | "scheduled" | "green" | "premium" | "babysitting" | "warranty";
   onClick?: () => void;
 }
 
@@ -15,7 +15,7 @@ const PMStatCard: React.FC<PMStatCardProps> = ({ title, value, icon, variant, on
       iconBg: "bg-green-500/10 text-green-400",
       textValue: "text-green-400",
       cardBg:
-        "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover: border-green-500/20 hover:shadow-lg hover:-translate-y-1",
+        "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-green-500/20 hover:shadow-lg hover:-translate-y-1",
       titleColor: "text-[var(--dash-text-muted)]",
     },
     scheduled: {
@@ -37,6 +37,20 @@ const PMStatCard: React.FC<PMStatCardProps> = ({ title, value, icon, variant, on
       textValue: stylesModule.premiumText,
       cardBg: stylesModule.premiumCard,
       titleColor: stylesModule.premiumTitle,
+    },
+    babysitting: {
+      iconBg: "bg-indigo-500/10 text-indigo-400",
+      textValue: "text-indigo-400",
+      cardBg:
+        "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-indigo-500/20 hover:shadow-lg hover:-translate-y-1",
+      titleColor: "text-[var(--dash-text-muted)]",
+    },
+    warranty: {
+      iconBg: "bg-blue-500/10 text-blue-400",
+      textValue: "text-blue-400",
+      cardBg:
+        "bg-[var(--dash-bg-card)] border-[var(--dash-border-subtle)] hover:border-blue-500/20 hover:shadow-lg hover:-translate-y-1",
+      titleColor: "text-[var(--dash-text-muted)]",
     },
   };
 

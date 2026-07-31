@@ -127,6 +127,8 @@ export default function MarketingDashboard() {
   const scheduledCount = projects.filter(isProjectScheduled).length;
   const runningCount = projects.filter(isProjectRunning).length;
   const completedCount = projects.filter(p => p.projectStatus === 3).length;
+  const babysittingCount = projects.filter(p => p.projectStatus === 6).length;
+  const warrantyCount = projects.filter(p => p.projectStatus === 7).length;
 
   const recentSubmissions = useMemo(() => {
     const currentMonth = new Date().getMonth();
@@ -292,7 +294,7 @@ export default function MarketingDashboard() {
       </section>
 
       {/* Stats Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+      <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
         <StatCardCustom
           label="Total Project"
           value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : totalProjects}
@@ -328,6 +330,24 @@ export default function MarketingDashboard() {
           iconColor="text-emerald-600 dark:text-emerald-500"
           valueColor="text-emerald-600 dark:text-emerald-500"
           onClick={() => router.push('/project?tab=Running')}
+        />
+        <StatCardCustom
+          label="Babysitting"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-indigo-500" /> : babysittingCount}
+          icon={Clock}
+          iconBg="bg-indigo-100 dark:bg-[#2a2650]"
+          iconColor="text-indigo-600 dark:text-indigo-400"
+          valueColor="text-indigo-600 dark:text-indigo-400"
+          onClick={() => router.push('/project?tab=Babysitting')}
+        />
+        <StatCardCustom
+          label="Warranty"
+          value={isLoading ? <Loader2 className="w-6 h-6 animate-spin text-teal-500" /> : warrantyCount}
+          icon={CheckCircle2}
+          iconBg="bg-teal-100 dark:bg-[#1a3535]"
+          iconColor="text-teal-600 dark:text-teal-400"
+          valueColor="text-teal-600 dark:text-teal-400"
+          onClick={() => router.push('/project?tab=Warranty')}
         />
         <StatCardCustom
           label="Completed"
@@ -403,6 +423,15 @@ export default function MarketingDashboard() {
                 } else if (project.projectStatus === 4) {
                   statusLabel = "Deleted";
                   statusColor = "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400";
+                } else if (project.projectStatus === 5) {
+                  statusLabel = "Hold";
+                  statusColor = "bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400";
+                } else if (project.projectStatus === 6) {
+                  statusLabel = "Babysitting";
+                  statusColor = "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400";
+                } else if (project.projectStatus === 7) {
+                  statusLabel = "Warranty";
+                  statusColor = "bg-teal-100 text-teal-700 dark:bg-teal-500/10 dark:text-teal-400";
                 }
 
                 return (
