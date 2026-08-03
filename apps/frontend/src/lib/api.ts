@@ -50,6 +50,8 @@ type BackendUser = {
   projects: BackendUserProject[];
   contractHistory?: BackendContractHistoryItem[];
   roleHistories?: BackendRoleHistoryItem[];
+  isIntern?: boolean;
+  isNotAvailableWfo?: boolean;
 };
 
 type BackendContractExtension = {
@@ -91,6 +93,8 @@ export type BackendProjectMember = {
   swapReason?: string | null;
   replacedByUserId?: string | null;
   replacedByUserName?: string | null;
+  isIntern?: boolean;
+  isNotAvailableWfo?: boolean;
 };
 
 export type BackendRequiredRole = {
@@ -162,6 +166,8 @@ export type BackendEmployee = {
   departmentName: string;
   employeeType: number; // 0=Contract,1=Permanent
   experienceYears: number;
+  isIntern?: boolean;
+  isNotAvailableWfo?: boolean;
   contractStart: string;
   contractEnd: string;
   contractStatus: number; // 0=Active,1=Expired,2=ExpiringSoon
@@ -266,6 +272,8 @@ const mapEmployee = (user: BackendUser): Employee => {
     contractStatus,
     daysRemaining: user.daysRemaining,
     experienceYears: user.experienceYears,
+    isIntern: user.isIntern,
+    isNotAvailableWfo: user.isNotAvailableWfo,
     skills: user.skills,
     projects: user.projects.map(mapProject),
     contractHistory: user.contractHistory?.map((h) => ({
@@ -902,6 +910,13 @@ export async function deleteSkill(id: number): Promise<void> {
   });
 }
 
+export async function updateEmployeeInternStatus(id: string, isIntern: boolean): Promise<void> {
+  await fetchJson(`/api/employees/${id}/intern-status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isIntern })
+  });
+}
+
 export async function getTimelineEditRequests(): Promise<TimelineEditRequest[]> {
   const allHireRequests = await getHireRequests();
 
@@ -945,6 +960,8 @@ export type RecommendationCandidate = {
   targetRole: string;
   targetWorkingType: string;
   experienceYears: number;
+  isIntern?: boolean;
+  isNotAvailableWfo?: boolean;
   skills: string[];
   matchedSkills: string[];
   skillMatchPercent: number;
@@ -1018,4 +1035,12 @@ export async function overrideProjectStatus(
     method: 'PATCH',
     body: JSON.stringify({ projectStatus: enumValue, notifyPm })
   });
+}
+
+export async function updateWfoStatus(isNotAvailableWfo: boolean): Promise<Employee> {
+  const data = await fetchJson<BackendUser>('/api/employees/me/wfo-status', {
+    method: 'PATCH',
+    body: JSON.stringify({ isNotAvailableWfo })
+  });
+  return mapEmployee(data);
 }

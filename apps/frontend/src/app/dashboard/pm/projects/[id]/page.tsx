@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { getProjectById, BackendProject } from "@/lib/api";
 import ProjectGanttChart from "@/app/dashboard/gm/components/ProjectGanttChart";
+import InternBadge from "@/components/InternBadge";
 
 const mapStatus = (backendStatus: number, startDateStr?: string) => {
   switch (backendStatus) {
@@ -359,9 +360,12 @@ export default function PMProjectDetailsPage() {
                                     .slice(0, 2)}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-[13px] font-bold text-[var(--dash-text-primary)] truncate">
-                                    {member.userName}
-                                  </p>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-[13px] font-bold text-[var(--dash-text-primary)] truncate">
+                                      {member.userName}
+                                    </p>
+                                    <InternBadge isIntern={member.isIntern} size="sm" />
+                                  </div>
                                   <p className="text-[11px] text-[var(--dash-text-faint)] truncate">
                                     {formatDate(
                                       member.startDate ||

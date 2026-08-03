@@ -57,6 +57,10 @@ public class CandidateDto
     public string TargetRole { get; set; } = string.Empty; // The role they'd fill
     public string TargetWorkingType { get; set; } = string.Empty; // e.g. "Dedicated" or "NonDedicated"
     public int ExperienceYears { get; set; }
+    /// <summary>True if this candidate is tagged as an intern by HR.</summary>
+    public bool IsIntern { get; set; } = false;
+    /// <summary>True if this candidate has self-reported as not available for WFO.</summary>
+    public bool IsNotAvailableWfo { get; set; } = false;
     public List<string> Skills { get; set; } = new();
     public List<string> MatchedSkills { get; set; } = new(); // Skills from past projects that match target project
     public double SkillMatchPercent { get; set; } // 0-100

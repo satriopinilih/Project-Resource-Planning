@@ -915,7 +915,9 @@ public class ProjectService
             SwapReason = up.SwapReason,
             ReplacedByUserId = up.ReplacedByUserId,
             ReplacedByUserName = up.ReplacedByUserId != null && userNameLookup.ContainsKey(up.ReplacedByUserId)
-                ? userNameLookup[up.ReplacedByUserId] : null
+                ? userNameLookup[up.ReplacedByUserId] : null,
+            IsIntern = up.User?.IsIntern ?? false,
+            IsNotAvailableWfo = up.User?.IsNotAvailableWfo ?? false
         }).ToList();
 
         var requiredRoles = p.ProjectRequiredRoles.Select(pr => new ProjectRequiredRoleDto

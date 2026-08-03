@@ -528,7 +528,9 @@ public class EmployeeService
                 SwapReason = p.SwapReason
             }).ToList(),
             ContractHistory = history,
-            RoleHistories = BuildRoleHistories(u, staffRole)
+            RoleHistories = BuildRoleHistories(u, staffRole),
+            IsIntern = u.IsIntern,
+            IsNotAvailableWfo = u.IsNotAvailableWfo
         };
     }
 
@@ -673,5 +675,69 @@ public class EmployeeService
         };
 
         return (true, null, 200, response);
+    }
+
+    /// <summary>
+    /// Updates the IsIntern status for a junior employee. HR-only operation.
+    /// Uses optimistic update — returns the updated UserDto on success.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, UserDto? Data)> UpdateInternStatusAsync(
+        string id, bool isIntern, string actorUserId)
+    {
+        var user = await _db.Users
+            .Include(u => u.Department)
+            .Include(u => u.UserSkills).ThenInclude(us => us.Skill)
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
+            .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+            .Include(u => u.UserExtensions)
+            .Include(u => u.RoleHistories)
+            .FirstOrDefaultAsync(u => u.UserId == id);
+
+        if (user is null)
+            return (false, "Employee not found", 404, null);
+
+        // Only allow setting IsIntern = true for junior-level staff roles
+        var currentStaffRole = user.UserStaffRoles.Select(x => x.StaffRole.RoleName).FirstOrDefault() ?? string.Empty;
+        if (isIntern && !currentStaffRole.StartsWith("Junior", StringComparison.OrdinalIgnoreCase))
+            return (false, "Intern status can only be set for employees with a Junior staff role", 400, null);
+
+        user.IsIntern = isIntern;
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = actorUserId;
+
+        await _db.SaveChangesAsync();
+
+        return (true, null, 200, MapToUserDto(user));
+    }
+
+    /// <summary>
+    /// Updates the IsNotAvailableWfo flag for an employee.
+    /// Only the employee themselves can call this — enforced at controller level.
+    /// Any employee type/role may toggle this status.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, UserDto? Data)> UpdateWfoStatusAsync(
+        string id, bool isNotAvailableWfo, string actorUserId)
+    {
+        var user = await _db.Users
+            .Include(u => u.Department)
+            .Include(u => u.UserSkills).ThenInclude(us => us.Skill)
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
+            .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+            .Include(u => u.UserExtensions)
+            .Include(u => u.RoleHistories)
+            .FirstOrDefaultAsync(u => u.UserId == id);
+
+        if (user is null)
+            return (false, "Employee not found", 404, null);
+
+        user.IsNotAvailableWfo = isNotAvailableWfo;
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = actorUserId;
+
+        await _db.SaveChangesAsync();
+
+        return (true, null, 200, MapToUserDto(user));
     }
 }

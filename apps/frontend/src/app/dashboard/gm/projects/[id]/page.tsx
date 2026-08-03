@@ -6,6 +6,7 @@ import AppHeader from "@/components/AppHeader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import HolidayWarningModal, { DateConflict, checkDateConflicts } from "./HolidayWarningModal";
 import StatusBadge from "@/components/StatusBadge";
+import InternBadge from "@/components/InternBadge";
 import {
   Trash2,
   Calendar,
@@ -207,6 +208,10 @@ export default function ProjectDetailsPage() {
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
   const [holidayConflicts, setHolidayConflicts] = useState<DateConflict[]>([]);
   const [showHolidayWarning, setShowHolidayWarning] = useState(false);
+
+  // WFO check states
+  const [wfoConflicts, setWfoConflicts] = useState<BackendProjectMember[]>([]);
+  const [showWfoWarning, setShowWfoWarning] = useState(false);
 
   // Confirm modal states
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
@@ -462,6 +467,21 @@ export default function ProjectDetailsPage() {
 
   const handlePreStartCheck = () => {
     if (!project) return;
+    
+    // Check WFO first
+    const wfoMembers = project.members?.filter((m) => m.isNotAvailableWfo && m.status === "Assigned") || [];
+    if (wfoMembers.length > 0) {
+      setWfoConflicts(wfoMembers);
+      setShowWfoWarning(true);
+    } else {
+      proceedToHolidayCheck();
+    }
+  };
+
+  const proceedToHolidayCheck = () => {
+    if (!project) return;
+    setShowWfoWarning(false);
+    
     const conflicts = checkDateConflicts(
       project.estimatedStartDate,
       project.estimatedEndDate,
@@ -926,7 +946,10 @@ export default function ProjectDetailsPage() {
                                   {member.userName.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-[13px] font-bold text-[var(--dash-text-primary)] truncate">{member.userName}</p>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-[13px] font-bold text-[var(--dash-text-primary)] truncate">{member.userName}</p>
+                                    <InternBadge isIntern={member.isIntern} size="sm" />
+                                  </div>
                                   <p className="text-[11px] text-[var(--dash-text-faint)] truncate">
                                     {formatDate(member.startDate || project.estimatedStartDate)} - {formatDate(member.endDate || project.estimatedEndDate)}
                                   </p>
@@ -1065,6 +1088,7 @@ export default function ProjectDetailsPage() {
                                   <p className={`text-[15px] font-bold truncate ${!avail.available ? "text-[var(--dash-text-faint)]" : "text-[var(--dash-text-heading)]"}`}>
                                     {emp.userName}
                                   </p>
+                                  <InternBadge isIntern={emp.isIntern} size="sm" />
                                   {avail.available ? (
                                     <span className="flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
                                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -1747,6 +1771,65 @@ export default function ProjectDetailsPage() {
           currentStatusNum={project.projectStatus}
           projectName={project.projectName}
         />
+      )}
+
+      {/* ── WFO Warning Modal ── */}
+      {showWfoWarning && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setShowWfoWarning(false)}
+        >
+          <div
+            className="bg-[#0d1117] border border-amber-500/20 rounded-2xl w-full max-w-[480px] shadow-2xl overflow-hidden animate-[fadeIn_0.2s_ease-out]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-amber-500/10 px-6 py-4 flex items-center gap-4 border-b border-amber-500/20">
+              <div className="p-2 bg-amber-500/20 rounded-lg text-amber-500">
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <h3 className="text-[18px] font-bold text-white">Work From Office Warning</h3>
+                <p className="text-[13px] text-amber-400 mt-0.5">Some members are not available for WFO</p>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <p className="text-[14px] text-gray-300 mb-5 leading-relaxed">
+                The following members have marked themselves as <span className="font-bold text-amber-400">Not Available WFO</span>. 
+                Please ensure this aligns with the project requirements before starting.
+              </p>
+
+              <div className="space-y-3 mb-6 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                {wfoConflicts.map((member) => (
+                  <div key={member.userId} className="flex items-center justify-between p-3.5 rounded-xl bg-[#141922] border border-[#1e2433]">
+                    <div className="flex flex-col">
+                      <span className="text-[14px] font-bold text-white">{member.userName}</span>
+                      <span className="text-[12px] text-gray-400">{member.role}</span>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider">
+                      WFO Not Available
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setShowWfoWarning(false)}
+                  className="flex-1 py-2.5 rounded-lg text-[13px] font-bold text-gray-300 bg-[#1e2433] hover:bg-[#2a3241] border border-gray-700/50 transition-colors"
+                >
+                  Cancel Start
+                </button>
+                <button
+                  onClick={proceedToHolidayCheck}
+                  className="flex-1 py-2.5 rounded-lg text-[13px] font-bold text-amber-950 bg-amber-500 hover:bg-amber-400 transition-colors"
+                >
+                  Acknowledge & Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Holiday / Weekend Warning Modal ── */}

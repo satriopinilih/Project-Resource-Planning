@@ -165,9 +165,14 @@ function TeamMembersContent() {
                       <p className="text-[15px] font-semibold text-gray-100">
                         {member.userName}
                       </p>
-                      <p className="text-[13px] text-gray-400 mt-0.5">
-                        {member.role}
-                      </p>
+                      <div className="text-[13px] text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                        <span>{member.role}</span>
+                        {member.isNotAvailableWfo && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            Not available WFO
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[12px] text-gray-500 mt-0.5">
                         Exp: {member.experienceYears}yr
                       </p>
@@ -232,9 +237,14 @@ function MemberDetail({ member }: { member: BackendEmployee }) {
           <h2 className="text-[24px] font-bold text-white leading-tight">
             {member.userName}
           </h2>
-          <p className="text-[15px] text-gray-400 mt-1">
-            {member.role}
-          </p>
+          <div className="text-[15px] text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
+            <span>{member.role}</span>
+            {member.isNotAvailableWfo && (
+              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                Not available WFO
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3 mt-3 flex-wrap">
             <span
               className={`inline-block px-3 py-1 text-[12px] font-semibold rounded-md ${contractInfo.bg} ${contractInfo.color}`}

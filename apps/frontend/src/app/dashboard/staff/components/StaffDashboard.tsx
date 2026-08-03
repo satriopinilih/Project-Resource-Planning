@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getSessionUser, SessionUser } from "@/lib/auth";
-import { getEmployeeById, getEmployeeFormOptions, updateEmployeeSkills, LookupItem } from "@/lib/api";
+import { getEmployeeById, getEmployeeFormOptions, updateEmployeeSkills, updateWfoStatus, LookupItem } from "@/lib/api";
 import { Employee, Project, ContractHistoryItem } from "@/lib/types";
 import {
   Loader2, Search, Calendar as CalendarIcon, FolderKanban, CalendarClock, Users,
@@ -16,6 +16,51 @@ const fmtDate = (d: string | null | undefined, opts?: Intl.DateTimeFormatOptions
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-US", opts ?? { month: "short", day: "numeric", year: "numeric" });
 };
+
+// ── WFO Status Widget ────────────────────────────────────────────────────────
+function WfoStatusWidget({ employee, onToggle }: { employee: Employee; onToggle: (val: boolean) => Promise<void> }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleToggle = async () => {
+    setLoading(true);
+    await onToggle(!employee.isNotAvailableWfo);
+    setLoading(false);
+  };
+
+  return (
+    <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+          <Users size={15} className="text-emerald-400" />
+        </div>
+        <div>
+          <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)]">Work Preferences</h3>
+          <p className="text-[10px] text-[var(--dash-text-faint)]">Manage your WFO availability</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border-subtle)]">
+        <div>
+          <p className="text-[13px] font-semibold text-[var(--dash-text-heading)]">Not available WFO</p>
+          <p className="text-[11px] text-[var(--dash-text-faint)]">Mark if you cannot work from office</p>
+        </div>
+        <button
+          onClick={handleToggle}
+          disabled={loading}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[var(--dash-bg-card)] ${
+            employee.isNotAvailableWfo ? 'bg-blue-600' : 'bg-slate-400/50'
+          } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              employee.isNotAvailableWfo ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ── Contract Detail Widget ────────────────────────────────────────────────────
 function ContractDetailWidget({ employee }: { employee: Employee }) {
@@ -165,6 +210,15 @@ export default function StaffDashboard() {
   const [submittingSkills, setSubmittingSkills] = useState(false);
   const [skillError, setSkillError] = useState<string | null>(null);
   const [skillSearchQuery, setSkillSearchQuery] = useState("");
+
+  const handleToggleWfo = async (isNotAvailableWfo: boolean) => {
+    try {
+      const updated = await updateWfoStatus(isNotAvailableWfo);
+      setEmployee(updated);
+    } catch (err: any) {
+      alert("Failed to update WFO status: " + err.message);
+    }
+  };
 
   const filteredSkills = useMemo(() => {
     if (!skillSearchQuery.trim()) return availableSkills;
@@ -520,6 +574,7 @@ export default function StaffDashboard() {
         {/* ── Right: Contract sidebar ── */}
         {employee && (
           <div className="w-full xl:w-[320px] shrink-0 space-y-4">
+            <WfoStatusWidget employee={employee} onToggle={handleToggleWfo} />
             <ContractDetailWidget employee={employee} />
             {contractHistory.length > 0 && (
               <ContractHistoryPreview history={contractHistory} />

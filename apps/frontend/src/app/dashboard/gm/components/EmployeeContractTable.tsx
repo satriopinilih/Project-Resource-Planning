@@ -39,6 +39,7 @@ interface EmployeeContract {
   experienceYears: number;
   skills: string[];
   projects: { name: string; start: string; end: string; status: number }[];
+  isNotAvailableWfo: boolean;
 }
 
 const SYSTEM_USER_IDS = ["GM001", "HR123"];
@@ -87,7 +88,8 @@ function mapToContract(u: BackendEmployee): EmployeeContract {
       start: formatDate(p.startDate),
       end: p.endDate ? formatDate(p.endDate) : "Ongoing",
       status: 0 // Defaulting to scheduled to match screenshot "Scheduled" badge
-    }))
+    })),
+    isNotAvailableWfo: u.isNotAvailableWfo
   };
 }
 
@@ -466,8 +468,15 @@ export default function EmployeeContractTable({ showExtensionAction = true }: Em
                           {emp.email}
                         </p>
                       </td>
-                      <td className="py-4 pr-4 text-[13px] text-[var(--dash-text-secondary)]">
-                        {emp.role}
+                      <td className="py-4 pr-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[13px] text-[var(--dash-text-secondary)]">{emp.role}</span>
+                          {emp.isNotAvailableWfo && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 whitespace-nowrap">
+                              Not available WFO
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 pr-4">
                         <span

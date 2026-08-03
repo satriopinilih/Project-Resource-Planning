@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
-import { getEmployees, getProjects, createContractExtension, getContractExtensionRequests, resetEmployeePassword, getSkills, updateEmployeeSkills, SkillDto, getContractExtensionRecommendation, getEmployeeFormOptions, LookupItem } from '@/lib/api';
+import { getEmployees, getProjects, createContractExtension, getContractExtensionRequests, resetEmployeePassword, getSkills, updateEmployeeSkills, SkillDto, getContractExtensionRecommendation, getEmployeeFormOptions, LookupItem, updateEmployeeInternStatus } from '@/lib/api';
 import { Employee } from '@/lib/types';
 import { getPrimaryRole, getSessionUser } from '@/lib/auth';
 import { Loader2, X, SlidersHorizontal, Info } from 'lucide-react';
 import Modal from '@/components/Modal';
+import InternBadge from '@/components/InternBadge';
 
 function getRoleExperience(employee: Employee) {
   if (!employee.roleHistories || employee.roleHistories.length === 0) {
@@ -75,13 +76,17 @@ export default function TeamMembersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [minExperience, setMinExperience] = useState<number | "">("");
-  const [sortBy, setSortBy] = useState<"name" | "role" | "experience">("name");
+  const [sortBy, setSortBy] = useState<"name" | "role" | "experience" | "wfo">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Contract History Toggle State
   const [showContractHistory, setShowContractHistory] = useState(false);
   const [showRoleHistory, setShowRoleHistory] = useState(false);
+  
+  // Intern toggle state
+  const [isInternToggling, setIsInternToggling] = useState(false);
+  
   // New Role (for extension modal)
   const [extensionNewRole, setExtensionNewRole] = useState("");
   const [staffRoles, setStaffRoles] = useState<LookupItem[]>([]);
@@ -110,6 +115,18 @@ export default function TeamMembersPage() {
       } else if (sortBy === "experience") {
         valA = a.experienceYears ?? 0;
         valB = b.experienceYears ?? 0;
+      }
+
+      if (sortBy === "wfo") {
+        valA = a.isNotAvailableWfo ? 1 : 0;
+        valB = b.isNotAvailableWfo ? 1 : 0;
+        if (valA !== valB) {
+          // If 'wfo' is selected, 'true' (1) should come first by default (asc)
+          return sortOrder === "asc" ? ((valB as number) - (valA as number)) : ((valA as number) - (valB as number));
+        }
+        // Fallback to name if wfo status is same
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
       }
 
       if (valA < valB) return sortOrder === "asc" ? -1 : 1;
@@ -439,6 +456,7 @@ export default function TeamMembersPage() {
                         <option value="name">Name</option>
                         <option value="role">Role</option>
                         <option value="experience">Experience</option>
+                        <option value="wfo">Not available WFO</option>
                       </select>
                     </div>
 
@@ -520,7 +538,15 @@ export default function TeamMembersPage() {
                           </div>
                         ))}
                       </div>
-                      <div className="text-[12px] text-[var(--dash-text-secondary)] mb-2 font-medium">{employee.role}</div>
+                      <div className="text-[12px] text-[var(--dash-text-secondary)] mb-2 font-medium flex items-center gap-1.5 flex-wrap">
+                        {employee.role}
+                        <InternBadge isIntern={employee.isIntern} />
+                        {employee.isNotAvailableWfo && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 whitespace-nowrap">
+                            Not available WFO
+                          </span>
+                        )}
+                      </div>
 
                         <div className="mt-2 flex items-center gap-2">
                           <span className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded border ${badgeClasses}`}>
@@ -563,9 +589,49 @@ export default function TeamMembersPage() {
                               </p>
                             ))}
                           </div>
-                          <p className="text-[14px] text-[var(--dash-text-secondary)] mt-1">{selectedEmployee.role}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <p className="text-[14px] text-[var(--dash-text-secondary)]">{selectedEmployee.role}</p>
+                            <InternBadge isIntern={selectedEmployee.isIntern} />
+                            {selectedEmployee.isNotAvailableWfo && (
+                              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                Not available WFO
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      <div className="flex items-center gap-3">
+                        {/* HR-only: Internship Toggle for Junior Staff */}
+                        {role === 'HR' && selectedEmployee.role?.toLowerCase().includes('junior') && (
+                          <div className="flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 px-3 py-2 rounded-lg">
+                            <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Mark as Internship</span>
+                            <button
+                              disabled={isInternToggling}
+                              onClick={async () => {
+                                const newValue = !selectedEmployee.isIntern;
+                                // Optimistic UI Update
+                                const updatedEmployee = { ...selectedEmployee, isIntern: newValue };
+                                setEmployees(prev => prev.map(e => e.id === selectedEmployee.id ? updatedEmployee : e));
+                                setIsInternToggling(true);
+                                try {
+                                  await updateEmployeeInternStatus(selectedEmployee.id, newValue);
+                                } catch (err: any) {
+                                  alert(err.message || "Failed to update internship status");
+                                  // Revert on error
+                                  setEmployees(prev => prev.map(e => e.id === selectedEmployee.id ? selectedEmployee : e));
+                                } finally {
+                                  setIsInternToggling(false);
+                                }
+                              }}
+                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${selectedEmployee.isIntern ? 'bg-blue-600' : 'bg-gray-600'} ${isInternToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                              <span
+                                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${selectedEmployee.isIntern ? 'translate-x-5' : 'translate-x-1'}`}
+                              />
+                            </button>
+                          </div>
+                        )}
 
                       {role === 'GM' && (
                         <button
@@ -579,6 +645,7 @@ export default function TeamMembersPage() {
                           Edit Skills
                         </button>
                       )}
+                      </div>
                     </div>
 
                     {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
