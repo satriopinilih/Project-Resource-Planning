@@ -88,11 +88,11 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
         )}
 
         {/* Availability Note */}
-        {!candidate.isAvailable && (
-          <p className="text-[11px] text-amber-400/80 flex items-center gap-1.5">
+        {(!candidate.isAvailable || (candidate.availabilityNote && (candidate.availabilityNote.includes("Delay") || candidate.availabilityNote.includes("adjust")))) && (
+          <p className={`text-[11px] flex items-center gap-1.5 mt-1 ${candidate.isAvailable ? 'text-purple-400/90' : 'text-amber-400/80'}`}>
             <Clock size={11} />
             {candidate.availabilityNote}
-            {candidate.currentProjects.length > 0 && (
+            {candidate.currentProjects && candidate.currentProjects.length > 0 && (
               <span className="text-[var(--dash-text-faint)]">
                 ({candidate.currentProjects.join(", ")})
               </span>
@@ -224,10 +224,36 @@ const OptionCard: React.FC<{
 
   // Calculate custom match score as average of individual match %
   const customMatchScore = isCustomized
-    ? customizedAssignments!.reduce((sum, a) => sum + a.skillMatchPercent, 0) / customizedAssignments!.length
+    ? customizedAssignments!.reduce((sum, a) => sum + (a.skillMatchPercent || 0), 0) / Math.max(1, customizedAssignments!.length)
     : null;
 
   const displayScore = customMatchScore !== null ? customMatchScore : option.matchScore;
+
+  let effectiveRequiresHiring = option.requiresHiring;
+  let effectiveRequiresReschedule = option.requiresReschedule;
+  let effectiveHiringDetail: string | undefined = option.hiringDetail;
+  let effectiveRescheduleDetail: string | undefined = option.rescheduleDetail;
+
+  if (isCustomized) {
+    const isMissingRoles = customizedAssignments!.length < option.teamSize;
+    const hasBusy = customizedAssignments!.some(c => !c.isAvailable);
+
+    if (isMissingRoles) {
+      effectiveRequiresHiring = true;
+      effectiveHiringDetail = `Customized team is missing ${option.teamSize - customizedAssignments!.length} member(s).`;
+      effectiveRequiresReschedule = false;
+      effectiveRescheduleDetail = undefined;
+    } else if (hasBusy) {
+      effectiveRequiresHiring = false;
+      effectiveRequiresReschedule = true;
+      effectiveRescheduleDetail = "Some custom team members are currently busy (Delay needed).";
+    } else {
+      effectiveRequiresHiring = false;
+      effectiveRequiresReschedule = false;
+      effectiveHiringDetail = undefined;
+      effectiveRescheduleDetail = undefined;
+    }
+  }
 
   return (
     <div className={`
@@ -305,23 +331,23 @@ const OptionCard: React.FC<{
         {/* Status Box */}
         <div className={`
           mt-3 p-3 rounded-xl border flex flex-col gap-1.5
-          ${option.requiresHiring
+          ${effectiveRequiresHiring
             ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
-            : option.requiresReschedule
+            : effectiveRequiresReschedule
               ? "bg-[#8b5cf6]/5 border-[#8b5cf6]/20 text-[#a78bfa]"
               : "bg-green-500/5 border-green-500/20 text-green-500"}
         `}>
           <div className="flex items-center gap-2">
-            {option.requiresHiring ? <UserPlus size={14} /> : option.requiresReschedule ? <Clock size={14} /> : <CheckCircle2 size={14} />}
+            {effectiveRequiresHiring ? <UserPlus size={14} /> : effectiveRequiresReschedule ? <Clock size={14} /> : <CheckCircle2 size={14} />}
             <span className="text-[12px] font-bold">
-              {option.requiresHiring ? "Request Hiring / Replacement" : option.requiresReschedule ? "Action Needed: Delay Start Date" : "All resources available"}
+              {effectiveRequiresHiring ? "Request Hiring / Replacement" : effectiveRequiresReschedule ? "Action Needed: Delay Start Date" : "All resources available"}
             </span>
           </div>
-          {option.requiresHiring && option.hiringDetail && (
-            <p className="text-[11px] font-medium pl-5 opacity-90">• {option.hiringDetail}</p>
+          {effectiveRequiresHiring && effectiveHiringDetail && (
+            <p className="text-[11px] font-medium pl-5 opacity-90">• {effectiveHiringDetail}</p>
           )}
-          {option.requiresReschedule && option.rescheduleDetail && (
-            <p className="text-[11px] font-medium pl-5 opacity-90">• {option.rescheduleDetail}</p>
+          {effectiveRequiresReschedule && effectiveRescheduleDetail && (
+            <p className="text-[11px] font-medium pl-5 opacity-90">• {effectiveRescheduleDetail}</p>
           )}
         </div>
       </div>
@@ -355,7 +381,7 @@ const OptionCard: React.FC<{
 
       {/* Option Actions */}
       <div className="mt-auto pt-5 flex gap-3">
-        {option.requiresReschedule && !option.requiresHiring ? (
+        {effectiveRequiresReschedule && !effectiveRequiresHiring ? (
           <button
             disabled={!hasRequiredRoles}
             title={!hasRequiredRoles ? "Add required roles to the project before starting" : undefined}
@@ -371,16 +397,16 @@ const OptionCard: React.FC<{
           </button>
         ) : (
           <button
-            disabled={!hasRequiredRoles || option.requiresHiring || option.requiresReschedule}
+            disabled={!hasRequiredRoles || effectiveRequiresHiring || effectiveRequiresReschedule}
             title={!hasRequiredRoles ? "Add required roles to the project before starting" : undefined}
             onClick={() => {
-              if (!hasRequiredRoles || option.requiresHiring || option.requiresReschedule) return;
+              if (!hasRequiredRoles || effectiveRequiresHiring || effectiveRequiresReschedule) return;
               if (isCustomized) setStartCustomConfirmOpen(true);
               else setStartConfirmOpen(true);
             }}
             className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
           >
-            {!hasRequiredRoles ? "Add Roles First" : option.requiresHiring ? "Unavailable to Start" : "Start Project"}
+            {!hasRequiredRoles ? "Add Roles First" : effectiveRequiresHiring ? "Unavailable to Start" : "Start Project"}
           </button>
         )}
 

@@ -19,6 +19,12 @@ public class ContractExtension
 
     public string ReasonForExtension { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Optional: new role requested by GM during extension (e.g., promotion from "Junior Dev" to "Senior Dev").
+    /// Null means no role change requested. Applied when HR approves.
+    /// </summary>
+    [StringLength(100)]
+    public string? NewRole { get; set; }
 
     [StringLength(20)]
     public string Status { get; set; } = "Pending"; // Pending, Approved, Declined

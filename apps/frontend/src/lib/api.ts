@@ -49,6 +49,7 @@ type BackendUser = {
   roles: string[];
   projects: BackendUserProject[];
   contractHistory?: BackendContractHistoryItem[];
+  roleHistories?: BackendRoleHistoryItem[];
 };
 
 type BackendContractExtension = {
@@ -138,6 +139,18 @@ type BackendContractHistoryItem = {
   endDate: string | null;
   role: string;
   isActive: boolean;
+  duration: string;
+  extendedOn: string | null;
+  extendedBy: string | null;
+  daysUntilExpiry: number | null;
+};
+
+type BackendRoleHistoryItem = {
+  roleName: string;
+  startDate: string;
+  endDate: string | null;
+  isCurrentRole: boolean;
+  duration: string;
 };
 
 export type BackendEmployee = {
@@ -260,6 +273,17 @@ const mapEmployee = (user: BackendUser): Employee => {
       endDate: h.endDate,
       role: h.role,
       isActive: h.isActive,
+      duration: h.duration ?? '',
+      extendedOn: h.extendedOn ?? null,
+      extendedBy: h.extendedBy ?? null,
+      daysUntilExpiry: h.daysUntilExpiry ?? null,
+    })) ?? [],
+    roleHistories: user.roleHistories?.map((rh) => ({
+      roleName: rh.roleName,
+      startDate: rh.startDate,
+      endDate: rh.endDate,
+      isCurrentRole: rh.isCurrentRole,
+      duration: rh.duration ?? '',
     })) ?? [],
   };
 };
@@ -364,6 +388,20 @@ export async function getExpiringEmployees(days = 60): Promise<Employee[]> {
 export async function getEmployeeById(id: string): Promise<Employee> {
   const data = await fetchJson<BackendUser>(`/api/employees/${encodeURIComponent(id)}`);
   return mapEmployee(data);
+}
+
+export async function getMyContracts(): Promise<import('./types').ContractHistoryItem[]> {
+  const data = await fetchJson<BackendContractHistoryItem[]>('/api/employees/me/contracts');
+  return data.map((h) => ({
+    startDate: h.startDate,
+    endDate: h.endDate,
+    role: h.role,
+    isActive: h.isActive,
+    duration: h.duration ?? '',
+    extendedOn: h.extendedOn ?? null,
+    extendedBy: h.extendedBy ?? null,
+    daysUntilExpiry: h.daysUntilExpiry ?? null,
+  }));
 }
 
 export async function getStaffNotifications(id: string): Promise<{ hasUnread: boolean; count: number; notifications: Project[] }> {
@@ -525,11 +563,18 @@ export async function createContractExtension(
   userId: string,
   extensionDuration: number,
   reasonForExtension: string,
-  expectedEndDate?: string | null
+  expectedEndDate?: string | null,
+  newRole?: string | null
 ): Promise<void> {
   await fetchJson('/api/contractextensions', {
     method: 'POST',
-    body: JSON.stringify({ userId, extensionDuration, reasonForExtension, expectedEndDate: expectedEndDate ?? null })
+    body: JSON.stringify({
+      userId,
+      extensionDuration,
+      reasonForExtension,
+      expectedEndDate: expectedEndDate ?? null,
+      newRole: newRole ?? null
+    })
   });
 }
 

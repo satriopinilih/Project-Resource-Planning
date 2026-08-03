@@ -28,6 +28,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<HireRequest> HireRequests { get; set; }
     public DbSet<Holiday> Holidays { get; set; }
     public DbSet<Client> Clients { get; set; }
+    public DbSet<EmployeeRoleHistory> EmployeeRoleHistories { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -94,6 +95,16 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<StaffRole>()
             .HasIndex(sr => sr.RoleName)
             .IsUnique();
+
+        // EmployeeRoleHistory: index on UserId for fast per-employee lookups
+        modelBuilder.Entity<EmployeeRoleHistory>()
+            .HasIndex(erh => erh.UserId);
+
+        modelBuilder.Entity<EmployeeRoleHistory>()
+            .HasOne(erh => erh.User)
+            .WithMany(u => u.RoleHistories)
+            .HasForeignKey(erh => erh.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Set default values for audit timestamps (optional, handled in SaveChanges override)
         modelBuilder.Entity<User>()

@@ -9,6 +9,8 @@ public class ContractExtensionDto
     public string UserName { get; set; } = string.Empty;
     public int ExtensionDuration { get; set; }
     public string ReasonForExtension { get; set; } = string.Empty;
+    /// <summary>New role/position requested by GM. Null = no role change.</summary>
+    public string? NewRole { get; set; }
     public DateTime CreatedAt { get; set; }
     public string Status { get; set; } = "Pending"; // Pending, Approved, Declined
 }

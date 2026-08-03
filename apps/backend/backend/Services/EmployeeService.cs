@@ -31,6 +31,7 @@ public class EmployeeService
             .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
             .Include(u => u.UserProjects).ThenInclude(up => up.Project)
             .Include(u => u.UserExtensions)
+            .Include(u => u.RoleHistories)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -77,6 +78,7 @@ public class EmployeeService
             .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
             .Include(u => u.UserProjects).ThenInclude(up => up.Project)
             .Include(u => u.UserExtensions)
+            .Include(u => u.RoleHistories)
             .FirstOrDefaultAsync(u => u.UserId == id);
 
         return user is null ? null : MapToUserDto(user);
@@ -99,6 +101,7 @@ public class EmployeeService
             .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
             .Include(u => u.UserProjects).ThenInclude(up => up.Project)
             .Include(u => u.UserExtensions)
+            .Include(u => u.RoleHistories)
             .Where(u => u.ContractEnd.Date >= now && u.ContractEnd.Date <= threshold)
             .OrderBy(u => u.ContractEnd)
             .ToListAsync();
@@ -394,6 +397,7 @@ public class EmployeeService
         // 1. Start with the original contract period as the first (oldest) entry.
         // 2. Append each Approved extension, each starting where the previous ended.
         var history = new List<ContractHistoryDto>();
+        var today = DateTime.UtcNow.Date;
         var approvedExtensions = u.UserExtensions
             .Where(e => e.Status == "Approved")
             .OrderBy(e => e.ProcessedAt ?? e.CreatedAt)
@@ -412,24 +416,35 @@ public class EmployeeService
         if (approvedExtensions.Count == 0)
         {
             // No extensions — single entry for the current/original contract
+            var endDate = u.EmployeeType == Commons.Enums.EmployeeType.Permanent ? (DateTime?)null : u.ContractEnd;
+            var daysUntilExpiry = endDate.HasValue ? (endDate.Value.Date - today).Days : (int?)null;
             history.Add(new ContractHistoryDto
             {
                 StartDate = u.ContractStart,
-                EndDate = u.EmployeeType == Commons.Enums.EmployeeType.Permanent ? null : u.ContractEnd,
-                Role = staffRole,
-                IsActive = false // will be resolved below
+                EndDate = u.ContractEnd,
+                Role = GetRoleAtDate(u, u.ContractStart, staffRole),
+                IsActive = true, // will be resolved below
+                Duration = FormatDuration(u.ContractStart, u.ContractEnd),
+                ExtendedOn = null,
+                ExtendedBy = null,
+                DaysUntilExpiry = daysUntilExpiry >= 0 ? daysUntilExpiry : null
             });
         }
         else
         {
             // Original contract period (before first extension)
             DateTime cursor = originalEnd;
+            var origDaysUntilExpiry = (originalEnd.Date - today).Days;
             history.Add(new ContractHistoryDto
             {
                 StartDate = u.ContractStart,
                 EndDate = originalEnd,
-                Role = staffRole,
-                IsActive = false // will be resolved below
+                Role = GetRoleAtDate(u, u.ContractStart, staffRole),
+                IsActive = false, // will be resolved below
+                Duration = FormatDuration(u.ContractStart, originalEnd),
+                ExtendedOn = null,
+                ExtendedBy = null,
+                DaysUntilExpiry = origDaysUntilExpiry >= 0 ? origDaysUntilExpiry : null
             });
 
             // Each extension period
@@ -438,13 +453,18 @@ public class EmployeeService
                 var ext = approvedExtensions[i];
                 bool isLast = i == approvedExtensions.Count - 1;
                 DateTime extEnd = cursor.AddMonths(ext.ExtensionDuration);
+                var extEndDate = isLast ? u.ContractEnd : extEnd;
+                var extDaysUntilExpiry = (extEndDate.Date - today).Days;
                 history.Add(new ContractHistoryDto
                 {
                     StartDate = cursor,
-                    // Always use the real end date — last period uses the current ContractEnd
-                    EndDate = isLast ? u.ContractEnd : extEnd,
-                    Role = staffRole,
-                    IsActive = false // will be resolved below
+                    EndDate = extEndDate,
+                    Role = GetRoleAtDate(u, cursor, staffRole),
+                    IsActive = false, // will be resolved below
+                    Duration = FormatDuration(cursor, extEndDate),
+                    ExtendedOn = ext.ProcessedAt ?? ext.CreatedAt,
+                    ExtendedBy = ext.RequestedByUser?.UserName ?? "Admin HR",
+                    DaysUntilExpiry = extDaysUntilExpiry >= 0 ? extDaysUntilExpiry : null
                 });
                 cursor = extEnd;
             }
@@ -452,8 +472,7 @@ public class EmployeeService
 
         // Resolve IsActive based on today's date, not position.
         // A period is active when: startDate <= today AND endDate >= today.
-        var today = DateTime.UtcNow.Date;
-        ContractHistoryDto? activePeriod = history
+        var activePeriod = history
             .Where(h => h.StartDate.Date <= today && (h.EndDate == null || h.EndDate.Value.Date >= today))
             .OrderByDescending(h => h.StartDate)
             .FirstOrDefault();
@@ -472,6 +491,11 @@ public class EmployeeService
         // Sort descending by StartDate (newest first)
         history = history.OrderByDescending(h => h.StartDate).ToList();
 
+        // Set DaysUntilExpiry only on the active entry (others irrelevant)
+        foreach (var h in history)
+        {
+            if (!h.IsActive) h.DaysUntilExpiry = null;
+        }
 
         return new UserDto
         {
@@ -503,8 +527,112 @@ public class EmployeeService
                 IsUnread = !p.IsNotificationRead,
                 SwapReason = p.SwapReason
             }).ToList(),
-            ContractHistory = history
+            ContractHistory = history,
+            RoleHistories = BuildRoleHistories(u, staffRole)
         };
+    }
+
+    private static string GetRoleAtDate(User u, DateTime date, string currentRoleName)
+    {
+        if (u.RoleHistories != null && u.RoleHistories.Any())
+        {
+            var rh = u.RoleHistories
+                .OrderByDescending(h => h.StartDate)
+                .FirstOrDefault(h => h.StartDate.Date <= date.Date && (h.EndDate == null || h.EndDate.Value.Date >= date.Date));
+            if (rh != null) return rh.RoleName;
+            
+            var earliest = u.RoleHistories.OrderBy(h => h.StartDate).FirstOrDefault();
+            if (earliest != null && date.Date < earliest.StartDate.Date)
+                return earliest.RoleName;
+        }
+        return currentRoleName;
+    }
+
+    /// <summary>
+    /// Builds the role history list for a user.
+    /// Uses EmployeeRoleHistory records if present (tracked changes),
+    /// otherwise falls back to a single current-role entry from UserStaffRole.
+    /// </summary>
+    private static List<RoleHistoryDto> BuildRoleHistories(User u, string currentRoleName)
+    {
+        if (u.RoleHistories != null && u.RoleHistories.Any())
+        {
+            return u.RoleHistories
+                .OrderByDescending(rh => rh.StartDate)
+                .Select(rh => new RoleHistoryDto
+                {
+                    RoleName = rh.RoleName,
+                    StartDate = rh.StartDate,
+                    EndDate = rh.EndDate,
+                    IsCurrentRole = rh.IsCurrentRole,
+                    Duration = rh.EndDate.HasValue
+                        ? FormatDuration(rh.StartDate, rh.EndDate.Value)
+                        : FormatDuration(rh.StartDate, DateTime.UtcNow)
+                })
+                .ToList();
+        }
+
+        // Fallback: no tracked history yet → return a single entry for the current role
+        if (!string.IsNullOrWhiteSpace(currentRoleName))
+        {
+            return new List<RoleHistoryDto>
+            {
+                new RoleHistoryDto
+                {
+                    RoleName = currentRoleName,
+                    StartDate = u.ContractStart,
+                    EndDate = null,
+                    IsCurrentRole = true,
+                    Duration = FormatDuration(u.ContractStart, DateTime.UtcNow)
+                }
+            };
+        }
+
+        return new List<RoleHistoryDto>();
+
+    }
+
+    /// <summary>
+    /// Retrieves the authenticated user's contract history.
+    /// Returns the full ContractHistory list from MapToUserDto.
+    /// </summary>
+    public async Task<(bool Success, string? Error, int StatusCode, List<ContractHistoryDto>? Data)> GetContractHistoryAsync(string userId)
+    {
+        var user = await _db.Users
+            .AsNoTracking()
+            .Include(u => u.Department)
+            .Include(u => u.UserSkills).ThenInclude(us => us.Skill)
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.UserStaffRoles).ThenInclude(usr => usr.StaffRole)
+            .Include(u => u.UserProjects).ThenInclude(up => up.Project)
+            .Include(u => u.UserExtensions).ThenInclude(e => e.RequestedByUser)
+            .FirstOrDefaultAsync(u => u.UserId == userId);
+
+        if (user is null)
+            return (false, "User not found", 404, null);
+
+        var dto = MapToUserDto(user);
+        return (true, null, 200, dto.ContractHistory);
+    }
+
+    /// <summary>
+    /// Converts a date range into a human-readable duration string.
+    /// Examples: "2 years", "6 months", "2 years, 3 months"
+    /// </summary>
+    private static string FormatDuration(DateTime start, DateTime end)
+    {
+        int years = 0, months = 0;
+        var cursor = start;
+        while (cursor.AddYears(1) <= end) { years++; cursor = cursor.AddYears(1); }
+        while (cursor.AddMonths(1) <= end) { months++; cursor = cursor.AddMonths(1); }
+
+        if (years > 0 && months > 0)
+            return $"{years} year{(years > 1 ? "s" : "")}, {months} month{(months > 1 ? "s" : "")}";
+        if (years > 0)
+            return $"{years} year{(years > 1 ? "s" : "")}";
+        if (months > 0)
+            return $"{months} month{(months > 1 ? "s" : "")}";
+        return "< 1 month";
     }
 
     /// <summary>

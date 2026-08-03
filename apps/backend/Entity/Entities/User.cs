@@ -57,4 +57,7 @@ public class User
 
     [InverseProperty(nameof(ContractExtension.User))]
     public virtual ICollection<ContractExtension> UserExtensions { get; set; } = new List<ContractExtension>();
+
+    [InverseProperty(nameof(EmployeeRoleHistory.User))]
+    public virtual ICollection<EmployeeRoleHistory> RoleHistories { get; set; } = new List<EmployeeRoleHistory>();
 }
