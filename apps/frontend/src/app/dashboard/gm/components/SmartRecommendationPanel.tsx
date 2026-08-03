@@ -1096,8 +1096,8 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
         {data.requiredRoles.length > 0 && (
           <div className="mb-6 flex flex-wrap gap-2">
             <span className="text-[11px] text-[var(--dash-text-faint)] uppercase font-bold tracking-wider self-center mr-2">Required:</span>
-            {data.requiredRoles.map((role) => (
-              <span key={`${role.staffRoleId}-${role.workingType}`} className="px-3 py-1.5 bg-[#1a1f2e] border border-[var(--dash-border)] rounded-lg text-[11px] font-semibold text-gray-300">
+            {data.requiredRoles.map((role, idx) => (
+              <span key={`${role.staffRoleId}-${role.workingType}-${(role as any).phase ?? ''}-${idx}`} className="px-3 py-1.5 bg-[#1a1f2e] border border-[var(--dash-border)] rounded-lg text-[11px] font-semibold text-gray-300">
                 {role.requiredCount}× {role.roleName}
                 <span className="text-[var(--dash-text-faint)] ml-1">({role.workingType})</span>
               </span>

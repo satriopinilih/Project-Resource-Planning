@@ -50,21 +50,72 @@ public class PMProjectService
                 ? userAssignment.StartDate.Value.ToString("yyyy-MM-dd")
                 : p.EstimatedStartDate.ToString("yyyy-MM-dd");
 
+            var barsList = new System.Collections.Generic.List<object>
+            {
+                new
+                {
+                    title = p.ProjectName,
+                    status = (p.ProjectStatus == ProjectStatus.Babysitting || 
+                              p.ProjectStatus == ProjectStatus.Warranty || 
+                              p.ProjectStatus == ProjectStatus.Completed || 
+                              isPmSwappedOut) 
+                                ? "Completed" 
+                                : p.ProjectStatus.ToString(),
+                    startDate = startDateStr,
+                    endDate = endDateStr,
+                    projectStatus = p.ProjectStatus.ToString()
+                }
+            };
+
+            if (p.BabysittingDuration > 0 && p.BabysittingStartDate.HasValue && p.BabysittingEndDate.HasValue)
+            {
+                string babysittingStatus = "Scheduled";
+                if (p.ProjectStatus == ProjectStatus.Babysitting)
+                {
+                    babysittingStatus = "Running";
+                }
+                else if (p.ProjectStatus == ProjectStatus.Warranty || p.ProjectStatus == ProjectStatus.Completed || isPmSwappedOut)
+                {
+                    babysittingStatus = "Completed";
+                }
+
+                barsList.Add(new
+                {
+                    title = p.ProjectName + " (Babysitting)",
+                    status = babysittingStatus,
+                    startDate = p.BabysittingStartDate.Value.ToString("yyyy-MM-dd"),
+                    endDate = p.BabysittingEndDate.Value.ToString("yyyy-MM-dd"),
+                    projectStatus = p.ProjectStatus.ToString()
+                });
+            }
+
+            if (p.WarrantyDuration > 0 && p.WarrantyStartDate.HasValue && p.WarrantyEndDate.HasValue)
+            {
+                string warrantyStatus = "Scheduled";
+                if (p.ProjectStatus == ProjectStatus.Warranty)
+                {
+                    warrantyStatus = "Running";
+                }
+                else if (p.ProjectStatus == ProjectStatus.Completed || isPmSwappedOut)
+                {
+                    warrantyStatus = "Completed";
+                }
+
+                barsList.Add(new
+                {
+                    title = p.ProjectName + " (Warranty)",
+                    status = warrantyStatus,
+                    startDate = p.WarrantyStartDate.Value.ToString("yyyy-MM-dd"),
+                    endDate = p.WarrantyEndDate.Value.ToString("yyyy-MM-dd"),
+                    projectStatus = p.ProjectStatus.ToString()
+                });
+            }
+
             return new
             {
                 label = p.ProjectName,
                 subLabel = p.ClientOrganization,
-                bars = new[]
-                {
-                    new
-                    {
-                        title = p.ProjectName,
-                        status = statusStr,
-                        startDate = startDateStr,
-                        endDate = endDateStr,
-                        projectStatus = p.ProjectStatus.ToString()
-                    }
-                }
+                bars = barsList.ToArray()
             };
         }).ToList();
     }
@@ -155,6 +206,8 @@ public class PMProjectService
         var scheduled = 0;
         var running = 0;
         var completed = 0;
+        var babysitting = 0;
+        var warranty = 0;
 
         foreach (var p in projects)
         {
@@ -170,8 +223,10 @@ public class PMProjectService
             else if (effectiveStatus == ProjectStatus.Scheduled) scheduled++;
             else if (effectiveStatus == ProjectStatus.Running) running++;
             else if (effectiveStatus == ProjectStatus.Completed) completed++;
+            else if (effectiveStatus == ProjectStatus.Babysitting) babysitting++;
+            else if (effectiveStatus == ProjectStatus.Warranty) warranty++;
         }
 
-        return new { total, pending, onHold, scheduled, running, completed };
+        return new { total, pending, onHold, scheduled, running, completed, babysitting, warranty };
     }
 }

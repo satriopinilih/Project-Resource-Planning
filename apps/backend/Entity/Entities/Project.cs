@@ -25,6 +25,15 @@ public class Project
     public DateTime EstimatedStartDate { get; set; }
     public DateTime EstimatedEndDate { get; set; }
 
+    public int BabysittingDuration { get; set; }   // In weeks
+    public int WarrantyDuration { get; set; }      // In weeks
+
+    public DateTime? BabysittingStartDate { get; set; }
+    public DateTime? BabysittingEndDate { get; set; }
+
+    public DateTime? WarrantyStartDate { get; set; }
+    public DateTime? WarrantyEndDate { get; set; }
+
     public ProjectStatus ProjectStatus { get; set; }
     public ProjectStatus? PreviousProjectStatus { get; set; }
 

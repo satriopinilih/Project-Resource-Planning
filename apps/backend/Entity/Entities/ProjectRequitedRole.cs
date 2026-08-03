@@ -19,6 +19,9 @@ public class ProjectRequiredRole
 
     public WorkingType WorkingType { get; set; }
 
+    [StringLength(50)]
+    public string Phase { get; set; } = "Main";
+
     [NotMapped]
     public string RequiredSkill { get; set; } = string.Empty;
 

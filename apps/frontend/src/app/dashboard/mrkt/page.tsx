@@ -31,6 +31,15 @@ import {
 import { declineHireRequest, fulfillHireRequest } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
+// Returns the next calendar day as a yyyy-MM-dd string
+const nextDay = (dateStr: string): string => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+};
+
 export default function MarketingDashboard() {
   const router = useRouter();
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -51,6 +60,11 @@ export default function MarketingDashboard() {
   const [selectedReq, setSelectedReq] = useState<HireRequest | null>(null);
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
+  const [editBabysittingEndDate, setEditBabysittingEndDate] = useState("");
+  const [editWarrantyEndDate, setEditWarrantyEndDate] = useState("");
+  // Internal start dates — auto-recalculated, not shown in UI but sent to backend
+  const [editBabysittingStartDate, setEditBabysittingStartDate] = useState("");
+  const [editWarrantyStartDate, setEditWarrantyStartDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Delete Confirmation Modal States
@@ -105,11 +119,30 @@ export default function MarketingDashboard() {
     }
   };
 
-  const openReviewModal = (req: HireRequest) => {
+  const openReviewModal = async (req: HireRequest) => {
     setSelectedReq(req);
     // Take the requested timeline from the GM request
     setEditStartDate(req.startDate.split('T')[0]);
     setEditEndDate(req.endDate.split('T')[0]);
+    // Pre-fill babysitting/warranty from the actual project if it has them
+    if (req.projectId) {
+      try {
+        const proj = await getProjectById(req.projectId.toString());
+        const bsEnd = (proj as any).babysittingEndDate ? (proj as any).babysittingEndDate.split('T')[0] : "";
+        const wrEnd = (proj as any).warrantyEndDate ? (proj as any).warrantyEndDate.split('T')[0] : "";
+        const bsStart = (proj as any).babysittingStartDate ? (proj as any).babysittingStartDate.split('T')[0] : "";
+        const wrStart = (proj as any).warrantyStartDate ? (proj as any).warrantyStartDate.split('T')[0] : "";
+        setEditBabysittingEndDate(bsEnd);
+        setEditWarrantyEndDate(wrEnd);
+        setEditBabysittingStartDate(bsStart);
+        setEditWarrantyStartDate(wrStart);
+      } catch {
+        setEditBabysittingEndDate("");
+        setEditWarrantyEndDate("");
+        setEditBabysittingStartDate("");
+        setEditWarrantyStartDate("");
+      }
+    }
     setReviewModalOpen(true);
   };
 
@@ -121,7 +154,7 @@ export default function MarketingDashboard() {
       const currentProject = await getProjectById(selectedReq.projectId.toString());
 
       // 2. Prepare full payload (Matching Backend DTO exactly)
-      const fullPayload = {
+      const fullPayload: any = {
         projectName: currentProject.projectName,
         clientOrganization: currentProject.clientOrganization,
         projectDescription: currentProject.projectDescription,
@@ -138,10 +171,28 @@ export default function MarketingDashboard() {
         requiredSkillIds: currentProject.requiredSkillIds || []
       };
 
-      // 3. Update Project
+      // 3. Include babysitting/warranty dates if project has them.
+      //    Recalculate start dates to always be the next day after the preceding phase end
+      //    so the backend validation (bsStart > projectEnd, wrStart > bsEnd) always passes.
+      if (editBabysittingEndDate) {
+        fullPayload.babysittingEndDate = new Date(editBabysittingEndDate).toISOString();
+        // Babysitting must START strictly after the project end date
+        const computedBsStart = nextDay(editEndDate);
+        fullPayload.babysittingStartDate = new Date(computedBsStart).toISOString();
+      }
+      if (editWarrantyEndDate) {
+        fullPayload.warrantyEndDate = new Date(editWarrantyEndDate).toISOString();
+        // Warranty must START strictly after the babysitting end date (or project end if no babysitting)
+        const computedWrStart = editBabysittingEndDate
+          ? nextDay(editBabysittingEndDate)
+          : nextDay(editEndDate);
+        fullPayload.warrantyStartDate = new Date(computedWrStart).toISOString();
+      }
+
+      // 4. Update Project
       await updateProject(selectedReq.projectId, fullPayload);
 
-      // 4. Fulfill the Hire Request (Timeline Edit Req)
+      // 5. Fulfill the Hire Request (Timeline Edit Req)
       await fulfillHireRequest(selectedReq.hireRequestId, 'Timeline Updated by Marketing');
 
       setReviewModalOpen(false);
@@ -471,7 +522,7 @@ export default function MarketingDashboard() {
       {/* Review Timeline Modal */}
       {reviewModalOpen && selectedReq && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setReviewModalOpen(false)}>
-          <div className="bg-white dark:bg-[#1c1c1f] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-gray-900 dark:text-white" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-[#1c1c1f] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-gray-900 dark:text-white max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-white/10">
               <h3 className="text-[17px] font-bold">Review Timeline Change</h3>
               <button onClick={() => setReviewModalOpen(false)} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer">
@@ -486,7 +537,8 @@ export default function MarketingDashboard() {
                 <p className="text-[13px] text-gray-500 italic mt-2">"{selectedReq.notes.replace("[TIMELINE EDIT REQUEST] ", "")}"</p>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
+              {/* ── Main project dates ── */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Requested Start Date</label>
                   <div className="relative">
@@ -508,11 +560,52 @@ export default function MarketingDashboard() {
                       type="date"
                       value={editEndDate}
                       onChange={(e) => setEditEndDate(e.target.value)}
+                      min={editStartDate || undefined}
                       className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-[#242427] border border-gray-200 dark:border-white/10 rounded-xl text-[13px] outline-none focus:border-blue-500/50 transition-colors"
                     />
                   </div>
                 </div>
               </div>
+
+              {/* ── Babysitting end date (only shown if pre-filled from project) ── */}
+              {(editBabysittingEndDate !== undefined) && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">
+                    Babysitting End Date
+                    <span className="ml-1 text-[10px] text-gray-400 font-normal normal-case">(optional — must be after project end)</span>
+                  </label>
+                  <div className="relative">
+                    <CalendarIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400" />
+                    <input
+                      type="date"
+                      value={editBabysittingEndDate}
+                      onChange={(e) => setEditBabysittingEndDate(e.target.value)}
+                      min={nextDay(editEndDate) || undefined}
+                      className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-[#1e2230] border border-indigo-200 dark:border-indigo-900/50 rounded-xl text-[13px] outline-none focus:border-indigo-500/50 transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Warranty end date (only shown if pre-filled from project) ── */}
+              {(editWarrantyEndDate !== undefined) && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-blue-400 uppercase tracking-wider">
+                    Warranty End Date
+                    <span className="ml-1 text-[10px] text-gray-400 font-normal normal-case">(optional — must be after babysitting end)</span>
+                  </label>
+                  <div className="relative">
+                    <CalendarIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
+                    <input
+                      type="date"
+                      value={editWarrantyEndDate}
+                      onChange={(e) => setEditWarrantyEndDate(e.target.value)}
+                      min={nextDay(editBabysittingEndDate || editEndDate) || undefined}
+                      className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-[#1e2230] border border-blue-200 dark:border-blue-900/50 rounded-xl text-[13px] outline-none focus:border-blue-500/50 transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="px-6 py-5 border-t border-gray-200 dark:border-white/10 flex justify-end gap-3 bg-gray-50 dark:bg-white/[0.02]">

@@ -11,7 +11,7 @@ interface Project {
   id: string;
   name: string;
   client: string;
-  status: "Running" | "Scheduled" | "Completed" | "On Hold" | "Completed (Replaced)";
+  status: "Running" | "Scheduled" | "Completed" | "On Hold" | "Completed (Replaced)" | "Babysitting" | "Warranty";
   timeline: string;
   startDateRaw: string;
   pm: string;
@@ -25,6 +25,9 @@ const mapStatus = (backendStatus: number): Project["status"] => {
     case 1: return "Scheduled";
     case 2: return "Running";
     case 3: return "Completed";
+    case 5: return "On Hold";
+    case 6: return "Babysitting";
+    case 7: return "Warranty";
     default: return "On Hold";
   }
 };
@@ -36,7 +39,7 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-const tabs = ["All", "Running", "Scheduled", "Completed"];
+const tabs = ["All", "Running", "Scheduled", "Babysitting", "Warranty", "Completed"];
 
 function PMProjectsContent() {
   const router = useRouter();
@@ -322,11 +325,15 @@ function PMProjectsContent() {
                               ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                               : project.status === "Running"
                                 ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                : project.status === "Completed" || project.status === "Completed (Replaced)"
-                                  ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                  : project.status === "On Hold"
-                                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                                    : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
+                                : project.status === "Babysitting"
+                                  ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                  : project.status === "Warranty"
+                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                    : project.status === "Completed" || project.status === "Completed (Replaced)"
+                                      ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                                      : project.status === "On Hold"
+                                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                        : "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                           }`}
                         >
                           {project.status}

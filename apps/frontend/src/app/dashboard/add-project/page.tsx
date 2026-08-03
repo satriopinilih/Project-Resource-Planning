@@ -62,12 +62,24 @@ export default function AddProjectPage() {
   const [newHolidayDate, setNewHolidayDate] = useState("");
 
   const [durationWeeks, setDurationWeeks] = useState<number>(1);
+  const [babysittingWeeks, setBabysittingWeeks] = useState<number>(0);
+  const [warrantyWeeks, setWarrantyWeeks] = useState<number>(0);
   const [startDate, setStartDate] = useState<string>("");
   const [endDateDetails, setEndDateDetails] = useState<{
     date: Date | null;
     skippedHolidays: BackendHoliday[];
     totalWorkingDays: number;
   }>({ date: null, skippedHolidays: [], totalWorkingDays: 0 });
+
+  const [babysittingDetails, setBabysittingDetails] = useState<{
+    startDate: string;
+    endDate: string;
+  }>({ startDate: "", endDate: "" });
+
+  const [warrantyDetails, setWarrantyDetails] = useState<{
+    startDate: string;
+    endDate: string;
+  }>({ startDate: "", endDate: "" });
 
   const handleAddCustomHoliday = () => {
     if (!newHolidayName.trim()) {
@@ -130,6 +142,12 @@ export default function AddProjectPage() {
   const [teamRoles, setTeamRoles] = useState([
     { id: '1', role: 'PM', count: 1, workingType: 'Dedicated' }
   ]);
+
+  const [customBabysittingStartDate, setCustomBabysittingStartDate] = useState<string>("");
+  const [customWarrantyStartDate, setCustomWarrantyStartDate] = useState<string>("");
+  const [activePostPhaseTab, setActivePostPhaseTab] = useState<'Babysitting' | 'Warranty'>('Babysitting');
+  const [babysittingRoles, setBabysittingRoles] = useState<{ id: string; role: string; count: number; workingType: string }[]>([]);
+  const [warrantyRoles, setWarrantyRoles] = useState<{ id: string; role: string; count: number; workingType: string }[]>([]);
 
   // --- Initial data fetch ---
   useEffect(() => {
@@ -240,6 +258,54 @@ export default function AddProjectPage() {
     setTeamRoles(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
+  const handleAddBabysittingRole = (workingType: 'Dedicated' | 'Non-Dedicated' = 'Dedicated') => {
+    const sourceRoles = allowedStaffRoles.length > 0
+      ? allowedStaffRoles.map(r => r.name)
+      : TECHNICAL_ROLES;
+    const addedRoles = babysittingRoles.map(r => r.role);
+    const available = sourceRoles.filter(r => !addedRoles.includes(r));
+    if (available.length === 0) return;
+
+    setBabysittingRoles(prev => [...prev, {
+      id: Math.random().toString(36).substring(2, 9),
+      role: available[0],
+      count: 1,
+      workingType
+    }]);
+  };
+
+  const handleRemoveBabysittingRole = (idToRemove: string) => {
+    setBabysittingRoles(prev => prev.filter(r => r.id !== idToRemove));
+  };
+
+  const updateBabysittingRole = (id: string, field: string, value: any) => {
+    setBabysittingRoles(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  const handleAddWarrantyRole = (workingType: 'Dedicated' | 'Non-Dedicated' = 'Dedicated') => {
+    const sourceRoles = allowedStaffRoles.length > 0
+      ? allowedStaffRoles.map(r => r.name)
+      : TECHNICAL_ROLES;
+    const addedRoles = warrantyRoles.map(r => r.role);
+    const available = sourceRoles.filter(r => !addedRoles.includes(r));
+    if (available.length === 0) return;
+
+    setWarrantyRoles(prev => [...prev, {
+      id: Math.random().toString(36).substring(2, 9),
+      role: available[0],
+      count: 1,
+      workingType
+    }]);
+  };
+
+  const handleRemoveWarrantyRole = (idToRemove: string) => {
+    setWarrantyRoles(prev => prev.filter(r => r.id !== idToRemove));
+  };
+
+  const updateWarrantyRole = (id: string, field: string, value: any) => {
+    setWarrantyRoles(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
   const missingRoles = useMemo(() => {
     const roles = teamRoles.map(r => r.role.toLowerCase());
     const hasPM = roles.some(r => r.includes("pm"));
@@ -296,6 +362,124 @@ export default function AddProjectPage() {
 
   }, [startDate, durationWeeks, holidays, customHolidays]);
 
+  // Helper to calculate end date based on custom start date and duration weeks
+  const calculateEndDate = useCallback((startDateVal: string, weeks: number) => {
+    if (!startDateVal || weeks <= 0) return null;
+    let current = new Date(startDateVal);
+    if (isNaN(current.getTime())) return null;
+
+    const totalTargetDays = weeks * 5;
+    let workingDaysCount = 0;
+
+    // Check if start date is a weekend or holiday, and skip to next working date if so
+    while (true) {
+      const dayOfWeek = current.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const dateString = current.toISOString().split('T')[0];
+      const holidayFound = holidays.some(h => isDateHoliday(h, dateString)) || customHolidays.some(h => isDateHoliday(h, dateString));
+      if (!isWeekend && !holidayFound) {
+        break;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    const adjustedStartDate = new Date(current);
+    workingDaysCount = 1; // adjustedStartDate is now working day 1
+
+    while (workingDaysCount < totalTargetDays) {
+      current.setDate(current.getDate() + 1);
+      const dayOfWeek = current.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const dateString = current.toISOString().split('T')[0];
+      const holidayFound = holidays.some(h => isDateHoliday(h, dateString)) || customHolidays.some(h => isDateHoliday(h, dateString));
+
+      if (!isWeekend && !holidayFound) {
+        workingDaysCount++;
+      }
+    }
+
+    return {
+      startDate: adjustedStartDate,
+      endDate: new Date(current)
+    };
+  }, [holidays, customHolidays]);
+
+  // Hook to set default Babysitting Start Date when main project end date changes
+  useEffect(() => {
+    if (endDateDetails.date) {
+      let current = new Date(endDateDetails.date);
+      current.setDate(current.getDate() + 1);
+      while (true) {
+        const dayOfWeek = current.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const dateString = current.toISOString().split('T')[0];
+        const holidayFound = holidays.some(h => isDateHoliday(h, dateString)) || customHolidays.some(h => isDateHoliday(h, dateString));
+        if (!isWeekend && !holidayFound) {
+          break;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      setCustomBabysittingStartDate(current.toISOString().split('T')[0]);
+    } else {
+      setCustomBabysittingStartDate("");
+    }
+  }, [endDateDetails.date, holidays, customHolidays]);
+
+  // Hook to set default Warranty Start Date when babysitting end date changes
+  useEffect(() => {
+    if (babysittingDetails.endDate) {
+      let current = new Date(babysittingDetails.endDate);
+      current.setDate(current.getDate() + 1);
+      while (true) {
+        const dayOfWeek = current.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const dateString = current.toISOString().split('T')[0];
+        const holidayFound = holidays.some(h => isDateHoliday(h, dateString)) || customHolidays.some(h => isDateHoliday(h, dateString));
+        if (!isWeekend && !holidayFound) {
+          break;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      setCustomWarrantyStartDate(current.toISOString().split('T')[0]);
+    } else {
+      setCustomWarrantyStartDate("");
+    }
+  }, [babysittingDetails.endDate, holidays, customHolidays]);
+
+  // Hook to calculate Babysitting End Date
+  useEffect(() => {
+    if (customBabysittingStartDate && babysittingWeeks > 0) {
+      const res = calculateEndDate(customBabysittingStartDate, babysittingWeeks);
+      if (res) {
+        setBabysittingDetails({
+          startDate: res.startDate.toISOString().split('T')[0],
+          endDate: res.endDate.toISOString().split('T')[0]
+        });
+      } else {
+        setBabysittingDetails({ startDate: "", endDate: "" });
+      }
+    } else {
+      setBabysittingDetails({ startDate: "", endDate: "" });
+    }
+  }, [customBabysittingStartDate, babysittingWeeks, calculateEndDate]);
+
+  // Hook to calculate Warranty End Date
+  useEffect(() => {
+    if (customWarrantyStartDate && warrantyWeeks > 0) {
+      const res = calculateEndDate(customWarrantyStartDate, warrantyWeeks);
+      if (res) {
+        setWarrantyDetails({
+          startDate: res.startDate.toISOString().split('T')[0],
+          endDate: res.endDate.toISOString().split('T')[0]
+        });
+      } else {
+        setWarrantyDetails({ startDate: "", endDate: "" });
+      }
+    } else {
+      setWarrantyDetails({ startDate: "", endDate: "" });
+    }
+  }, [customWarrantyStartDate, warrantyWeeks, calculateEndDate]);
+
   const handleFormSubmitRequest = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -319,17 +503,79 @@ export default function AddProjectPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    const techRoleNames = teamRoles.filter(r => r.role !== 'PM').map(r => r.role);
-    const uniqueRoles = new Set(techRoleNames);
-    if (uniqueRoles.size !== techRoleNames.length) {
-      setError("Duplicate technical roles detected. Each role must be unique.");
+    // Validate main roles
+    const mainTechRoles = teamRoles.filter(r => r.role !== 'PM').map(r => r.role);
+    if (new Set(mainTechRoles).size !== mainTechRoles.length) {
+      setError("Duplicate technical roles detected in Main phase. Each role must be unique.");
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (techRoleNames.length > MAX_TECHNICAL_ROLES) {
-      setError(`Maximum ${MAX_TECHNICAL_ROLES} technical roles allowed (excluding PM).`);
+    if (mainTechRoles.length > MAX_TECHNICAL_ROLES) {
+      setError(`Maximum ${MAX_TECHNICAL_ROLES} technical roles allowed in Main phase.`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
+    }
+
+    // Validate babysitting roles
+    const babysittingTechRoles = babysittingRoles.filter(r => r.role !== 'PM').map(r => r.role);
+    if (new Set(babysittingTechRoles).size !== babysittingTechRoles.length) {
+      setError("Duplicate technical roles detected in Babysitting phase. Each role must be unique.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (babysittingTechRoles.length > MAX_TECHNICAL_ROLES) {
+      setError(`Maximum ${MAX_TECHNICAL_ROLES} technical roles allowed in Babysitting phase.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Validate warranty roles
+    const warrantyTechRoles = warrantyRoles.filter(r => r.role !== 'PM').map(r => r.role);
+    if (new Set(warrantyTechRoles).size !== warrantyTechRoles.length) {
+      setError("Duplicate technical roles detected in Warranty phase. Each role must be unique.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (warrantyTechRoles.length > MAX_TECHNICAL_ROLES) {
+      setError(`Maximum ${MAX_TECHNICAL_ROLES} technical roles allowed in Warranty phase.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Validate phase date sequences to avoid overlaps
+    if (babysittingWeeks > 0 && customBabysittingStartDate && endDateDetails.date) {
+      const bsStart = new Date(customBabysittingStartDate);
+      const projEnd = new Date(endDateDetails.date);
+      projEnd.setHours(0, 0, 0, 0);
+      bsStart.setHours(0, 0, 0, 0);
+      if (bsStart <= projEnd) {
+        setError(`Babysitting Start Date (${bsStart.toLocaleDateString()}) must be after the Project End Date (${projEnd.toLocaleDateString()}).`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    if (warrantyWeeks > 0 && customWarrantyStartDate) {
+      const wrStart = new Date(customWarrantyStartDate);
+      wrStart.setHours(0, 0, 0, 0);
+
+      if (babysittingWeeks > 0 && babysittingDetails.endDate) {
+        const bsEnd = new Date(babysittingDetails.endDate);
+        bsEnd.setHours(0, 0, 0, 0);
+        if (wrStart <= bsEnd) {
+          setError(`Warranty Start Date (${wrStart.toLocaleDateString()}) must be after the Babysitting End Date (${bsEnd.toLocaleDateString()}).`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+      } else if (endDateDetails.date) {
+        const projEnd = new Date(endDateDetails.date);
+        projEnd.setHours(0, 0, 0, 0);
+        if (wrStart <= projEnd) {
+          setError(`Warranty Start Date (${wrStart.toLocaleDateString()}) must be after the Project End Date (${projEnd.toLocaleDateString()}).`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+      }
     }
 
     setError(null);
@@ -353,19 +599,48 @@ export default function AddProjectPage() {
       finalDescription += `\n\n[Custom Project Holidays]\n${customHolidayList}`;
     }
 
+    let finalNotes = additionalNotes;
+    const phaseNotes = `Babysitting Duration: ${babysittingWeeks} Weeks, Warranty Duration: ${warrantyWeeks} Weeks`;
+    if (finalNotes.trim()) {
+      finalNotes = `${finalNotes.trim()}\n${phaseNotes}`;
+    } else {
+      finalNotes = phaseNotes;
+    }
+
     const payload = {
       projectName,
       clientOrganization,
-      projectDescription: finalDescription + (additionalNotes ? "\n\nNotes: " + additionalNotes : ""),
+      projectDescription: finalDescription + (finalNotes ? "\n\nNotes: " + finalNotes : ""),
       estimatedDuration: durationWeeks,
       priorityLevel: priorityMap[priorityLevel] ?? 1,
       estimatedStartDate: new Date(startDate).toISOString(),
       estimatedEndDate: endDateDetails.date.toISOString(),
-      requiredRoles: teamRoles.map(r => ({
-        roleName: r.role,
-        count: r.count,
-        workingType: workingTypeMap[r.workingType] ?? 1
-      })),
+      babysittingDuration: babysittingWeeks,
+      warrantyDuration: warrantyWeeks,
+      babysittingStartDate: babysittingDetails.startDate ? new Date(babysittingDetails.startDate).toISOString() : null,
+      babysittingEndDate: babysittingDetails.endDate ? new Date(babysittingDetails.endDate).toISOString() : null,
+      warrantyStartDate: warrantyDetails.startDate ? new Date(warrantyDetails.startDate).toISOString() : null,
+      warrantyEndDate: warrantyDetails.endDate ? new Date(warrantyDetails.endDate).toISOString() : null,
+      requiredRoles: [
+        ...teamRoles.map(r => ({
+          roleName: r.role,
+          count: r.count,
+          workingType: workingTypeMap[r.workingType] ?? 1,
+          phase: "Main"
+        })),
+        ...babysittingRoles.map(r => ({
+          roleName: r.role,
+          count: r.count,
+          workingType: workingTypeMap[r.workingType] ?? 1,
+          phase: "Babysitting"
+        })),
+        ...warrantyRoles.map(r => ({
+          roleName: r.role,
+          count: r.count,
+          workingType: workingTypeMap[r.workingType] ?? 1,
+          phase: "Warranty"
+        }))
+      ],
       requiredSkillIds: selectedSkillIds
     };
 
@@ -573,6 +848,7 @@ export default function AddProjectPage() {
               </div>
             </div>
 
+
             {/* Client holiday info panel */}
             {selectedClient && (
               <div className="bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl p-4 flex items-start gap-3 transition-all duration-300">
@@ -701,6 +977,38 @@ export default function AddProjectPage() {
                           {h.name}
                         </span>
                       ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(babysittingDetails.startDate || warrantyDetails.startDate) && (
+              <div className="bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl p-5 space-y-4 transition-all duration-300">
+                {babysittingDetails.startDate && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 dark:bg-indigo-500/10 rounded-lg">
+                      <CalendarIcon className="text-indigo-600 dark:text-indigo-400" size={20} />
+                    </div>
+                    <div>
+                      <div className="text-[13px] text-gray-500 dark:text-gray-400">Calculated Babysitting Period</div>
+                      <div className="text-[15px] font-bold text-gray-900 dark:text-white">
+                        {new Date(babysittingDetails.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} — {new Date(babysittingDetails.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {warrantyDetails.startDate && (
+                  <div className="flex items-center gap-3 pt-4 border-t border-indigo-105 dark:border-indigo-500/10">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-500/10 rounded-lg">
+                      <CalendarIcon className="text-purple-600 dark:text-purple-400" size={20} />
+                    </div>
+                    <div>
+                      <div className="text-[13px] text-gray-500 dark:text-gray-400">Calculated Warranty Period</div>
+                      <div className="text-[15px] font-bold text-gray-900 dark:text-white">
+                        {new Date(warrantyDetails.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} — {new Date(warrantyDetails.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -979,6 +1287,301 @@ export default function AddProjectPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Post-Execution Phases Config Card */}
+            <div className={`rounded-2xl p-6 space-y-6 pt-4 mt-6 transition-colors duration-300 ${
+              activePostPhaseTab === 'Babysitting'
+                ? 'bg-indigo-50/40 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-500/20'
+                : 'bg-blue-50/40 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/20'
+            }`}>
+              <div className="flex justify-between items-center border-b border-gray-100 dark:border-white/5 pb-4">
+                <div>
+                  <h3 className="text-[15px] font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Sparkles className="text-indigo-500 shrink-0" size={18} />
+                    Post-Execution Setup
+                  </h3>
+                  <p className="text-[12px] text-gray-500 dark:text-gray-400">
+                    Configure dates and team roles for post-execution phases.
+                  </p>
+                </div>
+
+                {/* Tab Switcher */}
+                <div className="flex bg-gray-100 dark:bg-[#151922] p-1 rounded-xl gap-1 border border-gray-200 dark:border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setActivePostPhaseTab('Babysitting')}
+                    className={`px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${
+                      activePostPhaseTab === 'Babysitting'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'
+                    }`}
+                  >
+                    Babysitting
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePostPhaseTab('Warranty')}
+                    className={`px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${
+                      activePostPhaseTab === 'Warranty'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'
+                    }`}
+                  >
+                    Warranty
+                  </button>
+                </div>
+              </div>
+
+              {activePostPhaseTab === 'Babysitting' ? (
+                <div className="space-y-4">
+                  {/* Timeline block */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className={labelClasses}>Babysitting Duration (Weeks)</label>
+                      <input
+                        type="number"
+                        value={babysittingWeeks}
+                        onChange={(e) => setBabysittingWeeks(parseInt(e.target.value) || 0)}
+                        className={inputClasses}
+                        min={0}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Start Date</label>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          value={customBabysittingStartDate}
+                          onChange={(e) => setCustomBabysittingStartDate(e.target.value)}
+                          className={`${inputClasses} [&::-webkit-calendar-picker-indicator]:opacity-0`}
+                          disabled={babysittingWeeks <= 0}
+                          min={endDateDetails.date ? (() => {
+                            const nextDay = new Date(endDateDetails.date);
+                            nextDay.setDate(nextDay.getDate() + 1);
+                            return nextDay.toISOString().split('T')[0];
+                          })() : ""}
+                        />
+                        <CalendarIcon size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Calculated End Date</label>
+                      <input
+                        type="text"
+                        value={babysittingDetails.endDate ? new Date(babysittingDetails.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "N/A"}
+                        className={`${inputClasses} bg-gray-50 dark:bg-[#171b26] cursor-not-allowed`}
+                        disabled
+                      />
+                    </div>
+                  </div>
+
+                  {/* Babysitting Roles Builder */}
+                  {babysittingWeeks > 0 && (
+                    <div className="space-y-4 pt-2">
+                      <div className="flex justify-between items-center gap-4">
+                        <label className="text-[13px] font-bold text-gray-900 dark:text-white">
+                          Babysitting Roles
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAddBabysittingRole('Non-Dedicated')}
+                            className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-violet-200 dark:border-violet-500/20 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all"
+                          >
+                            <Plus size={13} /> Non-Dedicated
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAddBabysittingRole('Dedicated')}
+                            className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+                          >
+                            <Plus size={13} /> Add Role
+                          </button>
+                        </div>
+                      </div>
+
+                      {babysittingRoles.length === 0 ? (
+                        <p className="text-[12px] text-gray-500 dark:text-gray-400 italic">No roles configured for Babysitting yet.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {babysittingRoles.map((roleItem) => (
+                            <div key={roleItem.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-gray-800/10">
+                              <div className="md:col-span-5">
+                                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Role</label>
+                                <select
+                                  className={inputClasses}
+                                  value={roleItem.role}
+                                  onChange={(e) => updateBabysittingRole(roleItem.id, 'role', e.target.value)}
+                                >
+                                  {(allowedStaffRoles.length > 0 ? allowedStaffRoles.map(r => r.name) : ALLOWED_STAFF_ROLES)
+                                    .map(role => <option key={role} value={role}>{role}</option>)}
+                                </select>
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1 text-center">Count</label>
+                                <input
+                                  type="number"
+                                  value={roleItem.count}
+                                  onChange={(e) => updateBabysittingRole(roleItem.id, 'count', parseInt(e.target.value) || 1)}
+                                  min={1}
+                                  className={`${inputClasses} text-center`}
+                                />
+                              </div>
+                              <div className="md:col-span-4">
+                                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Type</label>
+                                <select
+                                  className={inputClasses}
+                                  value={roleItem.workingType}
+                                  onChange={(e) => updateBabysittingRole(roleItem.id, 'workingType', e.target.value)}
+                                >
+                                  {ALLOWED_WORKING_TYPES.map(wt => <option key={wt} value={wt}>{wt}</option>)}
+                                </select>
+                              </div>
+                              <div className="md:col-span-1 flex justify-center pb-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveBabysittingRole(roleItem.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                                  title="Remove role"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Timeline block */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className={labelClasses}>Warranty Duration (Weeks)</label>
+                      <input
+                        type="number"
+                        value={warrantyWeeks}
+                        onChange={(e) => setWarrantyWeeks(parseInt(e.target.value) || 0)}
+                        className={inputClasses}
+                        min={0}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Start Date</label>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          value={customWarrantyStartDate}
+                          onChange={(e) => setCustomWarrantyStartDate(e.target.value)}
+                          className={`${inputClasses} [&::-webkit-calendar-picker-indicator]:opacity-0`}
+                          disabled={warrantyWeeks <= 0}
+                          min={babysittingWeeks > 0 && babysittingDetails.endDate ? (() => {
+                            const nextDay = new Date(babysittingDetails.endDate);
+                            nextDay.setDate(nextDay.getDate() + 1);
+                            return nextDay.toISOString().split('T')[0];
+                          })() : endDateDetails.date ? (() => {
+                            const nextDay = new Date(endDateDetails.date);
+                            nextDay.setDate(nextDay.getDate() + 1);
+                            return nextDay.toISOString().split('T')[0];
+                          })() : ""}
+                        />
+                        <CalendarIcon size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Calculated End Date</label>
+                      <input
+                        type="text"
+                        value={warrantyDetails.endDate ? new Date(warrantyDetails.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "N/A"}
+                        className={`${inputClasses} bg-gray-50 dark:bg-[#171b26] cursor-not-allowed`}
+                        disabled
+                      />
+                    </div>
+                  </div>
+
+                  {/* Warranty Roles Builder */}
+                  {warrantyWeeks > 0 && (
+                    <div className="space-y-4 pt-2">
+                      <div className="flex justify-between items-center gap-4">
+                        <label className="text-[13px] font-bold text-gray-900 dark:text-white">
+                          Warranty Roles
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAddWarrantyRole('Non-Dedicated')}
+                            className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-violet-200 dark:border-violet-500/20 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all"
+                          >
+                            <Plus size={13} /> Non-Dedicated
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAddWarrantyRole('Dedicated')}
+                            className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+                          >
+                            <Plus size={13} /> Add Role
+                          </button>
+                        </div>
+                      </div>
+
+                      {warrantyRoles.length === 0 ? (
+                        <p className="text-[12px] text-gray-500 dark:text-gray-400 italic">No roles configured for Warranty yet.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {warrantyRoles.map((roleItem) => (
+                            <div key={roleItem.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-gray-800/10">
+                              <div className="md:col-span-5">
+                                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Role</label>
+                                <select
+                                  className={inputClasses}
+                                  value={roleItem.role}
+                                  onChange={(e) => updateWarrantyRole(roleItem.id, 'role', e.target.value)}
+                                >
+                                  {(allowedStaffRoles.length > 0 ? allowedStaffRoles.map(r => r.name) : ALLOWED_STAFF_ROLES)
+                                    .map(role => <option key={role} value={role}>{role}</option>)}
+                                </select>
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1 text-center">Count</label>
+                                <input
+                                  type="number"
+                                  value={roleItem.count}
+                                  onChange={(e) => updateWarrantyRole(roleItem.id, 'count', parseInt(e.target.value) || 1)}
+                                  min={1}
+                                  className={`${inputClasses} text-center`}
+                                />
+                              </div>
+                              <div className="md:col-span-4">
+                                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Type</label>
+                                <select
+                                  className={inputClasses}
+                                  value={roleItem.workingType}
+                                  onChange={(e) => updateWarrantyRole(roleItem.id, 'workingType', e.target.value)}
+                                >
+                                  {ALLOWED_WORKING_TYPES.map(wt => <option key={wt} value={wt}>{wt}</option>)}
+                                </select>
+                              </div>
+                              <div className="md:col-span-1 flex justify-center pb-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveWarrantyRole(roleItem.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                                  title="Remove role"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="pt-4">

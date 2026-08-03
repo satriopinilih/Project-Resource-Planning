@@ -90,6 +90,8 @@ export default function ProjectDetailsPage() {
     estimatedStartDate: "",
     estimatedEndDate: "",
     projectStatus: 0,
+    babysittingDuration: 0,
+    warrantyDuration: 0,
     requiredRoles: [] as any[],
     requiredSkillIds: [] as number[],
   });
@@ -107,12 +109,12 @@ export default function ProjectDetailsPage() {
     [formOptions.staffRoles]
   );
 
-  const getAvailableRolesForEditRow = (currentRole: string) => {
+  const getAvailableRolesForEditRow = (currentRole: string, phase: string = "Main") => {
     const allRoles = allowedStaffRoles.length > 0
       ? allowedStaffRoles.map((r) => r.name)
       : ALLOWED_STAFF_ROLES;
     const selectedOtherRoles = editForm.requiredRoles
-      .filter(r => r.role !== currentRole)
+      .filter(r => r.role !== currentRole && (r.phase || "Main").toLowerCase() === phase.toLowerCase())
       .map(r => r.role);
     return allRoles.filter(
       role => !selectedOtherRoles.includes(role)
@@ -170,13 +172,27 @@ export default function ProjectDetailsPage() {
     if (!project) return;
     setEditSubmitting(true);
 
-    // Validate uniqueness of roles
-    const selectedRoles = editForm.requiredRoles.map(r => r.role);
-    const uniqueRoles = new Set(selectedRoles);
-    if (uniqueRoles.size !== selectedRoles.length) {
-      alert("Duplicate roles detected. Each role must be unique.");
-      setEditSubmitting(false);
-      return;
+    // Validate uniqueness of roles per phase
+    const rolesByPhase: Record<string, string[]> = {};
+    for (const r of editForm.requiredRoles) {
+      const phaseKey = (r.phase || "Main").toLowerCase();
+      if (!rolesByPhase[phaseKey]) rolesByPhase[phaseKey] = [];
+      if (rolesByPhase[phaseKey].includes(r.role.toLowerCase())) {
+        alert(`Duplicate role '${r.role}' detected in '${r.phase || "Main"}' phase. Each role must be unique within a phase.`);
+        setEditSubmitting(false);
+        return;
+      }
+      rolesByPhase[phaseKey].push(r.role.toLowerCase());
+    }
+
+    // Validate maximum 5 technical roles per phase
+    for (const phaseKey in rolesByPhase) {
+      const techRolesCount = rolesByPhase[phaseKey].filter(role => role !== "pm").length;
+      if (techRolesCount > 5) {
+        alert(`Maximum 5 technical roles (excluding PM) allowed in '${phaseKey}' phase.`);
+        setEditSubmitting(false);
+        return;
+      }
     }
 
     // Check for weekend / holiday conflicts
@@ -196,14 +212,17 @@ export default function ProjectDetailsPage() {
       estimatedStartDate: editForm.estimatedStartDate ? new Date(editForm.estimatedStartDate).toISOString() : project.estimatedStartDate,
       estimatedEndDate: editForm.estimatedEndDate ? new Date(editForm.estimatedEndDate).toISOString() : project.estimatedEndDate,
       projectStatus: editForm.projectStatus,
+      babysittingDuration: editForm.babysittingDuration,
+      warrantyDuration: editForm.warrantyDuration,
       requiredRoles: editForm.requiredRoles.map(r => {
         const workingTypeMap: Record<string, number> = { "Dedicated": 0, "Non-Dedicated": 1 };
         return {
-          id: typeof r.id === 'string' && r.id.includes('.') ? 0 : Number(r.id),
+          id: isNaN(Number(r.id)) ? 0 : Number(r.id),
           staffRoleId: r.staffRoleId || 0,
           roleName: r.role,
           count: r.count,
-          workingType: workingTypeMap[r.workingType] ?? 1
+          workingType: workingTypeMap[r.workingType] ?? 1,
+          phase: r.phase || "Main"
         };
       }),
       requiredSkillIds: editForm.requiredSkillIds
@@ -326,11 +345,14 @@ export default function ProjectDetailsPage() {
                           estimatedStartDate: project.estimatedStartDate ? project.estimatedStartDate.split('T')[0] : '',
                           estimatedEndDate: project.estimatedEndDate ? project.estimatedEndDate.split('T')[0] : '',
                           projectStatus: project.projectStatus,
+                          babysittingDuration: project.babysittingDuration || 0,
+                          warrantyDuration: project.warrantyDuration || 0,
                           requiredRoles: project.requiredRoles?.map(r => ({
                             id: r.id || Math.random().toString(36).substring(2, 9),
                             role: r.roleName,
                             count: r.requiredCount,
-                            workingType: r.workingType || "Dedicated"
+                            workingType: r.workingType || "Dedicated",
+                            phase: r.phase || "Main"
                           })) || [],
                           requiredSkillIds: project.requiredSkillIds || [],
                         });
@@ -572,6 +594,16 @@ export default function ProjectDetailsPage() {
                     </select>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[12px] text-gray-400 mb-1">Babysitting Period (Weeks)</label>
+                    <input type="number" min={0} value={editForm.babysittingDuration} onChange={(e) => setEditForm({ ...editForm, babysittingDuration: Number(e.target.value) || 0 })} className="w-full px-3 py-2 bg-[#0f0f0f] border border-gray-800 rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] text-gray-400 mb-1">Warranty Period (Weeks)</label>
+                    <input type="number" min={0} value={editForm.warrantyDuration} onChange={(e) => setEditForm({ ...editForm, warrantyDuration: Number(e.target.value) || 0 })} className="w-full px-3 py-2 bg-[#0f0f0f] border border-gray-800 rounded-lg text-[13px] outline-none focus:border-[#3b82f6]/50 transition-colors" />
+                  </div>
+                </div>
                 <div>
                   <label className="block text-[12px] text-gray-400 mb-1">Project Status</label>
                   <select disabled value={editForm.projectStatus} className="w-full px-3 py-2 bg-[#0f0f0f] border border-gray-800 rounded-lg text-[13px] outline-none opacity-50 cursor-not-allowed">
@@ -619,97 +651,313 @@ export default function ProjectDetailsPage() {
 
                 {/* Required Team Roles */}
                 <div className="pt-2 border-t border-gray-800 mt-2">
-                  <div className="flex items-center justify-between mb-4">
-                    <label className="text-[12px] text-gray-400 font-medium">Required Team Roles</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const allRoles = allowedStaffRoles.length > 0
-                          ? allowedStaffRoles.map((r) => r.name)
-                          : ALLOWED_STAFF_ROLES;
-                        const selectedRoles = editForm.requiredRoles.map(r => r.role);
-                        const nextAvailableRole = allRoles.find(r => !selectedRoles.includes(r)) || allRoles[0];
-                        setEditForm({
-                          ...editForm,
-                          requiredRoles: [...editForm.requiredRoles, {
-                            id: Math.random().toString(36).substring(2, 9),
-                            role: nextAvailableRole,
-                            count: 1,
-                            workingType: 'Dedicated'
-                          }]
-                        });
-                      }}
-                      disabled={editForm.requiredRoles.length >= (allowedStaffRoles.length > 0 ? allowedStaffRoles.length : ALLOWED_STAFF_ROLES.length)}
-                      className="flex items-center gap-1 px-2 py-1 bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-md text-[11px] font-bold transition-all"
-                    >
-                      <Plus size={14} /> Add Role
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {editForm.requiredRoles.map((roleItem, index) => (
-                      <div key={roleItem.id} className="p-3 bg-[#0f0f0f] border border-gray-800 rounded-xl space-y-3 relative group">
+                  {/* Roles Editing Section */}
+                  <div>
+                    <h4 className="text-[13px] font-bold text-gray-300 mb-4 uppercase tracking-wider">Required Roles Configuration</h4>
+                    
+                    {/* 1. Main Phase Roles */}
+                    <div className="space-y-4 mb-6">
+                      <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+                        <span className="text-[12px] font-semibold text-gray-300">Main Phase Roles</span>
                         <button
                           type="button"
-                          onClick={() => setEditForm({ ...editForm, requiredRoles: editForm.requiredRoles.filter(r => r.id !== roleItem.id) })}
-                          className="absolute right-3 top-3 p-1 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                          onClick={() => {
+                            const allRoles = allowedStaffRoles.length > 0
+                              ? allowedStaffRoles.map((r) => r.name)
+                              : ALLOWED_STAFF_ROLES;
+                            const mainRoles = editForm.requiredRoles.filter(r => (r.phase || "Main") === "Main");
+                            const selectedRoles = mainRoles.map(r => r.role);
+                            const nextAvailableRole = allRoles.find(r => !selectedRoles.includes(r)) || allRoles[0];
+                            setEditForm({
+                              ...editForm,
+                              requiredRoles: [...editForm.requiredRoles, {
+                                id: Math.random().toString(36).substring(2, 9),
+                                role: nextAvailableRole,
+                                count: 1,
+                                workingType: 'Dedicated',
+                                phase: 'Main'
+                              }]
+                            });
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 rounded-md text-[11px] font-bold transition-all"
                         >
-                          <Trash2 size={14} />
+                          <Plus size={14} /> Add Role
                         </button>
+                      </div>
 
-                        <div className="grid grid-cols-2 gap-3 pr-6">
-                          <div>
-                            <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Role</label>
-                            <select
-                              className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
-                              value={roleItem.role}
-                              onChange={(e) => {
-                                const newRoles = [...editForm.requiredRoles];
-                                newRoles[index].role = e.target.value;
-                                setEditForm({ ...editForm, requiredRoles: newRoles });
-                              }}
-                            >
-                              {getAvailableRolesForEditRow(roleItem.role).map((role) => (
-                                <option key={role} value={role}>{role}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Count</label>
-                            <input
-                              type="number"
-                              className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none text-center"
-                              value={roleItem.count}
-                              onChange={(e) => {
-                                const newRoles = [...editForm.requiredRoles];
-                                newRoles[index].count = parseInt(e.target.value) || 1;
-                                setEditForm({ ...editForm, requiredRoles: newRoles });
-                              }}
-                              min={1}
-                            />
-                          </div>
+                      <div className="space-y-3">
+                        {editForm.requiredRoles.filter(r => (r.phase || "Main") === "Main").map((roleItem) => {
+                          const index = editForm.requiredRoles.findIndex(r => r.id === roleItem.id);
+                          return (
+                            <div key={roleItem.id} className="p-3 bg-[#0f0f0f] border border-gray-800 rounded-xl space-y-3 relative group">
+                              <button
+                                type="button"
+                                onClick={() => setEditForm({ ...editForm, requiredRoles: editForm.requiredRoles.filter(r => r.id !== roleItem.id) })}
+                                className="absolute right-3 top-3 p-1 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+
+                              <div className="grid grid-cols-2 gap-3 pr-6">
+                                <div>
+                                  <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Role</label>
+                                  <select
+                                    className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
+                                    value={roleItem.role}
+                                    onChange={(e) => {
+                                      const newRoles = [...editForm.requiredRoles];
+                                      newRoles[index].role = e.target.value;
+                                      setEditForm({ ...editForm, requiredRoles: newRoles });
+                                    }}
+                                  >
+                                    {getAvailableRolesForEditRow(roleItem.role, "Main").map((role) => (
+                                      <option key={role} value={role}>{role}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Count</label>
+                                  <input
+                                    type="number"
+                                    className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none text-center"
+                                    value={roleItem.count}
+                                    onChange={(e) => {
+                                      const newRoles = [...editForm.requiredRoles];
+                                      newRoles[index].count = parseInt(e.target.value) || 1;
+                                      setEditForm({ ...editForm, requiredRoles: newRoles });
+                                    }}
+                                    min={1}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 pr-6">
+                                <div>
+                                  <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Working Type</label>
+                                  <select
+                                    className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
+                                    value={roleItem.workingType}
+                                    onChange={(e) => {
+                                      const newRoles = [...editForm.requiredRoles];
+                                      newRoles[index].workingType = e.target.value;
+                                      setEditForm({ ...editForm, requiredRoles: newRoles });
+                                    }}
+                                  >
+                                    {ALLOWED_WORKING_TYPES.map((wt) => (
+                                      <option key={wt} value={wt}>{wt}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 2. Babysitting Phase Roles */}
+                    {editForm.babysittingDuration > 0 && (
+                      <div className="space-y-4 mb-6">
+                        <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+                          <span className="text-[12px] font-semibold text-indigo-400">Babysitting Phase Roles</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const allRoles = allowedStaffRoles.length > 0
+                                ? allowedStaffRoles.map((r) => r.name)
+                                : ALLOWED_STAFF_ROLES;
+                              const bsRoles = editForm.requiredRoles.filter(r => r.phase === "Babysitting");
+                              const selectedRoles = bsRoles.map(r => r.role);
+                              const nextAvailableRole = allRoles.find(r => !selectedRoles.includes(r)) || allRoles[0];
+                              setEditForm({
+                                ...editForm,
+                                requiredRoles: [...editForm.requiredRoles, {
+                                  id: Math.random().toString(36).substring(2, 9),
+                                  role: nextAvailableRole,
+                                  count: 1,
+                                  workingType: 'Dedicated',
+                                  phase: 'Babysitting'
+                                }]
+                              });
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-md text-[11px] font-bold transition-all"
+                          >
+                            <Plus size={14} /> Add Role
+                          </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 pr-6">
-                          <div>
-                            <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Working Type</label>
-                            <select
-                              className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
-                              value={roleItem.workingType}
-                              onChange={(e) => {
-                                const newRoles = [...editForm.requiredRoles];
-                                newRoles[index].workingType = e.target.value;
-                                setEditForm({ ...editForm, requiredRoles: newRoles });
-                              }}
-                            >
-                              {ALLOWED_WORKING_TYPES.map((wt) => (
-                                <option key={wt} value={wt}>{wt}</option>
-                              ))}
-                            </select>
-                          </div>
+                        <div className="space-y-3">
+                          {editForm.requiredRoles.filter(r => r.phase === "Babysitting").map((roleItem) => {
+                            const index = editForm.requiredRoles.findIndex(r => r.id === roleItem.id);
+                            return (
+                              <div key={roleItem.id} className="p-3 bg-[#0f0f0f] border border-gray-800 rounded-xl space-y-3 relative group">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditForm({ ...editForm, requiredRoles: editForm.requiredRoles.filter(r => r.id !== roleItem.id) })}
+                                  className="absolute right-3 top-3 p-1 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+
+                                <div className="grid grid-cols-2 gap-3 pr-6">
+                                  <div>
+                                    <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Role</label>
+                                    <select
+                                      className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
+                                      value={roleItem.role}
+                                      onChange={(e) => {
+                                        const newRoles = [...editForm.requiredRoles];
+                                        newRoles[index].role = e.target.value;
+                                        setEditForm({ ...editForm, requiredRoles: newRoles });
+                                      }}
+                                    >
+                                      {getAvailableRolesForEditRow(roleItem.role, "Babysitting").map((role) => (
+                                        <option key={role} value={role}>{role}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Count</label>
+                                    <input
+                                      type="number"
+                                      className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none text-center"
+                                      value={roleItem.count}
+                                      onChange={(e) => {
+                                        const newRoles = [...editForm.requiredRoles];
+                                        newRoles[index].count = parseInt(e.target.value) || 1;
+                                        setEditForm({ ...editForm, requiredRoles: newRoles });
+                                      }}
+                                      min={1}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 pr-6">
+                                  <div>
+                                    <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Working Type</label>
+                                    <select
+                                      className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
+                                      value={roleItem.workingType}
+                                      onChange={(e) => {
+                                        const newRoles = [...editForm.requiredRoles];
+                                        newRoles[index].workingType = e.target.value;
+                                        setEditForm({ ...editForm, requiredRoles: newRoles });
+                                      }}
+                                    >
+                                      {ALLOWED_WORKING_TYPES.map((wt) => (
+                                        <option key={wt} value={wt}>{wt}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
-                    ))}
+                    )}
+
+                    {/* 3. Warranty Phase Roles */}
+                    {editForm.warrantyDuration > 0 && (
+                      <div className="space-y-4 mb-6">
+                        <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+                          <span className="text-[12px] font-semibold text-blue-400">Warranty Phase Roles</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const allRoles = allowedStaffRoles.length > 0
+                                ? allowedStaffRoles.map((r) => r.name)
+                                : ALLOWED_STAFF_ROLES;
+                              const wRoles = editForm.requiredRoles.filter(r => r.phase === "Warranty");
+                              const selectedRoles = wRoles.map(r => r.role);
+                              const nextAvailableRole = allRoles.find(r => !selectedRoles.includes(r)) || allRoles[0];
+                              setEditForm({
+                                ...editForm,
+                                requiredRoles: [...editForm.requiredRoles, {
+                                  id: Math.random().toString(36).substring(2, 9),
+                                  role: nextAvailableRole,
+                                  count: 1,
+                                  workingType: 'Dedicated',
+                                  phase: 'Warranty'
+                                }]
+                              });
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md text-[11px] font-bold transition-all"
+                          >
+                            <Plus size={14} /> Add Role
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {editForm.requiredRoles.filter(r => r.phase === "Warranty").map((roleItem) => {
+                            const index = editForm.requiredRoles.findIndex(r => r.id === roleItem.id);
+                            return (
+                              <div key={roleItem.id} className="p-3 bg-[#0f0f0f] border border-gray-800 rounded-xl space-y-3 relative group">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditForm({ ...editForm, requiredRoles: editForm.requiredRoles.filter(r => r.id !== roleItem.id) })}
+                                  className="absolute right-3 top-3 p-1 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+
+                                <div className="grid grid-cols-2 gap-3 pr-6">
+                                  <div>
+                                    <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Role</label>
+                                    <select
+                                      className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
+                                      value={roleItem.role}
+                                      onChange={(e) => {
+                                        const newRoles = [...editForm.requiredRoles];
+                                        newRoles[index].role = e.target.value;
+                                        setEditForm({ ...editForm, requiredRoles: newRoles });
+                                      }}
+                                    >
+                                      {getAvailableRolesForEditRow(roleItem.role, "Warranty").map((role) => (
+                                        <option key={role} value={role}>{role}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Count</label>
+                                    <input
+                                      type="number"
+                                      className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none text-center"
+                                      value={roleItem.count}
+                                      onChange={(e) => {
+                                        const newRoles = [...editForm.requiredRoles];
+                                        newRoles[index].count = parseInt(e.target.value) || 1;
+                                        setEditForm({ ...editForm, requiredRoles: newRoles });
+                                      }}
+                                      min={1}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 pr-6">
+                                  <div>
+                                    <label className="block text-[10px] text-gray-500 mb-1 ml-0.5 uppercase tracking-wider font-bold">Working Type</label>
+                                    <select
+                                      className="w-full px-2 py-1.5 bg-[#161616] border border-gray-800 rounded-lg text-[12px] outline-none"
+                                      value={roleItem.workingType}
+                                      onChange={(e) => {
+                                        const newRoles = [...editForm.requiredRoles];
+                                        newRoles[index].workingType = e.target.value;
+                                        setEditForm({ ...editForm, requiredRoles: newRoles });
+                                      }}
+                                    >
+                                      {ALLOWED_WORKING_TYPES.map((wt) => (
+                                        <option key={wt} value={wt}>{wt}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

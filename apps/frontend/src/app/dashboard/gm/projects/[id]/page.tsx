@@ -197,6 +197,8 @@ export default function ProjectDetailsPage() {
   const [timelineEditRequested, setTimelineEditRequested] = useState(false);
   const [timelineEditStart, setTimelineEditStart] = useState("");
   const [timelineEditEnd, setTimelineEditEnd] = useState("");
+  const [timelineEditBabysittingEnd, setTimelineEditBabysittingEnd] = useState("");
+  const [timelineEditWarrantyEnd, setTimelineEditWarrantyEnd] = useState("");
   const [timelineEditError, setTimelineEditError] = useState<string | null>(null);
 
   // Start Project state
@@ -281,15 +283,20 @@ export default function ProjectDetailsPage() {
     checkExistingHireRequest();
   }, [numericId]);
 
-  const openAssignModal = async (prefillRole?: string, prefillWorkingType?: string) => {
+  const openAssignModal = async (
+    prefillRole?: string,
+    prefillWorkingType?: string,
+    prefillStart?: string,
+    prefillEnd?: string
+  ) => {
     setAssignModalOpen(true);
     setAssignError(null);
     setSelectedEmp(null);
     setAssignRole(prefillRole || "");
     setAssignWorkingType(prefillWorkingType || "Dedicated");
-    setAssignFromRole(!!prefillRole); // hide role/date fields if opened from a role card
-    setAssignStart(toInputDate(project?.estimatedStartDate));
-    setAssignEnd(toInputDate(project?.estimatedEndDate));
+    setAssignFromRole(!!prefillRole && !prefillStart); // hide role/date fields if opened from a main project role card
+    setAssignStart(prefillStart || toInputDate(project?.estimatedStartDate));
+    setAssignEnd(prefillEnd || toInputDate(project?.estimatedEndDate));
     setEmpSearch("");
 
     if (employees.length === 0) {
@@ -413,7 +420,7 @@ export default function ProjectDetailsPage() {
 
   const handleRequestTimelineEdit = async () => {
     if (!project) return;
-    // Validate: both dates must be filled
+    // Validate: both main dates must be filled
     if (!timelineEditStart || !timelineEditEnd) {
       setTimelineEditError("Please fill in both Start Date and End Date before submitting.");
       return;
@@ -421,16 +428,31 @@ export default function ProjectDetailsPage() {
     setTimelineEditError(null);
     try {
       setTimelineEditSubmitting(true);
-      // Build notes including requested dates
-      const requestedDateInfo = `\nRequested Timeline: ${formatDate(timelineEditStart)} - ${formatDate(timelineEditEnd)}`;
+
+      // Build detailed notes including all phase dates provided
+      const dateParts: string[] = [
+        `Main: ${formatDate(timelineEditStart)} – ${formatDate(timelineEditEnd)}`,
+      ];
+      if (timelineEditBabysittingEnd)
+        dateParts.push(`Babysitting End: ${formatDate(timelineEditBabysittingEnd)}`);
+      if (timelineEditWarrantyEnd)
+        dateParts.push(`Warranty End: ${formatDate(timelineEditWarrantyEnd)}`);
+
+      const requestedDateInfo = `\nRequested Timeline: ` + dateParts.join(" | ");
       const fullNotes = (timelineEditNotes || `GM requesting timeline review for project ${project.projectName}`) + requestedDateInfo;
+
+      // The overall proposed end is the latest of all supplied dates
+      const proposedDates = [timelineEditEnd, timelineEditBabysittingEnd, timelineEditWarrantyEnd]
+        .filter(Boolean)
+        .map((d) => new Date(d).getTime());
+      const latestEndDate = new Date(Math.max(...proposedDates)).toISOString().split("T")[0];
 
       await createTimelineEditRequest({
         projectId: project.projectId,
         projectName: project.projectName,
         notes: fullNotes,
         currentStartDate: timelineEditStart,
-        currentEndDate: timelineEditEnd,
+        currentEndDate: latestEndDate,
       });
       await createHireRequest({
         projectId: project.projectId,
@@ -446,6 +468,8 @@ export default function ProjectDetailsPage() {
       setTimelineEditNotes("");
       setTimelineEditStart("");
       setTimelineEditEnd("");
+      setTimelineEditBabysittingEnd("");
+      setTimelineEditWarrantyEnd("");
       setTimelineEditError(null);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to send timeline edit request");
@@ -490,11 +514,11 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
+  const handleRemoveMember = async (userId: string, role?: string, startDate?: string) => {
     if (!project) return;
     setRemovingUserId(userId);
     try {
-      await unassignMemberFromProject(project.projectId, userId);
+      await unassignMemberFromProject(project.projectId, userId, role, startDate);
       await fetchProject();
     } catch (err) {
       console.error("Failed to remove member:", err);
@@ -646,11 +670,38 @@ export default function ProjectDetailsPage() {
   }
 
   const statusInfo = mapStatus(project.projectStatus, project.estimatedStartDate);
-  const totalNeeded = (project.requiredRoles || []).reduce((s, r) => s + (r.requiredCount ?? 0), 0);
-  const totalFilled = (project.requiredRoles || []).reduce((s, r) => s + (r.filledCount ?? 0), 0);
+  
+  const mainRequiredRoles = project?.requiredRoles?.filter(
+    (role) => role.phase?.toLowerCase() === "main" || !role.phase
+  ) || [];
+
+  const babysittingRequiredRoles = project?.requiredRoles?.filter(
+    (role) => role.phase?.toLowerCase() === "babysitting"
+  ) || [];
+
+  const warrantyRequiredRoles = project?.requiredRoles?.filter(
+    (role) => role.phase?.toLowerCase() === "warranty"
+  ) || [];
+
+  const totalNeeded = mainRequiredRoles.reduce((s, r) => s + (r.requiredCount ?? 0), 0);
+  const totalFilled = mainRequiredRoles.reduce((s, r) => s + (r.filledCount ?? 0), 0);
   const staffingPct = totalNeeded > 0 ? Math.round((totalFilled / totalNeeded) * 100) : 0;
   const allRolesFilled = totalNeeded > 0 && totalFilled >= totalNeeded && project.projectStatus === 0;
   const isEditingTeam = project.projectStatus === 0 || isEditMode;
+
+  const babysittingMembers = project?.members?.filter((m) => {
+    if (!project.babysittingStartDate) return false;
+    const mStart = m.startDate ? new Date(m.startDate).toDateString() : "";
+    const pBSStart = new Date(project.babysittingStartDate).toDateString();
+    return mStart === pBSStart && m.status === "Assigned";
+  }) || [];
+
+  const warrantyMembers = project?.members?.filter((m) => {
+    if (!project.warrantyStartDate) return false;
+    const mStart = m.startDate ? new Date(m.startDate).toDateString() : "";
+    const pWStart = new Date(project.warrantyStartDate).toDateString();
+    return mStart === pWStart && m.status === "Assigned";
+  }) || [];
 
   return (
     <>
@@ -822,12 +873,21 @@ export default function ProjectDetailsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {project.requiredRoles.map((role) => {
-                  const membersInRole = project.members?.filter(m =>
-                    m.role.toLowerCase() === role.roleName.toLowerCase()
-                    && m.status === "Assigned"
-                    && String(m.workingType || "Dedicated").toLowerCase() === String(role.workingType || "Dedicated").toLowerCase()
-                  ) || [];
+                {mainRequiredRoles.map((role) => {
+                  const membersInRole = project.members?.filter(m => {
+                    if (m.status !== "Assigned") return false;
+                    if (m.role.toLowerCase() !== role.roleName.toLowerCase()) return false;
+                    if (String(m.workingType || "Dedicated").toLowerCase() !== String(role.workingType || "Dedicated").toLowerCase()) return false;
+
+                    const mStart = m.startDate ? new Date(m.startDate).toDateString() : "";
+                    const pBSStart = project.babysittingStartDate ? new Date(project.babysittingStartDate).toDateString() : "";
+                    const pWStart = project.warrantyStartDate ? new Date(project.warrantyStartDate).toDateString() : "";
+
+                    if (project.babysittingDuration > 0 && mStart === pBSStart) return false;
+                    if (project.warrantyDuration > 0 && mStart === pWStart) return false;
+
+                    return true;
+                  }) || [];
                   const isFilled = membersInRole.length >= (role.requiredCount ?? 0);
 
                   return (
@@ -957,6 +1017,242 @@ export default function ProjectDetailsPage() {
               </div>
             )}
           </section>
+
+          {/* Post-Execution Team (Babysitting & Warranty) */}
+          {(project.babysittingDuration > 0 || project.warrantyDuration > 0) && (
+            <section className="mt-8">
+              <h2 className="text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight mb-6">
+                Post-Execution Team (Babysitting & Warranty)
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Babysitting Team */}
+                {project.babysittingDuration > 0 && (
+                  <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl overflow-hidden flex flex-col shadow-sm">
+                    <div className="p-5 border-b border-[var(--dash-border)] bg-[var(--dash-bg-input)] flex items-center justify-between">
+                      <div>
+                        <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)]">
+                          Babysitting Team
+                        </h3>
+                        <span className="text-[11px] text-[var(--dash-text-faint)]">
+                          Duration: {project.babysittingDuration} Weeks ({project.babysittingStartDate ? formatDate(project.babysittingStartDate) : "—"} to {project.babysittingEndDate ? formatDate(project.babysittingEndDate) : "—"})
+                        </span>
+                      </div>
+                      {isEditingTeam && (
+                        <button
+                          onClick={() =>
+                            openAssignModal(
+                              "Babysitting Staff",
+                              "Dedicated",
+                              project.babysittingStartDate ? toInputDate(project.babysittingStartDate) : undefined,
+                              project.babysittingEndDate ? toInputDate(project.babysittingEndDate) : undefined
+                            )
+                          }
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-lg text-[12px] font-semibold transition-all cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          Assign Staff
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Needed Roles */}
+                    {babysittingRequiredRoles.length > 0 && (
+                      <div className="px-5 py-3.5 bg-indigo-500/5 border-b border-[var(--dash-border)]">
+                        <span className="text-[10px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider block mb-2">Needed Roles</span>
+                        <div className="flex flex-wrap gap-2">
+                          {babysittingRequiredRoles.map((role) => {
+                            const filledCount = babysittingMembers.filter(
+                              (m) => m.role.toLowerCase() === role.roleName.toLowerCase()
+                            ).length;
+                            const isFilled = filledCount >= role.requiredCount;
+                            return (
+                              <button
+                                key={role.id}
+                                disabled={!isEditingTeam}
+                                onClick={() =>
+                                  openAssignModal(
+                                    role.roleName,
+                                    typeof role.workingType === 'number' ? (role.workingType === 0 ? 'Dedicated' : 'Non-Dedicated') : role.workingType,
+                                    project.babysittingStartDate ? toInputDate(project.babysittingStartDate) : undefined,
+                                    project.babysittingEndDate ? toInputDate(project.babysittingEndDate) : undefined
+                                  )
+                                }
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all ${
+                                  isFilled
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : isEditingTeam
+                                      ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:border-indigo-500/60 cursor-pointer"
+                                      : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                }`}
+                              >
+                                <span>{role.roleName} ({filledCount}/{role.requiredCount})</span>
+                                {isFilled ? <Check size={10} /> : isEditingTeam ? <Plus size={10} /> : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-5 space-y-3 flex-1">
+                      {babysittingMembers.length === 0 ? (
+                        <p className="text-[13px] text-[var(--dash-text-faint)] italic py-4 text-center">
+                          No staff assigned for Babysitting.
+                        </p>
+                      ) : (
+                        babysittingMembers.map((member) => (
+                          <div
+                            key={member.userId + (member.startDate || "")}
+                            className="group flex items-center justify-between p-3.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl hover:border-indigo-500/40 transition-all duration-150"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-[13px]">
+                                {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                              </div>
+                              <div>
+                                <p className="text-[14px] font-semibold text-[var(--dash-text-heading)] leading-snug">
+                                  {member.userName}
+                                </p>
+                                <p className="text-[11px] text-[var(--dash-text-muted)] mt-0.5">
+                                  Role: {member.role}
+                                </p>
+                              </div>
+                            </div>
+                            {isEditingTeam && (
+                              <button
+                                onClick={() => handleRemoveMember(member.userId, member.role, member.startDate || undefined)}
+                                disabled={removingUserId === member.userId}
+                                className="p-1.5 text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 rounded-md opacity-0 group-hover:opacity-100 transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                              >
+                                {removingUserId === member.userId ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <Trash2 size={14} />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warranty Team */}
+                {project.warrantyDuration > 0 && (
+                  <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl overflow-hidden flex flex-col shadow-sm">
+                    <div className="p-5 border-b border-[var(--dash-border)] bg-[var(--dash-bg-input)] flex items-center justify-between">
+                      <div>
+                        <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)]">
+                          Warranty Team
+                        </h3>
+                        <span className="text-[11px] text-[var(--dash-text-faint)]">
+                          Duration: {project.warrantyDuration} Weeks ({project.warrantyStartDate ? formatDate(project.warrantyStartDate) : "—"} to {project.warrantyEndDate ? formatDate(project.warrantyEndDate) : "—"})
+                        </span>
+                      </div>
+                      {isEditingTeam && (
+                        <button
+                          onClick={() =>
+                            openAssignModal(
+                              "Warranty Staff",
+                              "Dedicated",
+                              project.warrantyStartDate ? toInputDate(project.warrantyStartDate) : undefined,
+                              project.warrantyEndDate ? toInputDate(project.warrantyEndDate) : undefined
+                            )
+                          }
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-lg text-[12px] font-semibold transition-all cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          Assign Staff
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Needed Roles */}
+                    {warrantyRequiredRoles.length > 0 && (
+                      <div className="px-5 py-3.5 bg-blue-500/5 border-b border-[var(--dash-border)]">
+                        <span className="text-[10px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider block mb-2">Needed Roles</span>
+                        <div className="flex flex-wrap gap-2">
+                          {warrantyRequiredRoles.map((role) => {
+                            const filledCount = warrantyMembers.filter(
+                              (m) => m.role.toLowerCase() === role.roleName.toLowerCase()
+                            ).length;
+                            const isFilled = filledCount >= role.requiredCount;
+                            return (
+                              <button
+                                key={role.id}
+                                disabled={!isEditingTeam}
+                                onClick={() =>
+                                  openAssignModal(
+                                    role.roleName,
+                                    typeof role.workingType === 'number' ? (role.workingType === 0 ? 'Dedicated' : 'Non-Dedicated') : role.workingType,
+                                    project.warrantyStartDate ? toInputDate(project.warrantyStartDate) : undefined,
+                                    project.warrantyEndDate ? toInputDate(project.warrantyEndDate) : undefined
+                                  )
+                                }
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all ${
+                                  isFilled
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : isEditingTeam
+                                      ? "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:border-blue-500/60 cursor-pointer"
+                                      : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                }`}
+                              >
+                                <span>{role.roleName} ({filledCount}/{role.requiredCount})</span>
+                                {isFilled ? <Check size={10} /> : isEditingTeam ? <Plus size={10} /> : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-5 space-y-3 flex-1">
+                      {warrantyMembers.length === 0 ? (
+                        <p className="text-[13px] text-[var(--dash-text-faint)] italic py-4 text-center">
+                          No staff assigned for Warranty.
+                        </p>
+                      ) : (
+                        warrantyMembers.map((member) => (
+                          <div
+                            key={member.userId + (member.startDate || "")}
+                            className="group flex items-center justify-between p-3.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-xl hover:border-blue-500/40 transition-all duration-150"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-[13px]">
+                                {member.userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                              </div>
+                              <div>
+                                <p className="text-[14px] font-semibold text-[var(--dash-text-heading)] leading-snug">
+                                  {member.userName}
+                                </p>
+                                <p className="text-[11px] text-[var(--dash-text-muted)] mt-0.5">
+                                  Role: {member.role}
+                                </p>
+                              </div>
+                            </div>
+                            {isEditingTeam && (
+                              <button
+                                onClick={() => handleRemoveMember(member.userId, member.role, member.startDate || undefined)}
+                                disabled={removingUserId === member.userId}
+                                className="p-1.5 text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 rounded-md opacity-0 group-hover:opacity-100 transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                              >
+                                {removingUserId === member.userId ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <Trash2 size={14} />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Expiring Contracts Alert has been moved to main GM dashboard */}
           {/* 4. Team Timeline (Gantt Chart) — shown for non-Pending projects */}
@@ -1300,7 +1596,7 @@ export default function ProjectDetailsPage() {
       {/* ── Timeline Edit Request Modal ── */}
       {timelineEditOpen && project && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => { setTimelineEditOpen(false); setTimelineEditError(null); }}>
-          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-[var(--dash-text-primary)]" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-[var(--dash-text-primary)] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--dash-border)]">
               <h3 className="text-[17px] font-bold text-[var(--dash-text-heading)]">Request Timeline Edit</h3>
               <button onClick={() => { setTimelineEditOpen(false); setTimelineEditError(null); }} className="p-1.5 rounded-lg text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)]"><X size={18} /></button>
@@ -1313,12 +1609,13 @@ export default function ProjectDetailsPage() {
               </div>
 
               <div>
-                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Current Timeline</label>
+                <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Current Main Timeline</label>
                 <div className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-[var(--dash-border)] text-[13px] text-amber-400">
-                  {formatDate(project.estimatedStartDate)} - {formatDate(project.estimatedEndDate)}
+                  {formatDate(project.estimatedStartDate)} – {formatDate(project.estimatedEndDate)}
                 </div>
               </div>
 
+              {/* ── Main project dates ── */}
               <div>
                 <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">
                   Requested Timeline <span className="text-red-400">*</span>
@@ -1340,6 +1637,7 @@ export default function ProjectDetailsPage() {
                       type="date"
                       value={timelineEditEnd}
                       onChange={(e) => { setTimelineEditEnd(e.target.value); setTimelineEditError(null); }}
+                      min={timelineEditStart || undefined}
                       className={`w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-[#3b82f6]/50 transition-colors [color-scheme:light_dark] ${!timelineEditEnd && timelineEditError ? 'border-red-500/60' : 'border-[var(--dash-border)]'
                         }`}
                     />
@@ -1353,6 +1651,50 @@ export default function ProjectDetailsPage() {
                   </div>
                 )}
               </div>
+
+              {/* ── Babysitting end date (conditional) ── */}
+              {((project as any).babysittingDuration > 0 || (project as any).babysittingEndDate) && (
+                <div>
+                  <label className="block text-[12px] font-semibold text-indigo-400 mb-1">
+                    New Babysitting End Date
+                    <span className="ml-1 text-[10px] text-[var(--dash-text-faint)] font-normal">(optional)</span>
+                  </label>
+                  {(project as any).babysittingEndDate && (
+                    <p className="text-[10px] text-[var(--dash-text-faint)] mb-1">
+                      Current: {formatDate((project as any).babysittingEndDate)}
+                    </p>
+                  )}
+                  <input
+                    type="date"
+                    value={timelineEditBabysittingEnd}
+                    onChange={(e) => setTimelineEditBabysittingEnd(e.target.value)}
+                    min={timelineEditEnd || undefined}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-indigo-900/40 text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-indigo-500/50 transition-colors [color-scheme:light_dark]"
+                  />
+                </div>
+              )}
+
+              {/* ── Warranty end date (conditional) ── */}
+              {((project as any).warrantyDuration > 0 || (project as any).warrantyEndDate) && (
+                <div>
+                  <label className="block text-[12px] font-semibold text-blue-400 mb-1">
+                    New Warranty End Date
+                    <span className="ml-1 text-[10px] text-[var(--dash-text-faint)] font-normal">(optional)</span>
+                  </label>
+                  {(project as any).warrantyEndDate && (
+                    <p className="text-[10px] text-[var(--dash-text-faint)] mb-1">
+                      Current: {formatDate((project as any).warrantyEndDate)}
+                    </p>
+                  )}
+                  <input
+                    type="date"
+                    value={timelineEditWarrantyEnd}
+                    onChange={(e) => setTimelineEditWarrantyEnd(e.target.value)}
+                    min={timelineEditBabysittingEnd || timelineEditEnd || undefined}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--dash-bg-input)] border border-blue-900/40 text-[13px] text-[var(--dash-text-primary)] outline-none focus:border-blue-500/50 transition-colors [color-scheme:light_dark]"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-[12px] text-[var(--dash-text-muted)] mb-1">Notes</label>

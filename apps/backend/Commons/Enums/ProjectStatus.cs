@@ -11,6 +11,8 @@ namespace Commons.Enums
         Running = 2,
         Completed = 3,
         Deleted = 4,
-        Hold = 5
+        Hold = 5,
+        Babysitting = 6,
+        Warranty = 7
     }
 }

@@ -31,7 +31,14 @@ const formatFull = (d: Date) =>
   }).format(d);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type ProjectStatus = "pending" | "scheduled" | "running" | "completed" | "deleted" | "hold";
+type ProjectStatus = "pending" | "scheduled" | "running" | "completed" | "deleted" | "hold" | "babysitting" | "warranty";
+
+interface TimelineBar {
+  title: string;
+  startDate: Date;
+  endDate: Date;
+  status: ProjectStatus;
+}
 
 interface TimelineProject {
   id: string;
@@ -40,9 +47,10 @@ interface TimelineProject {
   startDate: Date;
   endDate: Date;
   status: ProjectStatus;
+  bars: TimelineBar[];
 }
 
-// Backend ProjectStatus: 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted
+// Backend ProjectStatus: 0=Pending, 1=Scheduled, 2=Running, 3=Completed, 4=Deleted, 5=Hold, 6=Babysitting, 7=Warranty
 // Status 2 (Running) with a future start date is treated as "scheduled" (same logic as projects/page.tsx)
 function mapStatus(s: number, startDateStr?: string): ProjectStatus {
   if (s === 1) return "scheduled";
@@ -59,17 +67,69 @@ function mapStatus(s: number, startDateStr?: string): ProjectStatus {
   if (s === 3) return "completed";
   if (s === 4) return "deleted";
   if (s === 5) return "hold";
+  if (s === 6) return "babysitting";
+  if (s === 7) return "warranty";
   return "pending";
 }
 
 function projectToTimeline(p: BackendProject): TimelineProject {
+  const mainStart = p.estimatedStartDate ? new Date(p.estimatedStartDate) : new Date();
+  const mainEnd = p.estimatedEndDate ? new Date(p.estimatedEndDate) : new Date();
+  const mainStatus = mapStatus(p.projectStatus, p.estimatedStartDate);
+
+  const bars: TimelineBar[] = [
+    {
+      title: p.projectName,
+      startDate: mainStart,
+      endDate: mainEnd,
+      status: (mainStatus === "completed" || mainStatus === "babysitting" || mainStatus === "warranty") 
+        ? "completed" 
+        : mainStatus,
+    }
+  ];
+
+  if (p.babysittingDuration > 0 && p.babysittingStartDate && p.babysittingEndDate) {
+    let bsStatus: ProjectStatus = "scheduled";
+    if (mainStatus === "babysitting") {
+      bsStatus = "running";
+    } else if (mainStatus === "warranty" || mainStatus === "completed") {
+      bsStatus = "completed";
+    }
+
+    bars.push({
+      title: `${p.projectName} (Babysitting)`,
+      startDate: new Date(p.babysittingStartDate),
+      endDate: new Date(p.babysittingEndDate),
+      status: bsStatus,
+    });
+  }
+
+  if (p.warrantyDuration > 0 && p.warrantyStartDate && p.warrantyEndDate) {
+    let wrStatus: ProjectStatus = "scheduled";
+    if (mainStatus === "warranty") {
+      wrStatus = "running";
+    } else if (mainStatus === "completed") {
+      wrStatus = "completed";
+    }
+
+    bars.push({
+      title: `${p.projectName} (Warranty)`,
+      startDate: new Date(p.warrantyStartDate),
+      endDate: new Date(p.warrantyEndDate),
+      status: wrStatus,
+    });
+  }
+
+  const maxEnd = bars.reduce((max, bar) => bar.endDate > max ? bar.endDate : max, mainEnd);
+
   return {
     id: String(p.projectId),
     name: p.projectName,
     client: p.clientOrganization,
-    startDate: p.estimatedStartDate ? new Date(p.estimatedStartDate) : new Date(),
-    endDate: p.estimatedEndDate ? new Date(p.estimatedEndDate) : new Date(),
-    status: mapStatus(p.projectStatus, p.estimatedStartDate),
+    startDate: mainStart,
+    endDate: maxEnd,
+    status: mainStatus,
+    bars,
   };
 }
 
@@ -81,6 +141,8 @@ const statusBarColors: Record<ProjectStatus, string> = {
   completed: "bg-[#64748b]/90 hover:bg-[#64748b] border-[#64748b]/30",
   deleted: "bg-red-500/90 hover:bg-red-500 border-red-500/30",
   hold: "bg-orange-500/90 hover:bg-orange-500 border-orange-500/30",
+  babysitting: "bg-indigo-600/90 hover:bg-indigo-600 border-indigo-600/30",
+  warranty: "bg-blue-600/90 hover:bg-blue-600 border-blue-600/30",
 };
 
 const filterConfig: {
@@ -106,6 +168,18 @@ const filterConfig: {
       label: "Running",
       activeClass: "bg-[#22c55e]/20 border-[#22c55e]/60 text-[#22c55e]",
       dotClass: "bg-[#22c55e]",
+    },
+    {
+      status: "babysitting",
+      label: "Babysitting",
+      activeClass: "bg-indigo-600/20 border-indigo-600/60 text-indigo-400",
+      dotClass: "bg-indigo-600",
+    },
+    {
+      status: "warranty",
+      label: "Warranty",
+      activeClass: "bg-blue-600/20 border-blue-600/60 text-blue-400",
+      dotClass: "bg-blue-600",
     },
     {
       status: "completed",
@@ -135,9 +209,9 @@ export default function ProjectTimeline() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Default: show Pending, Scheduled, Running, Hold (hide Completed)
+  // Default: show Pending, Scheduled, Running, Hold, Babysitting, Warranty (hide Completed)
   const [activeFilters, setActiveFilters] = useState<Set<ProjectStatus>>(
-    new Set(["pending", "scheduled", "running", "hold"])
+    new Set(["pending", "scheduled", "running", "hold", "babysitting", "warranty"])
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -399,16 +473,6 @@ export default function ProjectTimeline() {
 
             {/* Project rows */}
             {filteredProjects.map((project) => {
-              // Clamp to window
-              const projStartDay = diffDays(windowStart, project.startDate);
-              const projEndDay = diffDays(windowStart, project.endDate);
-
-              const clampedStart = Math.max(0, projStartDay);
-              const clampedEnd = Math.min(TOTAL_DAYS - 1, projEndDay);
-
-              const leftPct = (clampedStart / TOTAL_DAYS) * 100;
-              const widthPct = Math.max(1, ((clampedEnd - clampedStart + 1) / TOTAL_DAYS) * 100);
-
               return (
                 <div
                   key={project.id}
@@ -439,22 +503,50 @@ export default function ProjectTimeline() {
                       ))}
                     </div>
 
-                    {/* The bar */}
-                    <Link
-                      href={`/project/${project.id}`}
-                      title={`${project.name} (${formatFull(project.startDate)} – ${formatFull(project.endDate)})`}
-                      style={{
-                        position: "absolute",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        left: `calc(${leftPct}% + 3px)`,
-                        width: `calc(${widthPct}% - 6px)`,
-                        height: "28px",
-                      }}
-                      className={`flex items-center px-3 rounded-md text-[11px] font-semibold text-white truncate border shadow-sm transition-all duration-200 ${statusBarColors[project.status]}`}
-                    >
-                      {project.name}
-                    </Link>
+                    {/* The bars */}
+                    {project.bars.map((bar, barIdx) => {
+                      const barStartDay = diffDays(windowStart, bar.startDate);
+                      const barEndDay = diffDays(windowStart, bar.endDate);
+
+                      if (bar.endDate < windowStart || bar.startDate > windowEnd) return null;
+
+                      const clampedStart = Math.max(0, barStartDay);
+                      const clampedEnd = Math.min(TOTAL_DAYS - 1, barEndDay);
+
+                      const leftPct = (clampedStart / TOTAL_DAYS) * 100;
+                      const widthPct = Math.max(1, ((clampedEnd - clampedStart + 1) / TOTAL_DAYS) * 100);
+
+                      const isPhaseCompleted = bar.status === "completed";
+                      const isBabysitting = bar.title.endsWith("(Babysitting)");
+                      const isWarranty = bar.title.endsWith("(Warranty)");
+
+                      return (
+                        <Link
+                          key={barIdx}
+                          href={`/project/${project.id}`}
+                          title={`${bar.title} (${formatFull(bar.startDate)} – ${formatFull(bar.endDate)})`}
+                          style={{
+                            position: "absolute",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            left: `calc(${leftPct}% + 3px)`,
+                            width: `calc(${widthPct}% - 6px)`,
+                            height: "28px",
+                          }}
+                          className={`flex items-center px-3 rounded-md text-[11px] font-semibold text-white truncate border shadow-sm transition-all duration-200 ${statusBarColors[bar.status]} ${
+                            isPhaseCompleted 
+                              ? "opacity-50" 
+                              : isBabysitting
+                                ? "opacity-85 border-indigo-400/40 border-dashed"
+                                : isWarranty
+                                  ? "opacity-85 border-blue-400/40 border-dashed"
+                                  : ""
+                          }`}
+                        >
+                          {bar.title}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
               );

@@ -23,6 +23,13 @@ public class CreateProjectRequest
 
     public DateTime EstimatedEndDate { get; set; }
 
+    public int BabysittingDuration { get; set; }
+    public int WarrantyDuration { get; set; }
+    public DateTime? BabysittingStartDate { get; set; }
+    public DateTime? BabysittingEndDate { get; set; }
+    public DateTime? WarrantyStartDate { get; set; }
+    public DateTime? WarrantyEndDate { get; set; }
+
     public List<CreateProjectRoleDto> RequiredRoles { get; set; } = new List<CreateProjectRoleDto>();
     public List<int> RequiredSkillIds { get; set; } = new List<int>();
 }
@@ -35,4 +42,6 @@ public class CreateProjectRoleDto
     public int Count { get; set; }
 
     public WorkingType WorkingType { get; set; }
+
+    public string Phase { get; set; } = "Main";
 }

@@ -39,6 +39,8 @@ export default function PMTimelineView() {
 
   const [filterScheduled, setFilterScheduled] = useState(true);
   const [filterRunning, setFilterRunning] = useState(true);
+  const [filterBabysitting, setFilterBabysitting] = useState(true);
+  const [filterWarranty, setFilterWarranty] = useState(true);
   const [filterCompleted, setFilterCompleted] = useState(false);
 
   const windowEnd = useMemo(() => {
@@ -74,7 +76,8 @@ export default function PMTimelineView() {
   }, [windowStart]);
 
   const navigateByName = (projectName: string) => {
-    const id = projectNameToId[projectName];
+    const cleanName = projectName.replace(/\s*\((Babysitting|Warranty)\)$/, "");
+    const id = projectNameToId[cleanName];
     if (id) {
       router.push(`/project/${id}`);
     }
@@ -210,7 +213,7 @@ export default function PMTimelineView() {
                 bar.projectStatus === "3";
               return !isBarCompleted;
             })
-            .map((bar: any) => bar.title),
+            .map((bar: any) => bar.title.replace(/\s*\((Babysitting|Warranty)\)$/, "")),
         ),
       ),
     );
@@ -231,6 +234,8 @@ export default function PMTimelineView() {
     if (statusStr === "Scheduled" || statusStr === "1") return filterScheduled;
     if (statusStr === "Running" || statusStr === "2") return filterRunning;
     if (statusStr === "Completed" || statusStr === "3") return filterCompleted;
+    if (statusStr === "Babysitting" || statusStr === "6") return filterBabysitting;
+    if (statusStr === "Warranty" || statusStr === "7") return filterWarranty;
     return true;
   };
 
@@ -417,6 +422,26 @@ export default function PMTimelineView() {
               Running
             </button>
             <button
+              onClick={() => setFilterBabysitting((v) => !v)}
+              className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all duration-200 cursor-pointer select-none ${
+                filterBabysitting
+                  ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                  : "bg-transparent text-[var(--dash-text-muted)] border-[var(--dash-border)] hover:border-indigo-500/20 hover:text-indigo-400"
+              }`}
+            >
+              Babysitting
+            </button>
+            <button
+              onClick={() => setFilterWarranty((v) => !v)}
+              className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all duration-200 cursor-pointer select-none ${
+                filterWarranty
+                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                  : "bg-transparent text-[var(--dash-text-muted)] border-[var(--dash-border)] hover:border-blue-500/20 hover:text-blue-400"
+              }`}
+            >
+              Warranty
+            </button>
+            <button
               onClick={() => setFilterCompleted((v) => !v)}
               className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all duration-200 cursor-pointer select-none ${
                 filterCompleted
@@ -558,10 +583,11 @@ export default function PMTimelineView() {
                             bar.projectStatus === "Completed" ||
                             bar.projectStatus === "3";
 
+                          const cleanProjectName = bar.title.replace(/\s*\((Babysitting|Warranty)\)$/, "");
                           const barColor = isBarCompleted
                             ? "#6b7280" // Abu-abu kalau sudah selesai
                             : viewMode === "Projects"
-                              ? projectPalette[bar.title] || "#3B82F6" // Warna default/palette untuk tab Project
+                              ? projectPalette[cleanProjectName] || "#3B82F6" // Warna default/palette untuk tab Project
                               : bar.status === "Scheduled"
                                 ? "#a855f7" // Ungu (Tailwind purple-500) untuk Scheduled
                                 : "#22c55e"; // Hijau (Tailwind green-500) untuk Running
@@ -581,7 +607,13 @@ export default function PMTimelineView() {
                               }
                               onMouseLeave={() => setTooltip(null)}
                               className={`absolute h-8 rounded-md flex items-center px-3 text-[10px] font-bold text-white shadow-sm cursor-pointer select-none transition-all duration-300 ease-in-out z-10 ${
-                                isBarCompleted ? "opacity-60" : ""
+                                isBarCompleted 
+                                  ? "opacity-50" 
+                                  : bar.title.endsWith("(Babysitting)")
+                                    ? "opacity-85 border border-indigo-400/40 border-dashed"
+                                    : bar.title.endsWith("(Warranty)")
+                                      ? "opacity-85 border border-blue-400/40 border-dashed"
+                                      : ""
                               }`}
                               style={{
                                 left: `${start}%`,
