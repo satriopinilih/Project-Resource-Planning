@@ -89,7 +89,7 @@ function mapToContract(u: BackendEmployee): EmployeeContract {
       end: p.endDate ? formatDate(p.endDate) : "Ongoing",
       status: 0 // Defaulting to scheduled to match screenshot "Scheduled" badge
     })),
-    isNotAvailableWfo: u.isNotAvailableWfo
+    isNotAvailableWfo: u.isNotAvailableWfo ?? false
   };
 }
 
