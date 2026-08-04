@@ -26,6 +26,19 @@ public class User
 
     public int ExperienceYears { get; set; }
 
+    /// <summary>
+    /// Marks a junior employee as an intern. Independent of contract system.
+    /// Controlled by HR only.
+    /// </summary>
+    public bool IsIntern { get; set; } = false;
+
+    /// <summary>
+    /// Indicates that this employee has marked themselves as not available for WFO (Work From Office).
+    /// Set by the employee themselves via PATCH /api/employees/me/wfo-status.
+    /// Used as a warning signal to GM when starting a project with this member.
+    /// </summary>
+    public bool IsNotAvailableWfo { get; set; } = false;
+
     public DateTime ContractStart { get; set; }
     public DateTime ContractEnd { get; set; }
     public ContractStatus ContractStatus { get; set; }

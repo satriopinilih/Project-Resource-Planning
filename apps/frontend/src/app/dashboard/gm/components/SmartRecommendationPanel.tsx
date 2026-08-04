@@ -29,7 +29,8 @@ import {
   assignMemberToProject,
   getEmployees
 } from "@/lib/api";
-import { Employee } from "@/lib/types";
+import { Project, Employee } from "@/lib/types";
+import InternBadge from "@/components/InternBadge";
 
 interface SmartRecommendationPanelProps {
   projectId: number;
@@ -64,6 +65,7 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <p className="text-[13px] font-bold text-white truncate">{candidate.userName}</p>
+          <InternBadge isIntern={candidate.isIntern} size="xs" />
           {candidate.isAvailable && (
             <span className="px-1.5 py-0.5 bg-green-500/10 text-green-400 text-[9px] font-bold rounded uppercase tracking-wider">Available</span>
           )}
@@ -212,10 +214,11 @@ const OptionCard: React.FC<{
   originalStartDate?: string;
   originalEndDate?: string;
   hasRequiredRoles: boolean;
+  totalRequiredCount: number;
   customizedAssignments?: RecommendationCandidate[];
   onClearCustomization?: () => void;
   onStartCustom?: () => void;
-}> = ({ option, isRecommended, label, originalStartDate, originalEndDate, hasRequiredRoles, customizedAssignments, onClearCustomization, onStartCustom }) => {
+}> = ({ option, isRecommended, label, originalStartDate, originalEndDate, hasRequiredRoles, totalRequiredCount, customizedAssignments, onClearCustomization, onStartCustom }) => {
   const [expanded, setExpanded] = useState(false);
   const [startConfirmOpen, setStartConfirmOpen] = useState(false);
   const [startCustomConfirmOpen, setStartCustomConfirmOpen] = useState(false);
@@ -235,12 +238,12 @@ const OptionCard: React.FC<{
   let effectiveRescheduleDetail: string | undefined = option.rescheduleDetail;
 
   if (isCustomized) {
-    const isMissingRoles = customizedAssignments!.length < option.teamSize;
+    const isMissingRoles = customizedAssignments!.length < totalRequiredCount;
     const hasBusy = customizedAssignments!.some(c => !c.isAvailable);
 
     if (isMissingRoles) {
       effectiveRequiresHiring = true;
-      effectiveHiringDetail = `Customized team is missing ${option.teamSize - customizedAssignments!.length} member(s).`;
+      effectiveHiringDetail = `Customized team is missing ${totalRequiredCount - customizedAssignments!.length} member(s).`;
       effectiveRequiresReschedule = false;
       effectiveRescheduleDetail = undefined;
     } else if (hasBusy) {
@@ -703,6 +706,7 @@ const CustomizeModal: React.FC<{
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-[13px] font-bold text-white">{selectedEmp.name}</p>
+                        <InternBadge isIntern={selectedEmp.isIntern} size="sm" />
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isBusy
                           ? "bg-red-500/15 text-red-400 border border-red-500/20"
                           : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
@@ -789,6 +793,7 @@ const CustomizeModal: React.FC<{
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className={`font-bold truncate ${!isFree ? "text-gray-500" : ""}`}>{emp.name}</span>
+                                    <InternBadge isIntern={emp.isIntern} size="xs" />
                                     {isAIRec && (
                                       <span className="text-[8px] font-black bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 uppercase tracking-wider shrink-0">
                                         AI Pick
@@ -1135,6 +1140,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             originalStartDate={data.estimatedStartDate}
             originalEndDate={data.estimatedEndDate}
             hasRequiredRoles={data.requiredRoles.length > 0}
+            totalRequiredCount={data.requiredRoles.reduce((sum, r) => sum + r.requiredCount, 0)}
             customizedAssignments={customAssignmentsA || undefined}
             onClearCustomization={() => setCustomAssignmentsA(null)}
             onStartCustom={() => processStartProject(customAssignmentsA || [])}
@@ -1146,6 +1152,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             originalStartDate={data.estimatedStartDate}
             originalEndDate={data.estimatedEndDate}
             hasRequiredRoles={data.requiredRoles.length > 0}
+            totalRequiredCount={data.requiredRoles.reduce((sum, r) => sum + r.requiredCount, 0)}
             customizedAssignments={customAssignmentsB || undefined}
             onClearCustomization={() => setCustomAssignmentsB(null)}
             onStartCustom={() => processStartProject(customAssignmentsB || [])}

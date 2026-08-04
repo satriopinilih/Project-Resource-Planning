@@ -40,6 +40,9 @@ public class ProjectMemberDto
     public string? SwapReason { get; set; }
     public string? ReplacedByUserId { get; set; }
     public string? ReplacedByUserName { get; set; }
+    public bool IsIntern { get; set; }
+    /// <summary>True if this member has self-reported as not available for WFO.</summary>
+    public bool IsNotAvailableWfo { get; set; }
 }
 
 

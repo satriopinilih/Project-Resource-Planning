@@ -272,6 +272,7 @@ public class RecommendationService
             TargetRole = requiredRole.RoleName,
             TargetWorkingType = requiredRole.WorkingType,
             ExperienceYears = experienceYears,
+            IsIntern = user.IsIntern,
             Skills = userSkills,
             MatchedSkills = matchedSkills,
             SkillMatchPercent = Math.Round(skillMatchPercent, 1),
@@ -309,6 +310,7 @@ public class RecommendationService
             {
                 roleCandidates = roleCandidates
                     .OrderByDescending(c => c.IsAvailable)
+                    .ThenBy(c => c.IsIntern)           // non-intern (false) first
                     .ThenByDescending(c => c.SkillMatchPercent)
                     .ThenByDescending(c => c.ExperienceYears)
                     .ToList();
@@ -317,6 +319,7 @@ public class RecommendationService
             {
                 roleCandidates = roleCandidates
                     .OrderByDescending(c => c.SkillMatchPercent)
+                    .ThenBy(c => c.IsIntern)           // non-intern (false) first
                     .ThenByDescending(c => c.ExperienceYears)
                     .ThenByDescending(c => c.IsAvailable)
                     .ToList();
@@ -340,6 +343,7 @@ public class RecommendationService
                         TargetRole = candidate.TargetRole,
                         TargetWorkingType = candidate.TargetWorkingType,
                         ExperienceYears = candidate.ExperienceYears,
+                        IsIntern = candidate.IsIntern,
                         Skills = candidate.Skills?.ToList() ?? new List<string>(),
                         MatchedSkills = candidate.MatchedSkills?.ToList() ?? new List<string>(),
                         SkillMatchPercent = candidate.SkillMatchPercent,

@@ -151,4 +151,51 @@ public class EmployeesController : ControllerBase
 
         return Ok(ApiResponse<List<ContractHistoryDto>>.SuccessResponse(data!));
     }
+
+    /// <summary>
+    /// Updates the Intern status tag for a junior employee. HR-only endpoint.
+    /// </summary>
+    [HttpPatch("{id}/intern-status")]
+    public async Task<ActionResult<ApiResponse<UserDto>>> UpdateInternStatus(string id, [FromBody] UpdateInternStatusRequest request)
+    {
+        var isHr = User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "HR");
+        if (!isHr)
+            return StatusCode(403, ApiResponse<UserDto>.ErrorResponse("Only HR can update intern status"));
+
+        var actorUserId = CurrentUserId ?? "HR";
+        var (success, error, statusCode, data) = await _service.UpdateInternStatusAsync(id, request.IsIntern, actorUserId);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<UserDto>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<UserDto>.SuccessResponse(data!, "Intern status updated successfully"));
+    }
+
+    /// <summary>
+    /// Allows any authenticated employee to toggle their own WFO availability status.
+    /// Staff can mark themselves as "Not available WFO" so GM receives a warning when starting a project.
+    /// PATCH /api/employees/me/wfo-status
+    /// </summary>
+    [HttpPatch("me/wfo-status")]
+    public async Task<ActionResult<ApiResponse<UserDto>>> UpdateMyWfoStatus([FromBody] UpdateWfoStatusRequest request)
+    {
+        var userId = CurrentUserId;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(ApiResponse<UserDto>.ErrorResponse("Not authenticated"));
+
+        var (success, error, statusCode, data) = await _service.UpdateWfoStatusAsync(userId, request.IsNotAvailableWfo, userId);
+
+        if (!success)
+            return StatusCode(statusCode, ApiResponse<UserDto>.ErrorResponse(error!));
+
+        return Ok(ApiResponse<UserDto>.SuccessResponse(data!, request.IsNotAvailableWfo
+            ? "WFO unavailability marked. GM will be warned when starting a project with you."
+            : "WFO availability restored."));
+    }
 }
+
+/// <summary>Request body for PATCH /api/employees/{id}/intern-status</summary>
+public record UpdateInternStatusRequest(bool IsIntern);
+
+/// <summary>Request body for PATCH /api/employees/me/wfo-status</summary>
+public record UpdateWfoStatusRequest(bool IsNotAvailableWfo);

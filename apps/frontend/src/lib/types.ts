@@ -44,6 +44,8 @@ export interface Employee {
   contractStatus: 'Active' | 'Expiring Soon';
   daysRemaining?: number;
   experienceYears: number;
+  isIntern?: boolean;
+  isNotAvailableWfo?: boolean;
   skills?: string[];
   projects?: Project[];
   contractHistory?: ContractHistoryItem[];

@@ -12,6 +12,10 @@ public class UserDto
     public string DepartmentName { get; set; } = string.Empty;
     public EmployeeType EmployeeType { get; set; }
     public int ExperienceYears { get; set; }
+    /// <summary>True if this junior employee is tagged as an intern by HR.</summary>
+    public bool IsIntern { get; set; } = false;
+    /// <summary>True if this employee has self-reported as not available for WFO.</summary>
+    public bool IsNotAvailableWfo { get; set; } = false;
     public DateTime ContractStart { get; set; }
     public DateTime ContractEnd { get; set; }
     public ContractStatus ContractStatus { get; set; }
