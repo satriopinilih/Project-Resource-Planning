@@ -388,7 +388,7 @@ public class EmployeeService
     }
     private static UserDto MapToUserDto(User u)
     {
-        var daysRemaining = (u.ContractEnd.Date - DateTime.UtcNow.Date).Days;
+        var daysRemaining = u.ContractEnd == default ? 0 : (u.ContractEnd.Date - DateTime.UtcNow.Date).Days;
         var staffRole = u.UserStaffRoles.Select(x => x.StaffRole.RoleName).FirstOrDefault()
                         ?? u.UserRoles.Select(x => x.Role.RoleName.ToString()).FirstOrDefault()
                         ?? "Staff";
@@ -411,7 +411,9 @@ public class EmployeeService
         // Re-derive the original contract end (before any extensions)
         // by subtracting all approved durations from the current ContractEnd.
         int totalExtendedMonths = approvedExtensions.Sum(e => e.ExtensionDuration);
-        DateTime originalEnd = u.ContractEnd.AddMonths(-totalExtendedMonths);
+        DateTime originalEnd = (u.ContractEnd == default || totalExtendedMonths == 0)
+            ? u.ContractEnd
+            : u.ContractEnd.Year > 1 ? u.ContractEnd.AddMonths(-totalExtendedMonths) : u.ContractEnd;
 
         if (approvedExtensions.Count == 0)
         {
@@ -623,10 +625,22 @@ public class EmployeeService
     /// </summary>
     private static string FormatDuration(DateTime start, DateTime end)
     {
+        // Guard: if either date is default/unset, return a safe fallback
+        if (start == default || end == default || start >= end)
+            return "< 1 month";
+
         int years = 0, months = 0;
         var cursor = start;
-        while (cursor.AddYears(1) <= end) { years++; cursor = cursor.AddYears(1); }
-        while (cursor.AddMonths(1) <= end) { months++; cursor = cursor.AddMonths(1); }
+        try
+        {
+            while (cursor.AddYears(1) <= end) { years++; cursor = cursor.AddYears(1); }
+            while (cursor.AddMonths(1) <= end) { months++; cursor = cursor.AddMonths(1); }
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // Fallback for edge-case dates near DateTime.Min/Max
+            return "< 1 month";
+        }
 
         if (years > 0 && months > 0)
             return $"{years} year{(years > 1 ? "s" : "")}, {months} month{(months > 1 ? "s" : "")}";
