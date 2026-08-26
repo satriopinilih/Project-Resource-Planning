@@ -7,6 +7,7 @@ import StatCard from '@/components/StatCard';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
 import EmployeeContractTable from '@/app/dashboard/gm/components/EmployeeContractTable';
+import ResourcePipeline from '@/components/ResourcePipeline';
 import {
   approveContractExtension,
   HireRequest,
@@ -715,6 +716,11 @@ export default function HRDashboard() {
               )}
             </>
           )}
+        </div>
+
+        {/* ── Resource Pipeline View (read-only) ── */}
+        <div className="mt-6">
+          <ResourcePipeline readOnly />
         </div>
       </main>
 

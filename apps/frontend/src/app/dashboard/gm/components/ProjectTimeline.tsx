@@ -82,8 +82,8 @@ function projectToTimeline(p: BackendProject): TimelineProject {
       title: p.projectName,
       startDate: mainStart,
       endDate: mainEnd,
-      status: (mainStatus === "completed" || mainStatus === "babysitting" || mainStatus === "warranty") 
-        ? "completed" 
+      status: (mainStatus === "completed" || mainStatus === "babysitting" || mainStatus === "warranty")
+        ? "completed"
         : mainStatus,
     }
   ];
@@ -299,7 +299,7 @@ export default function ProjectTimeline() {
     let future = 0;
 
     const filtered = allProjects.filter((p) => {
-      if (!activeFilters.has(p.status)) return false;
+      if (activeFilters.size > 0 && !activeFilters.has(p.status)) return false;
       if (searchQuery.trim() !== "" && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
       // Only show if overlaps with the current 12-week window
@@ -410,8 +410,8 @@ export default function ProjectTimeline() {
                   key={mode}
                   onClick={() => handleViewModeChange(mode)}
                   className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all ${viewMode === mode
-                      ? "bg-[#3b82f6] text-white shadow-sm"
-                      : "text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]"
+                    ? "bg-[#3b82f6] text-white shadow-sm"
+                    : "text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]"
                     }`}
                 >
                   {mode}
@@ -533,15 +533,14 @@ export default function ProjectTimeline() {
                             width: `calc(${widthPct}% - 6px)`,
                             height: "28px",
                           }}
-                          className={`flex items-center px-3 rounded-md text-[11px] font-semibold text-white truncate border shadow-sm transition-all duration-200 ${statusBarColors[bar.status]} ${
-                            isPhaseCompleted 
-                              ? "opacity-50" 
+                          className={`flex items-center px-3 rounded-md text-[11px] font-semibold text-white truncate border shadow-sm transition-all duration-200 ${statusBarColors[bar.status]} ${isPhaseCompleted
+                              ? "opacity-50"
                               : isBabysitting
                                 ? "opacity-85 border-indigo-400/40 border-dashed"
                                 : isWarranty
                                   ? "opacity-85 border-blue-400/40 border-dashed"
                                   : ""
-                          }`}
+                            }`}
                         >
                           {bar.title}
                         </Link>

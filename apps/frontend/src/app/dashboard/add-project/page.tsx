@@ -139,9 +139,7 @@ export default function AddProjectPage() {
 
   const router = useRouter();
 
-  const [teamRoles, setTeamRoles] = useState([
-    { id: '1', role: 'PM', count: 1, workingType: 'Dedicated' }
-  ]);
+  const [teamRoles, setTeamRoles] = useState<{ id: string; role: string; count: number; workingType: string }[]>([]);
 
   const [customBabysittingStartDate, setCustomBabysittingStartDate] = useState<string>("");
   const [customWarrantyStartDate, setCustomWarrantyStartDate] = useState<string>("");
@@ -210,38 +208,35 @@ export default function AddProjectPage() {
     [formOptions.staffRoles]
   );
 
-  const technicalRolesCount = useMemo(
-    () => teamRoles.filter(r => r.role !== 'PM').length,
+  const selectedRoles = useMemo(
+    () => teamRoles.map(r => r.role),
     [teamRoles]
   );
-  const isTechRoleLimitReached = technicalRolesCount >= MAX_TECHNICAL_ROLES;
 
-  const selectedTechnicalRoles = useMemo(
-    () => teamRoles.filter(r => r.role !== 'PM').map(r => r.role),
-    [teamRoles]
-  );
+  const maxRolesLimit = ALLOWED_STAFF_ROLES.length;
+  const isRoleLimitReached = teamRoles.length >= maxRolesLimit;
 
   const availableRolesForNew = useMemo(() => {
     const sourceRoles = allowedStaffRoles.length > 0
       ? allowedStaffRoles.map(r => r.name)
-      : TECHNICAL_ROLES;
-    return sourceRoles.filter(r => r !== 'PM' && !selectedTechnicalRoles.includes(r));
-  }, [allowedStaffRoles, selectedTechnicalRoles]);
+      : ALLOWED_STAFF_ROLES;
+    return sourceRoles.filter(r => !selectedRoles.includes(r));
+  }, [allowedStaffRoles, selectedRoles]);
 
   const getAvailableRolesForRow = useCallback(
     (currentRole: string) => {
       const sourceRoles = allowedStaffRoles.length > 0
         ? allowedStaffRoles.map(r => r.name)
-        : TECHNICAL_ROLES;
+        : ALLOWED_STAFF_ROLES;
       return sourceRoles.filter(
-        r => r !== 'PM' && (r === currentRole || !selectedTechnicalRoles.includes(r))
+        r => r === currentRole || !selectedRoles.includes(r)
       );
     },
-    [allowedStaffRoles, selectedTechnicalRoles]
+    [allowedStaffRoles, selectedRoles]
   );
 
   const handleAddRole = (workingType: 'Dedicated' | 'Non-Dedicated' = 'Dedicated') => {
-    if (isTechRoleLimitReached || availableRolesForNew.length === 0) return;
+    if (isRoleLimitReached || availableRolesForNew.length === 0) return;
     setTeamRoles(prev => [...prev, {
       id: Math.random().toString(36).substring(2, 9),
       role: availableRolesForNew[0],
@@ -504,40 +499,40 @@ export default function AddProjectPage() {
       return;
     }
     // Validate main roles
-    const mainTechRoles = teamRoles.filter(r => r.role !== 'PM').map(r => r.role);
-    if (new Set(mainTechRoles).size !== mainTechRoles.length) {
-      setError("Duplicate technical roles detected in Main phase. Each role must be unique.");
+    const mainRoles = teamRoles.map(r => r.role);
+    if (new Set(mainRoles).size !== mainRoles.length) {
+      setError("Duplicate roles detected in Main phase. Each role must be unique.");
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (mainTechRoles.length > MAX_TECHNICAL_ROLES) {
-      setError(`Maximum ${MAX_TECHNICAL_ROLES} technical roles allowed in Main phase.`);
+    if (mainRoles.length > ALLOWED_STAFF_ROLES.length) {
+      setError(`Maximum ${ALLOWED_STAFF_ROLES.length} roles allowed in Main phase.`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     // Validate babysitting roles
-    const babysittingTechRoles = babysittingRoles.filter(r => r.role !== 'PM').map(r => r.role);
-    if (new Set(babysittingTechRoles).size !== babysittingTechRoles.length) {
-      setError("Duplicate technical roles detected in Babysitting phase. Each role must be unique.");
+    const babysittingRolesList = babysittingRoles.map(r => r.role);
+    if (new Set(babysittingRolesList).size !== babysittingRolesList.length) {
+      setError("Duplicate roles detected in Babysitting phase. Each role must be unique.");
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (babysittingTechRoles.length > MAX_TECHNICAL_ROLES) {
-      setError(`Maximum ${MAX_TECHNICAL_ROLES} technical roles allowed in Babysitting phase.`);
+    if (babysittingRolesList.length > ALLOWED_STAFF_ROLES.length) {
+      setError(`Maximum ${ALLOWED_STAFF_ROLES.length} roles allowed in Babysitting phase.`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     // Validate warranty roles
-    const warrantyTechRoles = warrantyRoles.filter(r => r.role !== 'PM').map(r => r.role);
-    if (new Set(warrantyTechRoles).size !== warrantyTechRoles.length) {
-      setError("Duplicate technical roles detected in Warranty phase. Each role must be unique.");
+    const warrantyRolesList = warrantyRoles.map(r => r.role);
+    if (new Set(warrantyRolesList).size !== warrantyRolesList.length) {
+      setError("Duplicate roles detected in Warranty phase. Each role must be unique.");
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (warrantyTechRoles.length > MAX_TECHNICAL_ROLES) {
-      setError(`Maximum ${MAX_TECHNICAL_ROLES} technical roles allowed in Warranty phase.`);
+    if (warrantyRolesList.length > ALLOWED_STAFF_ROLES.length) {
+      setError(`Maximum ${ALLOWED_STAFF_ROLES.length} roles allowed in Warranty phase.`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -1177,11 +1172,11 @@ export default function AddProjectPage() {
                         Required Team Roles <span className="text-red-500">*</span>
                       </label>
                     </div>
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-colors ${isTechRoleLimitReached
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-colors ${isRoleLimitReached
                       ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
                       : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/25'
                       }`}>
-                      {technicalRolesCount}/{MAX_TECHNICAL_ROLES} Technical Roles
+                      {teamRoles.length}/{ALLOWED_STAFF_ROLES.length} Roles
                     </span>
                   </div>
 
@@ -1189,8 +1184,8 @@ export default function AddProjectPage() {
                     <button
                       type="button"
                       onClick={() => handleAddRole('Non-Dedicated')}
-                      disabled={isTechRoleLimitReached || availableRolesForNew.length === 0}
-                      className={`flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl border transition-all ${isTechRoleLimitReached || availableRolesForNew.length === 0
+                      disabled={isRoleLimitReached || availableRolesForNew.length === 0}
+                      className={`flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl border transition-all ${isRoleLimitReached || availableRolesForNew.length === 0
                         ? 'text-gray-400 dark:text-gray-600 border-gray-200 dark:border-white/5 cursor-not-allowed opacity-50'
                         : 'text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-500/20 hover:bg-violet-50 dark:hover:bg-violet-500/10'
                         }`}
@@ -1200,8 +1195,8 @@ export default function AddProjectPage() {
                     <button
                       type="button"
                       onClick={() => handleAddRole('Dedicated')}
-                      disabled={isTechRoleLimitReached || availableRolesForNew.length === 0}
-                      className={`flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl border transition-all ${isTechRoleLimitReached || availableRolesForNew.length === 0
+                      disabled={isRoleLimitReached || availableRolesForNew.length === 0}
+                      className={`flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl border transition-all ${isRoleLimitReached || availableRolesForNew.length === 0
                         ? 'text-gray-400 dark:text-gray-600 border-gray-200 dark:border-white/5 cursor-not-allowed opacity-50'
                         : 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20 hover:bg-blue-50 dark:hover:bg-blue-500/10'
                         }`}
@@ -1211,69 +1206,66 @@ export default function AddProjectPage() {
                   </div>
                 </div>
 
-                {isTechRoleLimitReached && (
+                {isRoleLimitReached && (
                   <div className="flex items-center gap-2 text-[12px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 px-3 py-2 rounded-xl">
                     <ShieldAlert size={14} />
-                    Maximum {MAX_TECHNICAL_ROLES} technical roles reached. Remove an existing role to add a new one.
+                    Maximum {ALLOWED_STAFF_ROLES.length} roles reached. Remove an existing role to add a new one.
                   </div>
                 )}
               </div>
 
               <div className="space-y-3">
-                {teamRoles.map((roleItem, index) => (
-                  <div
-                    key={roleItem.id}
-                    className={`grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-4 rounded-2xl border transition-all ${index === 0
-                      ? 'bg-blue-50/50 dark:bg-blue-500/5 border-blue-100 dark:border-blue-500/10'
-                      : roleItem.workingType === 'Non-Dedicated'
-                        ? 'bg-violet-50/50 dark:bg-violet-500/5 border-violet-100 dark:border-violet-500/10'
-                        : 'bg-gray-50/50 dark:bg-gray-500/5 border-gray-100 dark:border-gray-500/10'
-                      }`}
-                  >
-                    <div className="md:col-span-5">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <label className="text-[11px] text-gray-400 font-bold uppercase block">Role</label>
-                        {index === 0 && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">FIXED</span>
-                        )}
-                        {roleItem.workingType === 'Non-Dedicated' && index !== 0 && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400">SHARED</span>
-                        )}
+                {teamRoles.length === 0 ? (
+                  <div className="text-center py-6 text-[13px] text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-800/10 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                    No roles added yet. Click &quot;Add Role&quot; or &quot;Non-Dedicated&quot; above to add roles.
+                  </div>
+                ) : (
+                  teamRoles.map((roleItem) => (
+                    <div
+                      key={roleItem.id}
+                      className={`grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-4 rounded-2xl border transition-all ${
+                        roleItem.workingType === 'Non-Dedicated'
+                          ? 'bg-violet-50/50 dark:bg-violet-500/5 border-violet-100 dark:border-violet-500/10'
+                          : 'bg-gray-50/50 dark:bg-gray-500/5 border-gray-100 dark:border-gray-500/10'
+                        }`}
+                    >
+                      <div className="md:col-span-5">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <label className="text-[11px] text-gray-400 font-bold uppercase block">Role</label>
+                          {roleItem.workingType === 'Non-Dedicated' && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400">SHARED</span>
+                          )}
+                        </div>
+                        <select
+                          className={inputClasses}
+                          value={roleItem.role}
+                          onChange={(e) => updateRole(roleItem.id, 'role', e.target.value)}
+                        >
+                          {getAvailableRolesForRow(roleItem.role)
+                            .map(role => <option key={role} value={role}>{role}</option>)}
+                        </select>
                       </div>
-                      <select
-                        className={inputClasses}
-                        value={roleItem.role}
-                        onChange={(e) => updateRole(roleItem.id, 'role', e.target.value)}
-                        disabled={index === 0}
-                      >
-                        {index === 0 ? <option value="PM">Project Manager</option> : (
-                          getAvailableRolesForRow(roleItem.role)
-                            .map(role => <option key={role} value={role}>{role}</option>)
-                        )}
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-[11px] text-gray-400 font-bold uppercase mb-1.5 block text-center">Count</label>
-                      <input
-                        type="number"
-                        value={roleItem.count}
-                        onChange={(e) => updateRole(roleItem.id, 'count', parseInt(e.target.value) || 1)}
-                        min={1}
-                        className={`${inputClasses} text-center`}
-                      />
-                    </div>
-                    <div className="md:col-span-4">
-                      <label className="text-[11px] text-gray-400 font-bold uppercase mb-1.5 block">Type</label>
-                      <select
-                        className={inputClasses}
-                        value={roleItem.workingType}
-                        onChange={(e) => updateRole(roleItem.id, 'workingType', e.target.value)}
-                      >
-                        {ALLOWED_WORKING_TYPES.map(wt => <option key={wt} value={wt}>{wt}</option>)}
-                      </select>
-                    </div>
-                    <div className="md:col-span-1 flex justify-center pb-0.5">
-                      {index !== 0 && (
+                      <div className="md:col-span-2">
+                        <label className="text-[11px] text-gray-400 font-bold uppercase mb-1.5 block text-center">Count</label>
+                        <input
+                          type="number"
+                          value={roleItem.count}
+                          onChange={(e) => updateRole(roleItem.id, 'count', parseInt(e.target.value) || 1)}
+                          min={1}
+                          className={`${inputClasses} text-center`}
+                        />
+                      </div>
+                      <div className="md:col-span-4">
+                        <label className="text-[11px] text-gray-400 font-bold uppercase mb-1.5 block">Type</label>
+                        <select
+                          className={inputClasses}
+                          value={roleItem.workingType}
+                          onChange={(e) => updateRole(roleItem.id, 'workingType', e.target.value)}
+                        >
+                          {ALLOWED_WORKING_TYPES.map(wt => <option key={wt} value={wt}>{wt}</option>)}
+                        </select>
+                      </div>
+                      <div className="md:col-span-1 flex justify-center pb-0.5">
                         <button
                           type="button"
                           onClick={() => handleRemoveRole(roleItem.id)}
@@ -1282,10 +1274,10 @@ export default function AddProjectPage() {
                         >
                           <Trash2 size={20} />
                         </button>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
