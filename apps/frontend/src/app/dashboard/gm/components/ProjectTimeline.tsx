@@ -214,6 +214,7 @@ export default function ProjectTimeline() {
     new Set(["pending", "scheduled", "running", "hold", "babysitting", "warranty"])
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<string>("start-asc");
 
   const [viewMode, setViewMode] = useState<ViewMode>("Weekly");
 
@@ -302,7 +303,7 @@ export default function ProjectTimeline() {
       if (activeFilters.size > 0 && !activeFilters.has(p.status)) return false;
       if (searchQuery.trim() !== "" && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
-      // Only show if overlaps with the current 12-week window
+      // Only show if overlaps with the current window
       if (p.endDate < windowStart) {
         past++;
         return false;
@@ -314,8 +315,16 @@ export default function ProjectTimeline() {
       return true;
     });
 
-    return { columns: cols, filteredProjects: filtered, hiddenPastCount: past, hiddenFutureCount: future };
-  }, [allProjects, activeFilters, searchQuery, windowStart, windowEnd, viewMode]);
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === "name-asc") return a.name.localeCompare(b.name);
+      if (sortBy === "name-desc") return b.name.localeCompare(a.name);
+      if (sortBy === "start-desc") return b.startDate.getTime() - a.startDate.getTime();
+      // default: start-asc
+      return a.startDate.getTime() - b.startDate.getTime();
+    });
+
+    return { columns: cols, filteredProjects: sorted, hiddenPastCount: past, hiddenFutureCount: future };
+  }, [allProjects, activeFilters, searchQuery, sortBy, windowStart, windowEnd, viewMode]);
 
   return (
     <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300">
@@ -330,8 +339,25 @@ export default function ProjectTimeline() {
           </p>
         </div>
 
-        {/* Prev / Next */}
+        {/* Sort + Prev / Next */}
         <div className="flex items-center gap-2">
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-[var(--dash-text-muted)] whitespace-nowrap">
+              Sort:
+            </span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="h-9 px-2.5 text-[12px] font-semibold text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none focus:border-[#3b82f6]/50 transition-colors"
+            >
+              <option value="start-asc">Start Date (Earliest)</option>
+              <option value="start-desc">Start Date (Latest)</option>
+              <option value="name-asc">Project Name (A-Z)</option>
+              <option value="name-desc">Project Name (Z-A)</option>
+            </select>
+          </div>
+
           <div className="relative">
             {hiddenPastCount > 0 && (
               <span
@@ -401,29 +427,27 @@ export default function ProjectTimeline() {
         })}
 
         {/* View toggle & Search */}
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-3">
           {/* View toggle */}
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg p-0.5">
-              {(["Daily", "Weekly", "Monthly"] as ViewMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => handleViewModeChange(mode)}
-                  className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all ${viewMode === mode
-                    ? "bg-[#3b82f6] text-white shadow-sm"
-                    : "text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]"
-                    }`}
-                >
-                  {mode}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg p-0.5">
+            {(["Daily", "Weekly", "Monthly"] as ViewMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => handleViewModeChange(mode)}
+                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all ${viewMode === mode
+                  ? "bg-[#3b82f6] text-white shadow-sm"
+                  : "text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)]"
+                  }`}
+              >
+                {mode}
+              </button>
+            ))}
           </div>
 
           {/* ── Search Bar ── */}
-          <div className="relative w-[260px]">
+          <div className="relative w-[220px]">
             <Search
-              size={16}
+              size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]"
               strokeWidth={1.8}
             />
@@ -432,7 +456,7 @@ export default function ProjectTimeline() {
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-9 pl-9 pr-4 text-[13px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
+              className="w-full h-9 pl-8 pr-3 text-[12px] text-[var(--dash-text-heading)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg outline-none placeholder:text-[var(--dash-text-faint)] focus:border-[#3b82f6]/50 transition-colors duration-200"
             />
           </div>
         </div>
