@@ -47,7 +47,7 @@ export default function DashboardPage() {
 
   if (role === 'GM') {
     return (
-      <div className="flex-1 p-6 space-y-5 overflow-y-auto">
+      <div className="flex-1 p-4 sm:p-6 space-y-5 min-w-0 max-w-full">
         <StatCards />
         <AlertBanner />
         <ExpiringContractsAlert />

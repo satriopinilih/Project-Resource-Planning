@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Bell, Sun, Moon, User, Calendar, Check, Briefcase,
-  FileText, ArrowRightCircle, X, AlertCircle, Trash2, RotateCcw, ShieldAlert, Award
+  FileText, ArrowRightCircle, X, AlertCircle, Trash2, RotateCcw, ShieldAlert, Award,
+  Menu
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getSessionUser } from "@/lib/auth";
@@ -78,6 +79,7 @@ const avatarBgClass: Record<string, string> = {
 interface AppHeaderProps {
   title: string;
   role?: Role;
+  onMenuClick?: () => void;
 }
 
 interface PMNotification {
@@ -199,7 +201,7 @@ function NotificationItem({
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function AppHeader({ title, role }: AppHeaderProps) {
+export default function AppHeader({ title, role, onMenuClick }: AppHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -990,24 +992,35 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
-    <header className="sticky top-0 z-50 flex items-center justify-between h-[80px] px-8 bg-[var(--dash-bg-header)] backdrop-blur-xl border-b border-[var(--dash-border)] transition-colors duration-300">
-      {/* Page Title */}
-      <h2 className="text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight">
-        {title}
-      </h2>
+    <header className="sticky top-0 z-30 flex items-center justify-between h-[68px] sm:h-[80px] px-4 sm:px-8 bg-[var(--dash-bg-header)] backdrop-blur-xl border-b border-[var(--dash-border)] transition-colors duration-300 w-full min-w-0">
+      {/* Left: Mobile Menu Trigger + Page Title */}
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden p-2 -ml-1.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all cursor-pointer"
+            aria-label="Open navigation menu"
+          >
+            <Menu size={22} strokeWidth={1.8} />
+          </button>
+        )}
+        <h2 className="text-[17px] sm:text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight truncate">
+          {title}
+        </h2>
+      </div>
 
       {/* Right section */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-2.5 sm:gap-6 shrink-0">
         <div className="relative">
           {/* Bell button */}
           <button
             onClick={handleToggleNotifications}
-            className="relative p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
+            className="relative p-2 sm:p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
           >
-            <Bell size={22} strokeWidth={1.8} />
+            <Bell className="w-5 h-5 sm:w-[22px] sm:h-[22px]" strokeWidth={1.8} />
             {hasUnread && (
               <>
-                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)] animate-pulse" />
+                <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2.5 h-2.5 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)] animate-pulse" />
                 <span className="absolute -bottom-0.5 -left-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[var(--dash-bg-header)] leading-none">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
@@ -1017,7 +1030,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
 
           {/* Dropdown */}
           {isNotificationOpen && (
-            <div className="absolute right-[-10px] mt-3 w-[340px] rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute right-[-10px] mt-3 w-[300px] sm:w-[340px] rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-bg-card)] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
               {/* Header */}
               <div className="px-5 py-4 border-b border-[var(--dash-border-subtle)] bg-[var(--dash-bg-header)]/50 flex items-center justify-between">
                 <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)] tracking-tight">
@@ -1066,38 +1079,38 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
         {/* Theme toggle */}
         <button
           onClick={toggleDarkMode}
-          className="p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
+          className="p-2 sm:p-2.5 rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-all duration-200 cursor-pointer"
           title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          {isDarkMode ? <Sun size={22} strokeWidth={1.8} /> : <Moon size={22} strokeWidth={1.8} />}
+          {isDarkMode ? <Sun className="w-5 h-5 sm:w-[22px] sm:h-[22px]" strokeWidth={1.8} /> : <Moon className="w-5 h-5 sm:w-[22px] sm:h-[22px]" strokeWidth={1.8} />}
         </button>
 
         {/* Divider */}
-        <div className="w-px h-8 bg-[var(--dash-border)]" />
+        <div className="w-px h-7 sm:h-8 bg-[var(--dash-border)]" />
 
         {/* User info */}
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-[15px] font-bold text-[var(--dash-text-heading)] leading-tight">
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="text-right hidden sm:block">
+            <p className="text-[14px] sm:text-[15px] font-bold text-[var(--dash-text-heading)] leading-tight">
               {userName}
             </p>
-            <p className="text-[12px] text-[var(--dash-text-faint)] font-medium mt-0.5">
+            <p className="text-[11px] sm:text-[12px] text-[var(--dash-text-faint)] font-medium mt-0.5">
               {userRole}
             </p>
           </div>
           {/* Avatar */}
           <div className="relative">
             <div
-              className={`flex items-center justify-center w-11 h-11 rounded-full ${avatarClass} text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)]`}
+              className={`flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full ${avatarClass} text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)]`}
             >
-              <User size={22} strokeWidth={2} />
+              <User className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
             </div>
             {hasUnread && (
-              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#f59e0b] rounded-full border-2 border-[var(--dash-bg-header)]" />
             )}
           </div>
           {/* Role Pill */}
-          <div className={`px-3 py-1.5 rounded-full text-[13px] font-bold border ${badgeClass}`}>
+          <div className={`hidden md:block px-3 py-1.5 rounded-full text-[12px] sm:text-[13px] font-bold border ${badgeClass}`}>
             {userRole}
           </div>
         </div>

@@ -10,7 +10,13 @@ type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role>("Staff");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const pathname = usePathname();
+
+  // Automatically close mobile sidebar on navigation
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [pathname]);
 
   const getTitle = () => {
     if (pathname === "/dashboard") return "Dashboard";
@@ -34,12 +40,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
-      <AppSidebar role={role} />
-      <main className="flex-1 ml-64 flex flex-col min-h-screen">
-        {title ? <AppHeader title={title} role={role} /> : null}
-        {children}
-      </main>
+    <div className="flex min-h-screen w-full bg-[var(--dash-bg-page)] transition-colors duration-300 overflow-x-hidden">
+      <AppSidebar
+        role={role}
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen lg:pl-64 w-full">
+        {title ? (
+          <AppHeader
+            title={title}
+            role={role}
+            onMenuClick={() => setIsMobileSidebarOpen(true)}
+          />
+        ) : null}
+        <main className="flex-1 min-w-0 w-full flex flex-col">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

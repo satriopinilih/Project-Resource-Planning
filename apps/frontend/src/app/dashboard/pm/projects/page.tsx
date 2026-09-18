@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Filter, Loader2, ArrowRight, Users } from "lucide-react";
+import { Search, Filter, Loader2, ArrowRight, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { getProjects } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import AppHeader from "@/components/AppHeader";
@@ -41,7 +41,11 @@ const formatDate = (dateString: string) => {
 
 const tabs = ["All", "Running", "Scheduled", "Babysitting", "Warranty", "Completed"];
 
-function PMProjectsContent() {
+interface ProjectsPageProps {
+  onMenuClick?: () => void;
+}
+
+function PMProjectsContent({ onMenuClick }: ProjectsPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("All");
@@ -51,6 +55,41 @@ function PMProjectsContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [clientFilter, setClientFilter] = useState("All Clients");
   const [sortBy, setSortBy] = useState("name-asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(() => {
+    if (typeof window === "undefined") return 5;
+    try {
+      const saved = localStorage.getItem("projects_items_per_page");
+      const parsed = saved ? Number(saved) : 5;
+      return [5, 10, 15].includes(parsed) ? parsed : 5;
+    } catch {
+      return 5;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("projects_items_per_page");
+      if (saved) {
+        const parsed = Number(saved);
+        if ([5, 10, 15].includes(parsed)) {
+          setItemsPerPage(parsed);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const handleItemsPerPageChange = (val: number) => {
+    setItemsPerPage(val);
+    setCurrentPage(1);
+    try {
+      localStorage.setItem("projects_items_per_page", String(val));
+    } catch {
+      // Ignore
+    }
+  };
 
   useEffect(() => {
     const filterParam = searchParams.get("filter");
@@ -152,13 +191,25 @@ function PMProjectsContent() {
       case "oldest": return new Date(a.startDateRaw).getTime() - new Date(b.startDateRaw).getTime();
       case "most-member": return b.team - a.team;
       case "least-member": return a.team - b.team;
-      default: return 0;
+      default:
+        return 0;
     }
   });
 
+  // Reset to page 1 whenever search, tab, client, sort, or itemsPerPage changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery, clientFilter, sortBy, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+  const paginatedProjects = filteredProjects.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <>
-      <AppHeader title="Projects" role="PM" />
+      <AppHeader title="Projects" role="PM" onMenuClick={onMenuClick} />
       <div className="p-8 w-full h-auto overflow-y-auto">
         <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl transition-colors duration-300">
           <div className="flex items-center justify-between p-5 pb-0">
@@ -286,7 +337,7 @@ function PMProjectsContent() {
                       </div>
                     </td>
                   </tr>
-                ) : filteredProjects.length === 0 ? (
+                ) : paginatedProjects.length === 0 ? (
                   <tr>
                     <td
                       colSpan={6}
@@ -296,7 +347,7 @@ function PMProjectsContent() {
                     </td>
                   </tr>
                 ) : (
-                  filteredProjects.map((project) => (
+                  paginatedProjects.map((project) => (
                     <tr
                       key={project.id}
                       onClick={() => router.push(`/project/${project.id}`)}
@@ -363,20 +414,67 @@ function PMProjectsContent() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredProjects.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-[var(--dash-border-subtle)]">
+              <div className="flex items-center gap-4">
+                <p className="text-[12px] text-[var(--dash-text-faint)]">
+                  Showing {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProjects.length)} of {filteredProjects.length} projects
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-[var(--dash-text-faint)]">Show</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                    className="px-2 py-1 text-[11px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-md hover:text-[var(--dash-text-heading)] transition-colors focus:outline-none cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                  </select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] text-[var(--dash-text-faint)] mr-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft size={14} />
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  >
+                    Next
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 }
 
-export default function PMProjectsPage() {
+export default function PMProjectsPage({ onMenuClick }: ProjectsPageProps = {}) {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-screen bg-[#18181b]">
         <Loader2 className="w-8 h-8 animate-spin text-[#3b82f6]" />
       </div>
     }>
-      <PMProjectsContent />
+      <PMProjectsContent onMenuClick={onMenuClick} />
     </Suspense>
   );
 }

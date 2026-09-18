@@ -15,6 +15,7 @@ import {
   Database,
   ChevronDown,
   ChevronRight,
+  X,
 } from "lucide-react";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
@@ -65,9 +66,11 @@ const navByRole: Record<string, NavItem[]> = {
 
 interface AppSidebarProps {
   role: Role;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function AppSidebar({ role }: AppSidebarProps) {
+export default function AppSidebar({ role, isOpen = false, onClose }: AppSidebarProps) {
   const pathname = usePathname();
   const navItems = navByRole[role ?? "Staff"] ?? navByRole["Staff"];
 
@@ -87,22 +90,52 @@ export default function AppSidebar({ role }: AppSidebarProps) {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-[var(--dash-bg-sidebar)] border-r border-[var(--dash-border)] transition-colors duration-300">
-      {/* Branding */}
-      <div className="px-8 pt-8 pb-6">
-        <h1 className="text-[20px] font-bold text-[var(--dash-text-heading)] leading-tight tracking-tight">
-          Resource Planning
-        </h1>
-        <p className="text-[14px] text-[var(--dash-text-muted)] mt-1 font-medium">
-          Consulting System
-        </p>
-      </div>
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Separator */}
-      <div className="border-t border-[var(--dash-border)] mb-6" />
+      {/* Sidebar container: fixed on desktop, slide-over drawer on mobile */}
+      <aside
+        className={`
+          fixed top-0 bottom-0 left-0 z-50 flex h-full w-64 flex-col
+          bg-[var(--dash-bg-sidebar)] border-r border-[var(--dash-border)]
+          transition-transform duration-300 ease-in-out
+          lg:translate-x-0 lg:z-40
+          ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"}
+        `}
+      >
+        {/* Branding with Mobile Close Button */}
+        <div className="px-6 pt-6 pb-5 flex items-center justify-between">
+          <div>
+            <h1 className="text-[18px] sm:text-[20px] font-bold text-[var(--dash-text-heading)] leading-tight tracking-tight">
+              Resource Planning
+            </h1>
+            <p className="text-[13px] sm:text-[14px] text-[var(--dash-text-muted)] mt-0.5 font-medium">
+              Consulting System
+            </p>
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1.5 rounded-lg text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] transition-colors"
+              aria-label="Close menu"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-2 px-6">
+        {/* Separator */}
+        <div className="border-t border-[var(--dash-border)] mb-4" />
+
+        {/* Navigation with scrollable list for shorter viewports */}
+        <nav className="flex-1 flex flex-col gap-1.5 px-4 overflow-y-auto">
         {navItems.map((item) => {
           if (item.subItems) {
             const isSubItemActive = item.subItems.some(
@@ -198,5 +231,6 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         </button>
       </div>
     </aside>
+    </>
   );
 }

@@ -13,6 +13,7 @@ export default function ProjectPage() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [role, setRole] = useState<ReturnType<typeof getPrimaryRole>>(null);
   const [ready, setReady] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const sessionUser = getSessionUser();
@@ -33,12 +34,16 @@ export default function ProjectPage() {
   if (!ready || !user || !role) return null;
 
   return (
-    <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
-      <AppSidebar role={role} />
-      <main className="flex-1 ml-64 flex flex-col min-h-screen">
-        {role === 'GM' && <GMProjectsPage />}
-        {role === 'PM' && <PMProjectsPage />}
-        {role === 'Marketing' && <MarketingProjectsPage />}
+    <div className="flex min-h-screen w-full bg-[var(--dash-bg-page)] transition-colors duration-300 overflow-x-hidden">
+      <AppSidebar
+        role={role}
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
+      <main className="flex-1 min-w-0 flex flex-col min-h-screen lg:pl-64 w-full">
+        {role === 'GM' && <GMProjectsPage onMenuClick={() => setIsMobileSidebarOpen(true)} />}
+        {role === 'PM' && <PMProjectsPage onMenuClick={() => setIsMobileSidebarOpen(true)} />}
+        {role === 'Marketing' && <MarketingProjectsPage onMenuClick={() => setIsMobileSidebarOpen(true)} />}
       </main>
     </div>
   );

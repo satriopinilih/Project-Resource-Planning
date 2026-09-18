@@ -40,10 +40,10 @@ interface SmartRecommendationPanelProps {
 // ── Candidate Card ──
 const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number }> = ({ candidate, rank }) => {
   const matchColor = candidate.skillMatchPercent >= 70
-    ? "text-green-400"
+    ? "text-green-600 dark:text-green-400"
     : candidate.skillMatchPercent >= 40
-      ? "text-amber-400"
-      : "text-red-400";
+      ? "text-amber-600 dark:text-amber-400"
+      : "text-red-600 dark:text-red-400";
 
   const matchBg = candidate.skillMatchPercent >= 70
     ? "bg-green-500/10 border-green-500/20"
@@ -52,10 +52,10 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
       : "bg-red-500/10 border-red-500/20";
 
   return (
-    <div className="flex items-start gap-4 p-4 bg-[#1a1f2e]/60 rounded-xl border border-[var(--dash-border)] hover:border-gray-600 transition-all group">
+    <div className="flex items-start gap-4 p-4 bg-[var(--dash-bg-input)] rounded-xl border border-[var(--dash-border)] hover:border-[var(--dash-border-subtle)] transition-all group">
       {/* Rank Badge */}
       <div className="flex flex-col items-center gap-1 pt-0.5">
-        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${rank === 1 ? "bg-amber-500/20 text-amber-400" : rank === 2 ? "bg-gray-500/20 text-gray-400" : "bg-gray-800 text-gray-500"
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${rank === 1 ? "bg-amber-500/20 text-amber-600 dark:text-amber-400" : rank === 2 ? "bg-gray-500/20 text-[var(--dash-text-muted)]" : "bg-[var(--dash-bg-input)] text-[var(--dash-text-faint)]"
           }`}>
           #{rank}
         </div>
@@ -64,34 +64,34 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
       {/* Main Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="text-[13px] font-bold text-white truncate">{candidate.userName}</p>
+          <p className="text-[13px] font-bold text-[var(--dash-text-heading)] truncate">{candidate.userName}</p>
           <InternBadge isIntern={candidate.isIntern} size="xs" />
           {candidate.isAvailable && (
-            <span className="px-1.5 py-0.5 bg-green-500/10 text-green-400 text-[9px] font-bold rounded uppercase tracking-wider">Available</span>
+            <span className="px-1.5 py-0.5 bg-green-500/10 text-green-700 dark:text-green-400 text-[9px] font-bold rounded uppercase tracking-wider">Available</span>
           )}
         </div>
         <p className="text-[11px] text-[var(--dash-text-faint)] mb-2">
-          {candidate.staffRole} · {candidate.experienceYears}yr experience · For: <span className="text-blue-400">{candidate.targetRole} <span className="text-blue-400/60 font-semibold text-[10px]">({candidate.targetWorkingType})</span></span>
+          {candidate.staffRole} · {candidate.experienceYears}yr experience · For: <span className="text-blue-600 dark:text-blue-400">{candidate.targetRole} <span className="text-blue-500/70 dark:text-blue-400/60 font-semibold text-[10px]">({candidate.targetWorkingType})</span></span>
         </p>
 
         {/* Past Projects */}
         {candidate.pastProjects && candidate.pastProjects.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
-            <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider self-center mr-0.5">Projects:</span>
+            <span className="text-[9px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider self-center mr-0.5">Projects:</span>
             {candidate.pastProjects.map((proj, idx) => (
-              <span key={`${proj.projectName}-${idx}`} className="px-2 py-0.5 bg-purple-500/10 text-purple-300 text-[10px] font-semibold rounded-md border border-purple-500/20" title={`Role: ${proj.roleInProject} · Skills: ${proj.projectSkills.join(", ") || "—"}`}>
+              <span key={`${proj.projectName}-${idx}`} className="px-2 py-0.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-[10px] font-semibold rounded-md border border-purple-500/20" title={`Role: ${proj.roleInProject} · Skills: ${proj.projectSkills.join(", ") || "—"}`}>
                 {proj.projectName}
               </span>
             ))}
           </div>
         )}
         {(!candidate.pastProjects || candidate.pastProjects.length === 0) && (
-          <p className="text-[10px] text-gray-600 italic mb-2">No prior project experience</p>
+          <p className="text-[10px] text-[var(--dash-text-faint)] italic mb-2">No prior project experience</p>
         )}
 
         {/* Availability Note */}
         {(!candidate.isAvailable || (candidate.availabilityNote && (candidate.availabilityNote.includes("Delay") || candidate.availabilityNote.includes("adjust")))) && (
-          <p className={`text-[11px] flex items-center gap-1.5 mt-1 ${candidate.isAvailable ? 'text-purple-400/90' : 'text-amber-400/80'}`}>
+          <p className={`text-[11px] flex items-center gap-1.5 mt-1 ${candidate.isAvailable ? 'text-purple-600 dark:text-purple-400/90' : 'text-amber-600 dark:text-amber-400/80'}`}>
             <Clock size={11} />
             {candidate.availabilityNote}
             {candidate.currentProjects && candidate.currentProjects.length > 0 && (
@@ -108,7 +108,7 @@ const CandidateCard: React.FC<{ candidate: RecommendationCandidate; rank: number
         <span className={`text-[18px] font-black ${matchColor}`}>
           {candidate.skillMatchPercent.toFixed(0)}%
         </span>
-        <span className="text-[9px] text-gray-500 font-semibold uppercase tracking-wider">Match</span>
+        <span className="text-[9px] text-[var(--dash-text-faint)] font-semibold uppercase tracking-wider">Match</span>
       </div>
     </div>
   );
@@ -130,16 +130,16 @@ const AdjustDatesModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#0d1117] border border-[#8b5cf6]/30 rounded-3xl w-full max-w-lg shadow-[0_25px_60px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div className="bg-[var(--dash-bg-modal)] border border-[#8b5cf6]/30 rounded-3xl w-full max-w-lg shadow-[0_25px_60px_rgba(0,0,0,0.3)] overflow-hidden">
         {/* Header */}
-        <div className="px-7 pt-7 pb-5 border-b border-gray-800/60">
+        <div className="px-7 pt-7 pb-5 border-b border-[var(--dash-border)]">
           <div className="flex items-center gap-4">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
               <CalendarCheck size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="text-[17px] font-bold text-white">Adjust Project Dates</h3>
-              <p className="text-[12px] text-gray-500 mt-0.5">Reschedule to make all workers available</p>
+              <h3 className="text-[17px] font-bold text-[var(--dash-text-heading)]">Adjust Project Dates</h3>
+              <p className="text-[12px] text-[var(--dash-text-muted)] mt-0.5">Reschedule to make all workers available</p>
             </div>
           </div>
         </div>
@@ -150,35 +150,35 @@ const AdjustDatesModal: React.FC<{
           <div className="grid grid-cols-2 gap-3">
             <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/15">
               <p className="text-[10px] font-bold text-red-400/70 uppercase tracking-wider mb-2">Original Dates</p>
-              <p className="text-[12px] font-semibold text-gray-300">{fmt(originalStartDate)}</p>
+              <p className="text-[12px] font-semibold text-[var(--dash-text-secondary)]">{fmt(originalStartDate)}</p>
               <div className="flex items-center gap-1.5 my-1">
                 <div className="flex-1 h-px bg-red-500/20" />
                 <ArrowRight size={10} className="text-red-400/50" />
                 <div className="flex-1 h-px bg-red-500/20" />
               </div>
-              <p className="text-[12px] font-semibold text-gray-300">{fmt(originalEndDate)}</p>
+              <p className="text-[12px] font-semibold text-[var(--dash-text-secondary)]">{fmt(originalEndDate)}</p>
             </div>
             <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20">
-              <p className="text-[10px] font-bold text-purple-400/80 uppercase tracking-wider mb-2">New Dates</p>
-              <p className="text-[12px] font-semibold text-purple-200">{fmt(option.startDate)}</p>
+              <p className="text-[10px] font-bold text-purple-500/80 uppercase tracking-wider mb-2">New Dates</p>
+              <p className="text-[12px] font-semibold text-purple-700 dark:text-purple-200">{fmt(option.startDate)}</p>
               <div className="flex items-center gap-1.5 my-1">
                 <div className="flex-1 h-px bg-purple-500/20" />
                 <ArrowRight size={10} className="text-purple-400/50" />
                 <div className="flex-1 h-px bg-purple-500/20" />
               </div>
-              <p className="text-[12px] font-semibold text-purple-200">{fmt(option.endDate)}</p>
+              <p className="text-[12px] font-semibold text-purple-700 dark:text-purple-200">{fmt(option.endDate)}</p>
             </div>
           </div>
 
           {/* Detail note */}
           {option.rescheduleDetail && (
             <div className="p-3.5 rounded-xl bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 flex items-start gap-2.5">
-              <Clock size={13} className="text-purple-400 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-purple-300/90 leading-snug">{option.rescheduleDetail}</p>
+              <Clock size={13} className="text-purple-600 dark:text-purple-400 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-purple-700 dark:text-purple-300/90 leading-snug">{option.rescheduleDetail}</p>
             </div>
           )}
 
-          <p className="text-[11px] text-gray-500 leading-relaxed">
+          <p className="text-[11px] text-[var(--dash-text-muted)] leading-relaxed">
             The project's estimated start and end dates will be updated in the system. All team members in this plan will be assigned and the project will begin immediately.
           </p>
         </div>
@@ -188,7 +188,7 @@ const AdjustDatesModal: React.FC<{
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-[13px] transition-all disabled:opacity-50 cursor-pointer"
+            className="flex-1 py-2.5 rounded-xl bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-secondary)] font-semibold text-[13px] transition-all disabled:opacity-50 cursor-pointer border border-[var(--dash-border)]"
           >
             Cancel
           </button>
@@ -260,28 +260,28 @@ const OptionCard: React.FC<{
 
   return (
     <div className={`
-      flex-1 bg-[#1a1f2e]/50 border rounded-2xl p-6 flex flex-col transition-all duration-300
-      ${isCustomized ? "border-purple-500/40 shadow-[0_0_15px_rgba(139,92,246,0.1)]" : isRecommended ? "border-green-500/40 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : "border-[var(--dash-border)] hover:border-gray-700"}
+      flex-1 bg-[var(--dash-bg-card)] border rounded-2xl p-6 flex flex-col transition-all duration-300
+      ${isCustomized ? "border-purple-500/40 shadow-[0_0_15px_rgba(139,92,246,0.1)]" : isRecommended ? "border-green-500/40 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : "border-[var(--dash-border)] hover:border-[var(--dash-border-subtle)]"}
     `}>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2 flex-wrap">
-          <h4 className="text-[15px] font-bold text-white">{option.title}</h4>
+          <h4 className="text-[15px] font-bold text-[var(--dash-text-heading)]">{option.title}</h4>
           {isCustomized && (
-            <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-purple-500/30">
+            <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-purple-500/30">
               ✎ Customized
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
           {isRecommended && !isCustomized && (
-            <span className="px-2.5 py-1 rounded-md bg-green-500/10 text-green-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+            <span className="px-2.5 py-1 rounded-md bg-green-500/10 text-green-700 dark:text-green-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
               <Star size={10} fill="currentColor" /> Recommended
             </span>
           )}
           {isCustomized && onClearCustomization && (
             <button
               onClick={onClearCustomization}
-              className="px-2.5 py-1 rounded-md bg-gray-700/60 text-gray-400 hover:text-gray-200 hover:bg-gray-700 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border border-gray-600/40"
+              className="px-2.5 py-1 rounded-md bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border border-[var(--dash-border)]"
               title="Reset to AI recommendation"
             >
               ↺ Reset
@@ -294,17 +294,17 @@ const OptionCard: React.FC<{
         {/* Stats Row */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-gray-800 rounded-md text-gray-400"><Calendar size={14} /></div>
+            <div className="p-1.5 bg-[var(--dash-bg-input)] rounded-md text-[var(--dash-text-muted)]"><Calendar size={14} /></div>
             <div>
               <p className="text-[10px] text-[var(--dash-text-faint)] uppercase font-bold tracking-tight">Timeline</p>
-              <p className="text-[12px] text-gray-200 mt-0.5">{option.timeline}</p>
+              <p className="text-[12px] text-[var(--dash-text-primary)] mt-0.5">{option.timeline}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-gray-800 rounded-md text-gray-400"><Users size={14} /></div>
+            <div className="p-1.5 bg-[var(--dash-bg-input)] rounded-md text-[var(--dash-text-muted)]"><Users size={14} /></div>
             <div>
               <p className="text-[10px] text-[var(--dash-text-faint)] uppercase font-bold tracking-tight">Team Size</p>
-              <p className="text-[12px] text-gray-200 mt-0.5">{isCustomized ? customizedAssignments!.length : option.teamSize} members</p>
+              <p className="text-[12px] text-[var(--dash-text-primary)] mt-0.5">{isCustomized ? customizedAssignments!.length : option.teamSize} members</p>
             </div>
           </div>
         </div>
@@ -315,12 +315,12 @@ const OptionCard: React.FC<{
             <span className="text-[10px] text-[var(--dash-text-faint)] uppercase font-bold tracking-tight flex items-center gap-1.5">
               <Award size={12} /> {isCustomized ? "Custom Match Score" : "Skill Match Score"}
             </span>
-            <span className={`text-[13px] font-black ${displayScore >= 70 ? "text-green-400" : displayScore >= 40 ? "text-amber-400" : "text-red-400"
+            <span className={`text-[13px] font-black ${displayScore >= 70 ? "text-green-600 dark:text-green-400" : displayScore >= 40 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
               }`}>
               {displayScore.toFixed(0)}%
             </span>
           </div>
-          <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-[var(--dash-bg-input)] rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-1000 ${displayScore >= 70 ? "bg-gradient-to-r from-green-600 to-green-400" :
                 displayScore >= 40 ? "bg-gradient-to-r from-amber-600 to-amber-400" :
@@ -335,10 +335,10 @@ const OptionCard: React.FC<{
         <div className={`
           mt-3 p-3 rounded-xl border flex flex-col gap-1.5
           ${effectiveRequiresHiring
-            ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
+            ? "bg-amber-500/5 border-amber-500/20 text-amber-700 dark:text-amber-500"
             : effectiveRequiresReschedule
-              ? "bg-[#8b5cf6]/5 border-[#8b5cf6]/20 text-[#a78bfa]"
-              : "bg-green-500/5 border-green-500/20 text-green-500"}
+              ? "bg-[#8b5cf6]/5 border-[#8b5cf6]/20 text-purple-700 dark:text-[#a78bfa]"
+              : "bg-green-500/5 border-green-500/20 text-green-700 dark:text-green-500"}
         `}>
           <div className="flex items-center gap-2">
             {effectiveRequiresHiring ? <UserPlus size={14} /> : effectiveRequiresReschedule ? <Clock size={14} /> : <CheckCircle2 size={14} />}
@@ -358,7 +358,7 @@ const OptionCard: React.FC<{
       {/* Expand Candidates */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="mt-5 w-full py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 text-[12px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all border border-gray-700/50 cursor-pointer"
+        className="mt-5 w-full py-2.5 bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-secondary)] text-[12px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all border border-[var(--dash-border)] cursor-pointer"
       >
         <Briefcase size={14} />
         {expanded ? "Hide" : "Show"} Team ({isCustomized ? customizedAssignments!.length : option.candidates.length})
@@ -393,7 +393,7 @@ const OptionCard: React.FC<{
               if (isCustomized) setStartCustomConfirmOpen(true);
               else window.dispatchEvent(new CustomEvent('adjustDatesAndStart', { detail: { option, originalStartDate, originalEndDate } }));
             }}
-            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/20 disabled:shadow-none flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-300 disabled:to-gray-300 dark:disabled:from-gray-700 dark:disabled:to-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-500/20 disabled:shadow-none flex items-center justify-center gap-2"
           >
             <CalendarCheck size={14} />
             Adjust Dates &amp; Start
@@ -407,7 +407,7 @@ const OptionCard: React.FC<{
               if (isCustomized) setStartCustomConfirmOpen(true);
               else setStartConfirmOpen(true);
             }}
-            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
+            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500 text-white font-bold text-[13px] rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 disabled:shadow-none"
           >
             {!hasRequiredRoles ? "Add Roles First" : effectiveRequiresHiring ? "Unavailable to Start" : "Start Project"}
           </button>
@@ -432,7 +432,7 @@ const OptionCard: React.FC<{
             const dayOfWeek = new Date(startDateToCheck).getDay();
             const isWeekendStart = dayOfWeek === 0 || dayOfWeek === 6;
             return isWeekendStart && (
-              <div className="mt-2 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3 text-amber-400">
+              <div className="mt-2 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3 text-amber-600 dark:text-amber-400">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <div className="text-[12px] leading-relaxed font-medium">
                   <span className="font-bold block mb-1">Weekend Start Date</span>
@@ -462,7 +462,7 @@ const OptionCard: React.FC<{
             const dayOfWeek = new Date(startDateToCheck).getDay();
             const isWeekendStart = dayOfWeek === 0 || dayOfWeek === 6;
             return isWeekendStart && (
-              <div className="mt-2 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3 text-amber-400">
+              <div className="mt-2 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3 text-amber-600 dark:text-amber-400">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <div className="text-[12px] leading-relaxed font-medium">
                   <span className="font-bold block mb-1">Weekend Start Date</span>
@@ -474,7 +474,7 @@ const OptionCard: React.FC<{
         </ConfirmModal>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('customizeOption', { detail: option }))}
-          className="px-5 py-2.5 bg-[#2a2f3e] hover:bg-[#32384a] text-gray-200 font-bold text-[13px] rounded-xl border border-gray-700/50 transition-all cursor-pointer"
+          className="px-5 py-2.5 bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-secondary)] font-bold text-[13px] rounded-xl border border-[var(--dash-border)] transition-all cursor-pointer"
         >
           {isCustomized ? "Re-Customize" : "Customize"}
         </button>
@@ -589,25 +589,25 @@ const CustomizeModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#0d1117] border border-gray-800/80 rounded-3xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.6)]">
+      <div className="bg-[var(--dash-bg-modal)] border border-[var(--dash-border)] rounded-3xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.3)]">
 
         {/* ── Header ── */}
-        <div className="px-7 pt-7 pb-5 border-b border-gray-800/60 sticky top-0 bg-[#0d1117]/95 backdrop-blur-md z-10 rounded-t-3xl">
+        <div className="px-7 pt-7 pb-5 border-b border-[var(--dash-border)] sticky top-0 bg-[var(--dash-bg-modal)] backdrop-blur-md z-10 rounded-t-3xl">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
                 <Users size={20} className="text-white" />
               </div>
               <div>
-                <h3 className="text-[18px] font-bold text-white">Customize Team</h3>
-                <p className="text-[12px] text-gray-500 mt-0.5">
-                  Editing plan: <span className="text-purple-400 font-semibold">{option.title}</span>
+                <h3 className="text-[18px] font-bold text-[var(--dash-text-heading)]">Customize Team</h3>
+                <p className="text-[12px] text-[var(--dash-text-muted)] mt-0.5">
+                  Editing plan: <span className="text-purple-600 dark:text-purple-400 font-semibold">{option.title}</span>
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-800 rounded-xl text-gray-500 hover:text-white transition-all cursor-pointer"
+              className="p-2 hover:bg-[var(--dash-bg-hover)] rounded-xl text-[var(--dash-text-muted)] hover:text-[var(--dash-text-heading)] transition-all cursor-pointer"
             >
               ✕
             </button>
@@ -616,12 +616,12 @@ const CustomizeModal: React.FC<{
           {/* Progress Bar */}
           <div className="mt-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Assignment Progress</span>
-              <span className={`text-[12px] font-bold ${allFilled ? "text-emerald-400" : "text-amber-400"}`}>
+              <span className="text-[11px] font-bold text-[var(--dash-text-muted)] uppercase tracking-wider">Assignment Progress</span>
+              <span className={`text-[12px] font-bold ${allFilled ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
                 {filledCount} / {totalCount} Roles Filled
               </span>
             </div>
-            <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-[var(--dash-bg-input)] rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${allFilled
                   ? "bg-gradient-to-r from-emerald-600 to-emerald-400"
@@ -648,49 +648,49 @@ const CustomizeModal: React.FC<{
               <div
                 key={slot.id}
                 className={`rounded-2xl border transition-all duration-200 overflow-hidden ${isModified
-                  ? "border-purple-500/40 bg-[#130d1e]"
+                  ? "border-purple-500/40 bg-purple-500/5"
                   : slot.userId && selectedIsAvailable
-                    ? "border-emerald-500/30 bg-[#0d1a12]"
+                    ? "border-emerald-500/30 bg-emerald-500/5"
                     : slot.userId && !selectedIsAvailable
-                      ? "border-red-500/30 bg-[#1a0d0d]"
-                      : "border-gray-700/60 bg-[#111620]"
+                      ? "border-red-500/30 bg-red-500/5"
+                      : "border-[var(--dash-border)] bg-[var(--dash-bg-input)]"
                   }`}
               >
                 {/* Slot Header Row */}
                 <div className="p-4 flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black shrink-0 ${!slot.userId ? "bg-gray-800 text-gray-500"
-                    : selectedIsAvailable ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-red-500/20 text-red-400"
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black shrink-0 ${!slot.userId ? "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)]"
+                    : selectedIsAvailable ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                      : "bg-red-500/20 text-red-600 dark:text-red-400"
                     }`}>
                     {slotIndex + 1}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[14px] font-bold text-white">{slot.role} <span className="text-[12px] font-medium text-[var(--dash-text-faint)]">({slot.workingType})</span></span>
+                      <span className="text-[14px] font-bold text-[var(--dash-text-heading)]">{slot.role} <span className="text-[12px] font-medium text-[var(--dash-text-faint)]">({slot.workingType})</span></span>
                       {isModified && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 uppercase tracking-wider">
                           ✎ Modified
                         </span>
                       )}
                       {!slot.userId && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 uppercase tracking-wider">
                           ⚠ Unassigned
                         </span>
                       )}
                     </div>
                     {originalCandidate ? (
-                      <p className="text-[11px] text-gray-500 mt-0.5">
-                        AI Suggested: <span className="text-blue-400 font-semibold">{originalCandidate.userName}</span>
-                        <span className="text-gray-600 ml-1">· {originalCandidate.skillMatchPercent.toFixed(0)}% match</span>
+                      <p className="text-[11px] text-[var(--dash-text-muted)] mt-0.5">
+                        AI Suggested: <span className="text-blue-600 dark:text-blue-400 font-semibold">{originalCandidate.userName}</span>
+                        <span className="text-[var(--dash-text-faint)] ml-1">· {originalCandidate.skillMatchPercent.toFixed(0)}% match</span>
                       </p>
                     ) : (
-                      <p className="text-[11px] text-amber-500/60 mt-0.5">No AI recommendation — manual assignment required</p>
+                      <p className="text-[11px] text-amber-600/80 dark:text-amber-500/60 mt-0.5">No AI recommendation — manual assignment required</p>
                     )}
                   </div>
                   {isModified && slot.originalUserId && (
                     <button
                       onClick={() => updateAssignment(slot.id, slot.originalUserId)}
-                      className="text-[10px] font-bold text-purple-400 hover:text-purple-300 px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-all shrink-0 cursor-pointer whitespace-nowrap"
+                      className="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-all shrink-0 cursor-pointer whitespace-nowrap"
                     >
                       ↺ Reset
                     </button>
@@ -699,46 +699,46 @@ const CustomizeModal: React.FC<{
 
                 {/* Selected Employee Preview Card */}
                 {selectedEmp ? (
-                  <div className="mx-4 mb-3 p-3.5 bg-[#0d1117] rounded-xl border border-gray-800/60 flex items-center gap-3">
+                  <div className="mx-4 mb-3 p-3.5 bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarGradient(selectedEmp.name)} flex items-center justify-center font-bold text-[13px] text-white shrink-0 shadow-md`}>
                       {getInitials(selectedEmp.name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-[13px] font-bold text-white">{selectedEmp.name}</p>
+                        <p className="text-[13px] font-bold text-[var(--dash-text-heading)]">{selectedEmp.name}</p>
                         <InternBadge isIntern={selectedEmp.isIntern} size="sm" />
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isBusy
-                          ? "bg-red-500/15 text-red-400 border border-red-500/20"
-                          : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                          ? "bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/20"
+                          : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
                           }`}>
                           {isBusy ? "● Busy" : "● Available"}
                         </span>
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-0.5">{selectedEmp.role}{selectedEmp.department ? ` · ${selectedEmp.department}` : ""}</p>
+                      <p className="text-[11px] text-[var(--dash-text-muted)] mt-0.5">{selectedEmp.role}{selectedEmp.department ? ` · ${selectedEmp.department}` : ""}</p>
                       {selectedEmp.projects && selectedEmp.projects.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider self-center mr-0.5">Proj:</span>
+                          <span className="text-[8px] text-[var(--dash-text-faint)] font-bold uppercase tracking-wider self-center mr-0.5">Proj:</span>
                           {selectedEmp.projects.slice(0, 4).map((p: any, idx: number) => (
-                            <span key={p.userProjectId || p.id || `${p.name}-${idx}`} className="px-1.5 py-0.5 bg-purple-500/10 text-purple-300 text-[9px] font-semibold rounded border border-purple-500/15">
+                            <span key={p.userProjectId || p.id || `${p.name}-${idx}`} className="px-1.5 py-0.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-[9px] font-semibold rounded border border-purple-500/15">
                               {p.name}
                             </span>
                           ))}
                           {selectedEmp.projects.length > 4 && (
-                            <span className="text-[9px] text-gray-600 font-semibold self-center">+{selectedEmp.projects.length - 4} more</span>
+                            <span className="text-[9px] text-[var(--dash-text-faint)] font-semibold self-center">+{selectedEmp.projects.length - 4} more</span>
                           )}
                         </div>
                       )}
                     </div>
                     {selectedEmp.experienceYears !== undefined && (
-                      <div className="shrink-0 px-3 py-2 rounded-xl bg-gray-800/80 text-center border border-gray-700/40">
-                        <p className="text-[17px] font-black text-white leading-none">{selectedEmp.experienceYears}</p>
-                        <p className="text-[9px] text-gray-500 font-bold uppercase mt-0.5">yr exp</p>
+                      <div className="shrink-0 px-3 py-2 rounded-xl bg-[var(--dash-bg-input)] text-center border border-[var(--dash-border)]">
+                        <p className="text-[17px] font-black text-[var(--dash-text-heading)] leading-none">{selectedEmp.experienceYears}</p>
+                        <p className="text-[9px] text-[var(--dash-text-muted)] font-bold uppercase mt-0.5">yr exp</p>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="mx-4 mb-3 p-3 bg-[#0d1117] rounded-xl border border-gray-700/30 border-dashed">
-                    <p className="text-[12px] text-gray-600 text-center italic">No employee selected — choose one below</p>
+                  <div className="mx-4 mb-3 p-3 bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] border-dashed">
+                    <p className="text-[12px] text-[var(--dash-text-faint)] text-center italic">No employee selected — choose one below</p>
                   </div>
                 )}
 
@@ -746,27 +746,27 @@ const CustomizeModal: React.FC<{
                 <div className="px-4 pb-4">
                   <button
                     onClick={() => setExpandedSlot(isOpen ? null : slot.id)}
-                    className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[#0d1117] border border-gray-700/60 rounded-xl text-[12px] text-gray-400 hover:border-gray-500 hover:text-gray-200 transition-all cursor-pointer"
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl text-[12px] text-[var(--dash-text-muted)] hover:border-[var(--dash-border-subtle)] hover:text-[var(--dash-text-heading)] transition-all cursor-pointer"
                   >
                     <span className="font-semibold flex items-center gap-1.5">
                       {isOpen ? "▲ Close picker" : "▼ Change Employee"}
                     </span>
-                    <span className="text-[11px] text-gray-600">{getFilteredEmployeesForSlot(slot.role).length} employees</span>
+                    <span className="text-[11px] text-[var(--dash-text-faint)]">{getFilteredEmployeesForSlot(slot.role).length} employees</span>
                   </button>
 
                   {isOpen && (
-                    <div className="mt-2 bg-[#0d1117] border border-gray-700/50 rounded-xl overflow-hidden">
+                    <div className="mt-2 bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl overflow-hidden">
                       <div className="p-2 max-h-52 overflow-y-auto space-y-1">
                         {/* Unassign option */}
                         <button
                           onClick={() => updateAssignment(slot.id, "")}
-                          className={`w-full text-left px-3 py-2.5 rounded-lg text-[11px] transition-all cursor-pointer flex items-center gap-2.5 ${!slot.userId ? "bg-gray-700/50 text-gray-300 font-bold" : "text-gray-500 hover:bg-gray-800/60 hover:text-gray-300"}`}
+                          className={`w-full text-left px-3 py-2.5 rounded-lg text-[11px] transition-all cursor-pointer flex items-center gap-2.5 ${!slot.userId ? "bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)] font-bold" : "text-[var(--dash-text-muted)] hover:bg-[var(--dash-bg-hover)] hover:text-[var(--dash-text-heading)]"}`}
                         >
-                          <span className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-gray-600 text-[10px] font-bold shrink-0">—</span>
+                          <span className="w-6 h-6 rounded-full bg-[var(--dash-bg-input)] flex items-center justify-center text-[var(--dash-text-muted)] text-[10px] font-bold shrink-0">—</span>
                           <span>Leave Unassigned</span>
                         </button>
                         {/* Divider */}
-                        <div className="border-t border-gray-800/60 my-1" />
+                        <div className="border-t border-[var(--dash-border)] my-1" />
                         {getFilteredEmployeesForSlot(slot.role).map(emp => {
                           const isSelected = slot.userId === emp.id;
                           // Use backend isAvailable as source of truth
@@ -779,10 +779,10 @@ const CustomizeModal: React.FC<{
                               disabled={!isFree}
                               title={!isFree ? `${emp.name} is currently busy on another project` : undefined}
                               className={`w-full text-left px-3 py-3 rounded-xl text-[12px] transition-all flex flex-col gap-2 border ${!isFree
-                                ? "opacity-50 cursor-not-allowed border-red-900/20 bg-red-500/5"
+                                ? "opacity-50 cursor-not-allowed border-red-500/20 bg-red-500/5"
                                 : isSelected
-                                  ? "bg-blue-600/20 border border-blue-500/40 text-white cursor-pointer"
-                                  : "hover:bg-gray-800/60 text-gray-300 border-transparent hover:border-gray-700/50 cursor-pointer"
+                                  ? "bg-blue-600/20 border border-blue-500/40 text-[var(--dash-text-heading)] cursor-pointer"
+                                  : "hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-secondary)] border-transparent hover:border-[var(--dash-border)] cursor-pointer"
                                 }`}
                             >
                               {/* Top row: avatar + name + badges + status */}
@@ -792,26 +792,26 @@ const CustomizeModal: React.FC<{
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className={`font-bold truncate ${!isFree ? "text-gray-500" : ""}`}>{emp.name}</span>
+                                    <span className={`font-bold truncate ${!isFree ? "text-[var(--dash-text-muted)]" : ""}`}>{emp.name}</span>
                                     <InternBadge isIntern={emp.isIntern} size="xs" />
                                     {isAIRec && (
-                                      <span className="text-[8px] font-black bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 uppercase tracking-wider shrink-0">
+                                      <span className="text-[8px] font-black bg-blue-500/20 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 uppercase tracking-wider shrink-0">
                                         AI Pick
                                       </span>
                                     )}
-                                    {isSelected && isFree && <CheckCircle2 size={11} className="text-blue-400 shrink-0" />}
+                                    {isSelected && isFree && <CheckCircle2 size={11} className="text-blue-600 dark:text-blue-400 shrink-0" />}
                                   </div>
-                                  <span className="text-[10px] text-gray-500 block">{emp.role}{emp.department ? ` · ${emp.department}` : ""}</span>
+                                  <span className="text-[10px] text-[var(--dash-text-muted)] block">{emp.role}{emp.department ? ` · ${emp.department}` : ""}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
                                   {emp.experienceYears !== undefined && (
-                                    <span className="text-[9px] font-bold text-gray-400 bg-gray-800 px-1.5 py-0.5 rounded">
+                                    <span className="text-[9px] font-bold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] px-1.5 py-0.5 rounded">
                                       {emp.experienceYears}yr
                                     </span>
                                   )}
                                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isFree
-                                    ? "text-emerald-400 bg-emerald-500/10"
-                                    : "text-red-400 bg-red-500/10"
+                                    ? "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
+                                    : "text-red-600 dark:text-red-400 bg-red-500/10"
                                     }`}>
                                     {isFree ? "Free" : "Busy"}
                                   </span>
@@ -824,23 +824,23 @@ const CustomizeModal: React.FC<{
                                     <span
                                       key={p.userProjectId || p.id || `${p.name}-${idx}`}
                                       className={`px-1.5 py-0.5 text-[9px] font-semibold rounded border ${!isFree
-                                        ? "bg-gray-800/50 text-gray-600 border-gray-700/30"
+                                        ? "bg-[var(--dash-bg-input)] text-[var(--dash-text-muted)] border-[var(--dash-border)]"
                                         : isSelected
-                                          ? "bg-purple-500/15 text-purple-300 border-purple-500/20"
-                                          : "bg-gray-800 text-gray-400 border-gray-700/50"
+                                          ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/20"
+                                          : "bg-[var(--dash-bg-input)] text-[var(--dash-text-secondary)] border-[var(--dash-border)]"
                                         }`}
                                     >
                                       {p.name}
                                     </span>
                                   ))}
                                   {emp.projects.length > 3 && (
-                                    <span className="text-[9px] text-gray-600 self-center">+{emp.projects.length - 3}</span>
+                                    <span className="text-[9px] text-[var(--dash-text-faint)] self-center">+{emp.projects.length - 3}</span>
                                   )}
                                 </div>
                               )}
                               {/* Busy warning */}
                               {!isFree && (
-                                <p className="text-[10px] text-red-400/70 pl-[37px] leading-tight">
+                                <p className="text-[10px] text-red-500 dark:text-red-400/70 pl-[37px] leading-tight">
                                   Currently assigned to {emp.projects?.length} project(s) — cannot be selected
                                 </p>
                               )}
@@ -857,7 +857,7 @@ const CustomizeModal: React.FC<{
         </div>
 
         {/* ── Summary Footer (DIKECILKAN UKURANNYA) ── */}
-        <div className="px-6 py-4 border-t border-gray-800/60 bg-[#0d1117] rounded-b-3xl flex flex-col gap-3">
+        <div className="px-6 py-4 border-t border-[var(--dash-border)] bg-[var(--dash-bg-modal)] rounded-b-3xl flex flex-col gap-3">
           {/* Chip Summary - Spasi diperkecil */}
           <div className="flex flex-wrap gap-1.5">
             {assignments.map(slot => {
@@ -868,16 +868,16 @@ const CustomizeModal: React.FC<{
                 <div
                   key={slot.id}
                   className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium border ${empIsBusy
-                    ? "bg-red-500/10 border-red-500/25 text-red-300"
+                    ? "bg-red-500/10 border-red-500/25 text-red-700 dark:text-red-300"
                     : emp
-                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
-                      : "bg-gray-800/50 border-gray-700/50 text-gray-500 italic"
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                      : "bg-[var(--dash-bg-input)] border-[var(--dash-border)] text-[var(--dash-text-faint)] italic"
                     }`}
                 >
-                  {empIsBusy && <span className="text-red-400 font-bold">⚠</span>}
-                  <span className="text-gray-500 not-italic">{slot.role} <span className="text-[9px] uppercase font-bold text-gray-600">({slot.workingType})</span>:</span>
+                  {empIsBusy && <span className="text-red-500 font-bold">⚠</span>}
+                  <span className="text-[var(--dash-text-muted)] not-italic">{slot.role} <span className="text-[9px] uppercase font-bold text-[var(--dash-text-faint)]">({slot.workingType})</span>:</span>
                   <span className="font-semibold">{emp ? emp.name : "Unassigned"}</span>
-                  {empIsBusy && <span className="text-[8px] text-red-400/70 font-normal">busy</span>}
+                  {empIsBusy && <span className="text-[8px] text-red-500/70 dark:text-red-400/70 font-normal">busy</span>}
                 </div>
               );
             })}
@@ -890,16 +890,16 @@ const CustomizeModal: React.FC<{
             <div className="flex-1">
               {hasBusyAssignment ? (
                 <div className="flex items-start gap-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <span className="text-red-400 text-[12px] shrink-0 mt-0.5">⚠</span>
-                  <p className="text-[11px] text-red-400 font-semibold leading-snug">
+                  <span className="text-red-500 text-[12px] shrink-0 mt-0.5">⚠</span>
+                  <p className="text-[11px] text-red-600 dark:text-red-400 font-semibold leading-snug">
                     Busy employees detected.
-                    <span className="block text-[10px] text-red-400/70 font-normal">
+                    <span className="block text-[10px] text-red-500/70 dark:text-red-400/70 font-normal">
                       Replace them to start.
                     </span>
                   </p>
                 </div>
               ) : (
-                <p className={`text-[11px] font-semibold ${allFilled ? "text-emerald-400" : "text-amber-400"}`}>
+                <p className={`text-[11px] font-semibold ${allFilled ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
                   {allFilled
                     ? "✓ All roles assigned. Ready."
                     : `⚠ ${totalCount - filledCount} role(s) unassigned (will skip).`}
@@ -911,7 +911,7 @@ const CustomizeModal: React.FC<{
             <div className="flex gap-2 shrink-0">
               <button
                 onClick={onClose}
-                className="px-4 py-2 rounded-lg font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 text-[11px] transition-all cursor-pointer"
+                className="px-4 py-2 rounded-lg font-semibold bg-[var(--dash-bg-input)] text-[var(--dash-text-secondary)] hover:bg-[var(--dash-bg-hover)] text-[11px] transition-all cursor-pointer border border-[var(--dash-border)]"
               >
                 Cancel
               </button>
@@ -1044,8 +1044,8 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
     return (
       <div className="relative group">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-2xl blur opacity-75"></div>
-        <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-[var(--dash-border)] rounded-2xl p-10 flex flex-col items-center justify-center gap-4 transition-colors duration-300">
-          <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+        <div className="relative bg-[var(--dash-bg-card)] backdrop-blur-xl border border-[var(--dash-border)] rounded-2xl p-10 flex flex-col items-center justify-center gap-4 transition-colors duration-300">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
           <p className="text-[13px] text-[var(--dash-text-muted)] font-medium">Analyzing team availability and skill matches...</p>
         </div>
       </div>
@@ -1056,8 +1056,8 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
     return (
       <div className="relative group">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600/10 to-amber-600/10 rounded-2xl blur opacity-75"></div>
-        <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-red-500/20 rounded-2xl p-6 transition-colors duration-300">
-          <div className="flex items-center gap-3 text-red-400">
+        <div className="relative bg-[var(--dash-bg-card)] backdrop-blur-xl border border-red-500/20 rounded-2xl p-6 transition-colors duration-300">
+          <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
             <AlertCircle size={20} />
             <p className="text-[14px] font-semibold">{error}</p>
           </div>
@@ -1078,7 +1078,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
       {/* Glow effect */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
 
-      <div className="relative bg-[#111318]/80 backdrop-blur-xl border border-[var(--dash-border)] rounded-2xl p-6 overflow-hidden shadow-2xl transition-colors duration-300">
+      <div className="relative bg-[var(--dash-bg-card)] backdrop-blur-xl border border-[var(--dash-border)] rounded-2xl p-6 overflow-hidden shadow-2xl transition-colors duration-300">
 
         {/* Purple accent border highlight */}
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
@@ -1090,7 +1090,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
             <Sparkles size={24} />
           </div>
           <div>
-            <h3 className="text-[18px] font-bold text-white tracking-tight">Smart Recommendation Panel</h3>
+            <h3 className="text-[18px] font-bold text-[var(--dash-text-heading)] tracking-tight">Smart Recommendation Panel</h3>
             <p className="text-[13px] text-[var(--dash-text-secondary)] mt-1 max-w-2xl">
               AI-driven team composition based on skill matching, experience levels, and current workload analysis.
             </p>
@@ -1102,7 +1102,7 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
           <div className="mb-6 flex flex-wrap gap-2">
             <span className="text-[11px] text-[var(--dash-text-faint)] uppercase font-bold tracking-wider self-center mr-2">Required:</span>
             {data.requiredRoles.map((role, idx) => (
-              <span key={`${role.staffRoleId}-${role.workingType}-${(role as any).phase ?? ''}-${idx}`} className="px-3 py-1.5 bg-[#1a1f2e] border border-[var(--dash-border)] rounded-lg text-[11px] font-semibold text-gray-300">
+              <span key={`${role.staffRoleId}-${role.workingType}-${(role as any).phase ?? ''}-${idx}`} className="px-3 py-1.5 bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg text-[11px] font-semibold text-[var(--dash-text-secondary)]">
                 {role.requiredCount}× {role.roleName}
                 <span className="text-[var(--dash-text-faint)] ml-1">({role.workingType})</span>
               </span>
@@ -1112,15 +1112,15 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
 
         {/* Best Plan Banner */}
         <div className="mb-6 p-3.5 rounded-xl bg-green-500/5 border border-green-500/10 flex items-center gap-3 group/banner">
-          <div className="p-2 bg-green-500/20 rounded-lg text-green-400 group-hover/banner:scale-110 transition-transform">
+          <div className="p-2 bg-green-500/20 rounded-lg text-green-600 dark:text-green-400 group-hover/banner:scale-110 transition-transform">
             <Zap size={18} fill="currentColor" />
           </div>
           <div className="flex-1">
-            <p className="text-[14px] font-bold text-green-400">Best Optimal Plan: {bestLabel}</p>
-            <p className="text-[12px] text-green-400/70 font-medium">{data.bestOptionReason}</p>
+            <p className="text-[14px] font-bold text-green-700 dark:text-green-400">Best Optimal Plan: {bestLabel}</p>
+            <p className="text-[12px] text-green-600/80 dark:text-green-400/70 font-medium">{data.bestOptionReason}</p>
           </div>
           <div className="pr-2">
-            <ChevronRight className="text-green-500/40" size={18} />
+            <ChevronRight className="text-green-600/40 dark:text-green-500/40" size={18} />
           </div>
         </div>
 
@@ -1128,9 +1128,9 @@ export default function SmartRecommendationPanel({ projectId, refreshTrigger }: 
         <div className="flex flex-col md:flex-row gap-4 mb-2 relative">
           {/* Overlay loader when processing batch starts */}
           {isProcessing && (
-            <div className="absolute inset-0 z-20 bg-[#111318]/70 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center border border-gray-800">
+            <div className="absolute inset-0 z-20 bg-[var(--dash-bg-card)]/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center border border-[var(--dash-border)]">
               <Loader2 size={32} className="animate-spin text-blue-500 mb-4" />
-              <p className="text-white font-bold">{processStatus}</p>
+              <p className="text-[var(--dash-text-heading)] font-bold">{processStatus}</p>
             </div>
           )}
           <OptionCard

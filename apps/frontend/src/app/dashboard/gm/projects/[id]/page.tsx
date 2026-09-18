@@ -36,6 +36,7 @@ import {
   BackendProject,
   BackendEmployee,
   BackendProjectMember,
+  BackendRequiredRole,
   getRawEmployees,
   assignMemberToProject,
   unassignMemberFromProject,
@@ -202,9 +203,43 @@ export default function ProjectDetailsPage() {
   const [timelineEditWarrantyEnd, setTimelineEditWarrantyEnd] = useState("");
   const [timelineEditError, setTimelineEditError] = useState<string | null>(null);
 
-  // Start Project state
+  type PendingTeamChange =
+    | {
+        type: "swap";
+        oldUserId: string;
+        newUserId: string;
+        reason?: string;
+        oldUserName: string;
+        newUserName: string;
+        role: string;
+      }
+    | {
+        type: "assign";
+        payload: AssignMemberPayload;
+        userName: string;
+      }
+    | {
+        type: "updateRoleCount";
+        roleId: number;
+        count: number;
+      }
+    | {
+        type: "addRole";
+        payload: AddRequiredRolePayload;
+      }
+    | {
+        type: "deleteRole";
+        roleId: number;
+      };
+
+  // Start Project & Edit Mode state
   const [startingProject, setStartingProject] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [initialProjectSnapshot, setInitialProjectSnapshot] = useState<BackendProject | null>(null);
+  const [pendingTeamChanges, setPendingTeamChanges] = useState<PendingTeamChange[]>([]);
+  const [isSavingTeam, setIsSavingTeam] = useState(false);
+  const [saveTeamError, setSaveTeamError] = useState<string | null>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   // Holiday check states
   const [holidays, setHolidays] = useState<BackendHoliday[]>([]);
@@ -287,6 +322,94 @@ export default function ProjectDetailsPage() {
     };
     checkExistingHireRequest();
   }, [numericId]);
+
+  // Warn on leave if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isEditMode && pendingTeamChanges.length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isEditMode, pendingTeamChanges.length]);
+
+  const handleStartEditing = () => {
+    if (project) {
+      setInitialProjectSnapshot(JSON.parse(JSON.stringify(project)));
+      setPendingTeamChanges([]);
+      setSaveTeamError(null);
+      setIsEditMode(true);
+    }
+  };
+
+  const handleCancelEditing = () => {
+    if (pendingTeamChanges.length === 0) {
+      setIsEditMode(false);
+      setInitialProjectSnapshot(null);
+      setSaveTeamError(null);
+      return;
+    }
+    setCancelConfirmOpen(true);
+  };
+
+  const doCancelEditing = () => {
+    if (initialProjectSnapshot) {
+      setProject(initialProjectSnapshot);
+    }
+    setPendingTeamChanges([]);
+    setInitialProjectSnapshot(null);
+    setCancelConfirmOpen(false);
+    setIsEditMode(false);
+    setSaveTeamError(null);
+  };
+
+  const handleSaveAllChanges = async () => {
+    if (!project) return;
+    setDoneEditingConfirmOpen(false);
+
+    if (pendingTeamChanges.length === 0) {
+      setIsEditMode(false);
+      setInitialProjectSnapshot(null);
+      return;
+    }
+
+    setIsSavingTeam(true);
+    setSaveTeamError(null);
+    try {
+      for (const change of pendingTeamChanges) {
+        if (change.type === "swap") {
+          await swapMember(project.projectId, {
+            oldUserId: change.oldUserId,
+            newUserId: change.newUserId,
+            reason: change.reason,
+          });
+        } else if (change.type === "assign") {
+          await assignMemberToProject(project.projectId, change.payload);
+        } else if (change.type === "updateRoleCount") {
+          await updateRoleCount(project.projectId, change.roleId, change.count);
+        } else if (change.type === "addRole") {
+          await addRequiredRole(project.projectId, change.payload);
+        } else if (change.type === "deleteRole") {
+          if (change.roleId > 0) {
+            await deleteRequiredRole(project.projectId, change.roleId);
+          }
+        }
+      }
+
+      await fetchProject();
+      setPendingTeamChanges([]);
+      setInitialProjectSnapshot(null);
+      setIsEditMode(false);
+    } catch (err: any) {
+      console.error("Failed to save some team changes:", err);
+      setSaveTeamError(err?.message || "Failed to save some changes. Please review and try again.");
+    } finally {
+      setIsSavingTeam(false);
+    }
+  };
 
   const openAssignModal = async (
     prefillRole?: string,
@@ -389,9 +512,53 @@ export default function ProjectDetailsPage() {
       };
       if (assignStart) payload.startDate = new Date(assignStart).toISOString();
       if (assignEnd) payload.endDate = new Date(assignEnd).toISOString();
-      const updated = await assignMemberToProject(project.projectId, payload);
-      setProject(updated);
-      setAssignModalOpen(false);
+
+      if (isEditMode) {
+        const change: PendingTeamChange = {
+          type: "assign",
+          payload,
+          userName: selectedEmp.userName,
+        };
+        setPendingTeamChanges((prev) => [...prev, change]);
+
+        setProject((prev) => {
+          if (!prev) return prev;
+          const newMember: BackendProjectMember = {
+            userId: selectedEmp.userId,
+            userName: selectedEmp.userName,
+            role: assignRole.trim(),
+            staffRole: selectedEmp.role || assignRole.trim(),
+            workingType: assignWorkingType,
+            status: "Assigned",
+            startDate: payload.startDate || prev.estimatedStartDate,
+            endDate: payload.endDate || prev.estimatedEndDate,
+            isIntern: selectedEmp.isIntern,
+            isNotAvailableWfo: selectedEmp.isNotAvailableWfo,
+          };
+
+          const updatedRoles = (prev.requiredRoles || []).map((r) => {
+            if (
+              r.roleName.toLowerCase() === assignRole.trim().toLowerCase() &&
+              String(r.workingType || "Dedicated").toLowerCase() === String(assignWorkingType || "Dedicated").toLowerCase()
+            ) {
+              return { ...r, filledCount: (r.filledCount || 0) + 1 };
+            }
+            return r;
+          });
+
+          return {
+            ...prev,
+            requiredRoles: updatedRoles,
+            members: [...(prev.members || []), newMember],
+          };
+        });
+
+        setAssignModalOpen(false);
+      } else {
+        const updated = await assignMemberToProject(project.projectId, payload);
+        setProject(updated);
+        setAssignModalOpen(false);
+      }
     } catch (err: any) {
       setAssignError(err?.message || "Failed to assign member.");
     } finally {
@@ -551,6 +718,24 @@ export default function ProjectDetailsPage() {
     if (!project) return;
     const newCount = currentCount + delta;
     if (newCount < 1) return;
+
+    if (isEditMode) {
+      setPendingTeamChanges((prev) => {
+        const filtered = prev.filter((c) => !(c.type === "updateRoleCount" && c.roleId === roleId));
+        return [...filtered, { type: "updateRoleCount", roleId, count: newCount }];
+      });
+      setProject((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          requiredRoles: (prev.requiredRoles || []).map((r) =>
+            r.id === roleId ? { ...r, requiredCount: newCount } : r
+          ),
+        };
+      });
+      return;
+    }
+
     setUpdatingRoleId(roleId);
     try {
       const updated = await updateRoleCount(project.projectId, roleId, newCount);
@@ -564,6 +749,21 @@ export default function ProjectDetailsPage() {
 
   const handleDeleteRole = async (roleId: number) => {
     if (!project) return;
+    if (isEditMode) {
+      setPendingTeamChanges((prev) => [
+        ...prev.filter((c) => !(c.type === "updateRoleCount" && c.roleId === roleId)),
+        { type: "deleteRole", roleId },
+      ]);
+      setProject((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          requiredRoles: (prev.requiredRoles || []).filter((r) => r.id !== roleId),
+        };
+      });
+      return;
+    }
+
     setDeleteRoleError(null);
     setDeletingRoleId(roleId);
     try {
@@ -578,14 +778,39 @@ export default function ProjectDetailsPage() {
 
   const handleAddRole = async () => {
     if (!project) return;
+    const payload: AddRequiredRolePayload = {
+      roleName: addRoleForm.roleName,
+      count: addRoleForm.count,
+      workingType: addRoleForm.workingType,
+    };
+
+    if (isEditMode) {
+      const tempRoleId = -Date.now();
+      setPendingTeamChanges((prev) => [...prev, { type: "addRole", payload }]);
+      setProject((prev) => {
+        if (!prev) return prev;
+        const newRole: BackendRequiredRole = {
+          id: tempRoleId,
+          staffRoleId: 0,
+          roleName: payload.roleName,
+          requiredCount: payload.count,
+          filledCount: 0,
+          workingType: payload.workingType === 1 ? "NonDedicated" : "Dedicated",
+          phase: "main",
+        };
+        return {
+          ...prev,
+          requiredRoles: [...(prev.requiredRoles || []), newRole],
+        };
+      });
+      setAddRoleOpen(false);
+      setAddRoleForm({ roleName: "Junior Dev", count: 1, workingType: 0 });
+      return;
+    }
+
     setAddRoleSubmitting(true);
     setAddRoleError(null);
     try {
-      const payload: AddRequiredRolePayload = {
-        roleName: addRoleForm.roleName,
-        count: addRoleForm.count,
-        workingType: addRoleForm.workingType,
-      };
       const updated = await addRequiredRole(project.projectId, payload);
       setProject(updated);
       setAddRoleOpen(false);
@@ -658,9 +883,61 @@ export default function ProjectDetailsPage() {
         newUserId: swapSelectedEmp.userId,
         reason: swapReason || undefined,
       };
-      const updated = await swapMember(project.projectId, payload);
-      setProject(updated);
-      setSwapModalOpen(false);
+
+      if (isEditMode) {
+        const change: PendingTeamChange = {
+          type: "swap",
+          oldUserId: swapTarget.userId,
+          newUserId: swapSelectedEmp.userId,
+          reason: swapReason || undefined,
+          oldUserName: swapTarget.userName,
+          newUserName: swapSelectedEmp.userName,
+          role: swapTarget.role,
+        };
+        setPendingTeamChanges((prev) => [...prev, change]);
+
+        const nowIso = new Date().toISOString();
+        setProject((prev) => {
+          if (!prev) return prev;
+          const updatedMembers = (prev.members || []).map((m) => {
+            if (m.userId === swapTarget.userId && m.role === swapTarget.role && m.status === "Assigned") {
+              return {
+                ...m,
+                status: "Completed",
+                endDate: nowIso,
+                swapReason: swapReason || undefined,
+                replacedByUserId: swapSelectedEmp.userId,
+                replacedByUserName: swapSelectedEmp.userName,
+              };
+            }
+            return m;
+          });
+
+          const newMember: BackendProjectMember = {
+            userId: swapSelectedEmp.userId,
+            userName: swapSelectedEmp.userName,
+            role: swapTarget.role,
+            staffRole: swapSelectedEmp.role || swapTarget.staffRole || swapTarget.role,
+            workingType: swapTarget.workingType,
+            status: "Assigned",
+            startDate: nowIso,
+            endDate: prev.estimatedEndDate,
+            isIntern: swapSelectedEmp.isIntern,
+            isNotAvailableWfo: swapSelectedEmp.isNotAvailableWfo,
+          };
+
+          return {
+            ...prev,
+            members: [...updatedMembers, newMember],
+          };
+        });
+
+        setSwapModalOpen(false);
+      } else {
+        const updated = await swapMember(project.projectId, payload);
+        setProject(updated);
+        setSwapModalOpen(false);
+      }
     } catch (err: any) {
       setSwapError(err?.message || "Failed to swap member.");
     } finally {
@@ -747,34 +1024,50 @@ export default function ProjectDetailsPage() {
               </div>
 
               {project.projectStatus !== 0 && project.projectStatus !== 4 && (
-                <div className="flex gap-3 shrink-0">
+                <div className="flex gap-3 shrink-0 items-center">
                   {/* Override Status button — directly visible if Completed, otherwise requires isEditMode */}
                   {(project.projectStatus === 3 || isEditMode) && (
                     <button
                       onClick={() => setOverrideModalOpen(true)}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 transition-all"
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 transition-all cursor-pointer"
                     >
                       <ShieldAlert size={16} />
                       Override Status
                     </button>
                   )}
 
-                  {/* Edit Project button — not available for Completed projects */}
+                  {/* Edit Project buttons — not available for Completed projects */}
                   {project.projectStatus !== 3 && (
-                    <button
-                      onClick={() => {
-                        if (isEditMode) {
-                          setDoneEditingConfirmOpen(true);
-                        } else {
-                          setIsEditMode(true);
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${isEditMode ? "bg-[var(--dash-bg-input)] hover:bg-[var(--dash-bg-hover)] text-[var(--dash-text-heading)]" : "bg-[#2B7FFC] hover:bg-[#2563eb] text-white"
-                        }`}
-                    >
-                      {isEditMode ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
-                      {isEditMode ? "Done Editing" : "Edit Project"}
-                    </button>
+                    <>
+                      {isEditMode ? (
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            onClick={handleCancelEditing}
+                            disabled={isSavingTeam}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-semibold bg-[var(--dash-bg-input)] hover:bg-red-500/10 text-[var(--dash-text-muted)] hover:text-red-400 border border-[var(--dash-border)] transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <X size={16} />
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => setDoneEditingConfirmOpen(true)}
+                            disabled={isSavingTeam}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-bold bg-[#22c55e] hover:bg-green-600 text-white shadow-lg shadow-green-500/20 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {isSavingTeam ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                            {isSavingTeam ? "Saving Changes..." : `Save Changes ${pendingTeamChanges.length > 0 ? `(${pendingTeamChanges.length})` : ""}`}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleStartEditing}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-[#2B7FFC] hover:bg-[#2563eb] text-white transition-all cursor-pointer shadow-lg shadow-blue-500/20"
+                        >
+                          <UserPlus size={16} />
+                          Edit Project
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -840,6 +1133,44 @@ export default function ProjectDetailsPage() {
               projectId={numericId}
               refreshTrigger={project.requiredRoles?.length}
             />
+          )}
+
+          {/* Edit Mode Active Banner */}
+          {isEditMode && (
+            <div className="flex items-center justify-between px-5 py-3.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-400 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse shrink-0" />
+                <div>
+                  <p className="text-[13px] font-bold text-blue-300">
+                    Edit Mode Active
+                  </p>
+                  <p className="text-[11px] text-blue-400/80">
+                    {pendingTeamChanges.length === 0
+                      ? "You have not made any changes yet. Adjustments will be staged locally before saving."
+                      : `You have ${pendingTeamChanges.length} unsaved change(s). Click 'Save Changes' above to commit to the database.`}
+                  </p>
+                </div>
+              </div>
+              {pendingTeamChanges.length > 0 && (
+                <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 text-[11px] font-bold rounded-md border border-blue-500/30 shrink-0">
+                  {pendingTeamChanges.length} Pending {pendingTeamChanges.length === 1 ? "Change" : "Changes"}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Save Team Error Alert */}
+          {saveTeamError && (
+            <div className="flex items-center gap-2 p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-[13px] mb-6">
+              <AlertCircle size={16} className="shrink-0" />
+              <span className="flex-1">{saveTeamError}</span>
+              <button
+                onClick={() => setSaveTeamError(null)}
+                className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
           )}
 
           {/* 3. Role Management & Team */}
@@ -1021,13 +1352,26 @@ export default function ProjectDetailsPage() {
                                   </span>
                                 </div>
                               </div>
-                              {isEditingTeam && (
+                              {/* Pending projects allow unassigning directly */}
+                              {project.projectStatus === 0 && (
                                 <button
                                   onClick={() => handleRemoveMember(member.userId)}
                                   disabled={removingUserId === member.userId}
+                                  title={`Remove ${member.userName}`}
                                   className="p-1.5 text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 rounded-md opacity-0 group-hover:opacity-100 transition-all shrink-0 cursor-pointer disabled:opacity-50"
                                 >
                                   {removingUserId === member.userId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                </button>
+                              )}
+                              {/* Running or Scheduled projects in edit mode: show Replace button */}
+                              {isEditingTeam && (project.projectStatus === 1 || project.projectStatus === 2) && member.status === "Assigned" && (
+                                <button
+                                  onClick={() => openSwapModal(member)}
+                                  title={`Replace ${member.userName}`}
+                                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-all shrink-0 cursor-pointer"
+                                >
+                                  <PencilLine size={12} />
+                                  <span>Replace</span>
                                 </button>
                               )}
                             </div>
@@ -1141,10 +1485,11 @@ export default function ProjectDetailsPage() {
                                 </p>
                               </div>
                             </div>
-                            {isEditingTeam && (
+                            {project.projectStatus === 0 && (
                               <button
                                 onClick={() => handleRemoveMember(member.userId, member.role, member.startDate || undefined)}
                                 disabled={removingUserId === member.userId}
+                                title={`Remove ${member.userName}`}
                                 className="p-1.5 text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 rounded-md opacity-0 group-hover:opacity-100 transition-all shrink-0 cursor-pointer disabled:opacity-50"
                               >
                                 {removingUserId === member.userId ? (
@@ -1254,10 +1599,11 @@ export default function ProjectDetailsPage() {
                                 </p>
                               </div>
                             </div>
-                            {isEditingTeam && (
+                            {project.projectStatus === 0 && (
                               <button
                                 onClick={() => handleRemoveMember(member.userId, member.role, member.startDate || undefined)}
                                 disabled={removingUserId === member.userId}
+                                title={`Remove ${member.userName}`}
                                 className="p-1.5 text-[var(--dash-text-faint)] hover:text-red-400 hover:bg-red-500/10 rounded-md opacity-0 group-hover:opacity-100 transition-all shrink-0 cursor-pointer disabled:opacity-50"
                               >
                                 {removingUserId === member.userId ? (
@@ -2088,20 +2434,36 @@ export default function ProjectDetailsPage() {
         confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
       />
 
-      {/* ── Done Editing Confirm Modal ── */}
+      {/* ── Save Changes Confirm Modal ── */}
       <ConfirmModal
         isOpen={doneEditingConfirmOpen}
         onClose={() => setDoneEditingConfirmOpen(false)}
-        onConfirm={() => {
-          setDoneEditingConfirmOpen(false);
-          setIsEditMode(false);
-        }}
+        onConfirm={handleSaveAllChanges}
+        isLoading={isSavingTeam}
         icon={<CheckCircle2 size={28} className="text-white" />}
-        iconBg="bg-gradient-to-br from-purple-600 to-indigo-600"
+        iconBg="bg-gradient-to-br from-green-600 to-emerald-600"
         title="Save Changes"
-        message="Do you want to save the changes you made to this project's team?"
-        confirmText="Confirm"
-        confirmClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20"
+        message={
+          pendingTeamChanges.length > 0
+            ? `Do you want to apply ${pendingTeamChanges.length} change(s) to this project's team?`
+            : "No changes were made. Do you want to exit Edit Mode?"
+        }
+        confirmText="Confirm & Save"
+        confirmLoadingText="Saving Changes..."
+        confirmClass="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-lg shadow-green-500/20"
+      />
+
+      {/* ── Discard Changes Confirm Modal ── */}
+      <ConfirmModal
+        isOpen={cancelConfirmOpen}
+        onClose={() => setCancelConfirmOpen(false)}
+        onConfirm={doCancelEditing}
+        icon={<AlertTriangle size={28} className="text-white" />}
+        iconBg="bg-gradient-to-br from-red-600 to-rose-600"
+        title="Discard Changes"
+        message={`You have ${pendingTeamChanges.length} unsaved change(s). Are you sure you want to discard all changes? All modifications will be reverted.`}
+        confirmText="Discard Changes"
+        confirmClass="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-lg shadow-red-500/20"
       />
 
       {/* ── Override Status Modal ── */}

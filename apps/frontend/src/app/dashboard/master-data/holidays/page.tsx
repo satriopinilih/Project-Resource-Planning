@@ -86,7 +86,7 @@ export default function HolidaysPage() {
   const [isImporting, setIsImporting] = useState(false);
 
   // Calendar states
-  const [calendarDate, setCalendarDate] = useState<Date>(() => new Date(2026, 5, 1)); // Default to June 2026 as in screenshot
+  const [calendarDate, setCalendarDate] = useState<Date>(() => new Date());
 
   // Toast notification
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -1280,7 +1280,7 @@ export default function HolidaysPage() {
                   <textarea
                     value={clientDescInput}
                     onChange={(e) => setClientDescInput(e.target.value)}
-                    placeholder="e.g. Binus Graduate Attributes"
+                    placeholder="e.g. Short description of the clients"
                     className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#242427] border border-gray-200 dark:border-white/10 rounded-xl text-[13px] outline-none focus:border-indigo-500/50 transition-colors text-gray-900 dark:text-white min-h-[80px] resize-none"
                     maxLength={500}
                     disabled={isSubmitting}
@@ -1351,7 +1351,7 @@ export default function HolidaysPage() {
                   <textarea
                     value={clientDescInput}
                     onChange={(e) => setClientDescInput(e.target.value)}
-                    placeholder="e.g. Binus Graduate Attributes"
+                    placeholder="e.g. Short description of the client"
                     className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#242427] border border-gray-200 dark:border-white/10 rounded-xl text-[13px] outline-none focus:border-indigo-500/50 transition-colors text-gray-900 dark:text-white min-h-[80px] resize-none"
                     maxLength={500}
                     disabled={isSubmitting}

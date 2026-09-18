@@ -215,6 +215,41 @@ export default function ProjectTimeline() {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("start-asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(() => {
+    if (typeof window === "undefined") return 5;
+    try {
+      const saved = localStorage.getItem("timeline_items_per_page");
+      const parsed = saved ? Number(saved) : 5;
+      return [5, 10, 15].includes(parsed) ? parsed : 5;
+    } catch {
+      return 5;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("timeline_items_per_page");
+      if (saved) {
+        const parsed = Number(saved);
+        if ([5, 10, 15].includes(parsed)) {
+          setItemsPerPage(parsed);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const handleItemsPerPageChange = (val: number) => {
+    setItemsPerPage(val);
+    setCurrentPage(1);
+    try {
+      localStorage.setItem("timeline_items_per_page", String(val));
+    } catch {
+      // Ignore
+    }
+  };
 
   const [viewMode, setViewMode] = useState<ViewMode>("Weekly");
 
@@ -325,6 +360,16 @@ export default function ProjectTimeline() {
 
     return { columns: cols, filteredProjects: sorted, hiddenPastCount: past, hiddenFutureCount: future };
   }, [allProjects, activeFilters, searchQuery, sortBy, windowStart, windowEnd, viewMode]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilters, searchQuery, sortBy, windowStart, viewMode, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+  const paginatedProjects = filteredProjects.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300">
@@ -496,7 +541,7 @@ export default function ProjectTimeline() {
             </div>
 
             {/* Project rows */}
-            {filteredProjects.map((project) => {
+            {paginatedProjects.map((project) => {
               return (
                 <div
                   key={project.id}
@@ -579,6 +624,53 @@ export default function ProjectTimeline() {
               <p className="text-center text-[13px] text-[var(--dash-text-faint)] py-10">
                 No projects match the selected filters in this time window.
               </p>
+            )}
+
+            {/* Pagination Footer */}
+            {filteredProjects.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-3 border-t border-[var(--dash-border-subtle)]">
+                <div className="flex items-center gap-4">
+                  <p className="text-[12px] text-[var(--dash-text-faint)]">
+                    Showing {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProjects.length)} of {filteredProjects.length} projects
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-[var(--dash-text-faint)]">Show</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                      className="px-2 py-1 text-[11px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-md hover:text-[var(--dash-text-heading)] transition-colors focus:outline-none cursor-pointer"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={15}>15</option>
+                    </select>
+                  </div>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] text-[var(--dash-text-faint)] mr-2">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    >
+                      <ChevronLeft size={14} />
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-semibold text-[var(--dash-text-secondary)] bg-[var(--dash-bg-input)] border border-[var(--dash-border)] rounded-lg hover:text-[var(--dash-text-heading)] hover:bg-[var(--dash-bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    >
+                      Next
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -104,25 +104,25 @@ export default function StatCards() {
   }
 
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
       {stats.map((stat) => (
         <Link
           href={stat.href}
           key={stat.label}
-          className="flex items-center justify-between p-9 bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl hover:border-[#3b82f6]/50 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group cursor-pointer"
+          className="flex items-center justify-between p-4 sm:p-5 lg:p-6 bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl hover:border-[#3b82f6]/50 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group cursor-pointer min-w-0"
         >
-          <div>
-            <p className="text-[12px] text-[var(--dash-text-muted)] font-medium mb-1.5 group-hover:text-[var(--dash-text-primary)] transition-colors">
+          <div className="min-w-0 pr-2">
+            <p className="text-[11px] sm:text-[12px] text-[var(--dash-text-muted)] font-medium mb-1 truncate group-hover:text-[var(--dash-text-primary)] transition-colors">
               {stat.label}
             </p>
-            <p className="text-[28px] font-bold text-[var(--dash-text-heading)] leading-none group-hover:text-[#3b82f6] transition-colors">
+            <p className="text-[22px] sm:text-[28px] font-bold text-[var(--dash-text-heading)] leading-none group-hover:text-[#3b82f6] transition-colors">
               {stat.value}
             </p>
           </div>
           <div
-            className={`flex items-center justify-center w-10 h-10 rounded-lg ${stat.iconBg} group-hover:scale-110 transition-transform`}
+            className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg ${stat.iconBg} group-hover:scale-110 transition-transform shrink-0`}
           >
-            <stat.icon size={20} className={stat.iconColor} strokeWidth={1.8} />
+            <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.iconColor}`} strokeWidth={1.8} />
           </div>
         </Link>
       ))}
