@@ -89,34 +89,20 @@ function projectToTimeline(p: BackendProject): TimelineProject {
   ];
 
   if (p.babysittingDuration > 0 && p.babysittingStartDate && p.babysittingEndDate) {
-    let bsStatus: ProjectStatus = "scheduled";
-    if (mainStatus === "babysitting") {
-      bsStatus = "running";
-    } else if (mainStatus === "warranty" || mainStatus === "completed") {
-      bsStatus = "completed";
-    }
-
     bars.push({
       title: `${p.projectName} (Babysitting)`,
       startDate: new Date(p.babysittingStartDate),
       endDate: new Date(p.babysittingEndDate),
-      status: bsStatus,
+      status: "babysitting",
     });
   }
 
   if (p.warrantyDuration > 0 && p.warrantyStartDate && p.warrantyEndDate) {
-    let wrStatus: ProjectStatus = "scheduled";
-    if (mainStatus === "warranty") {
-      wrStatus = "running";
-    } else if (mainStatus === "completed") {
-      wrStatus = "completed";
-    }
-
     bars.push({
       title: `${p.projectName} (Warranty)`,
       startDate: new Date(p.warrantyStartDate),
       endDate: new Date(p.warrantyEndDate),
-      status: wrStatus,
+      status: "warranty",
     });
   }
 
@@ -335,7 +321,11 @@ export default function ProjectTimeline() {
     let future = 0;
 
     const filtered = allProjects.filter((p) => {
-      if (activeFilters.size > 0 && !activeFilters.has(p.status)) return false;
+      if (activeFilters.size > 0) {
+        const matchesBar = p.bars.some((b) => activeFilters.has(b.status));
+        const matchesMain = activeFilters.has(p.status);
+        if (!matchesBar && !matchesMain) return false;
+      }
       if (searchQuery.trim() !== "" && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
       // Only show if overlaps with the current window
@@ -578,6 +568,7 @@ export default function ProjectTimeline() {
                       const barEndDay = diffDays(windowStart, bar.endDate);
 
                       if (bar.endDate < windowStart || bar.startDate > windowEnd) return null;
+                      if (activeFilters.size > 0 && !activeFilters.has(bar.status)) return null;
 
                       const clampedStart = Math.max(0, barStartDay);
                       const clampedEnd = Math.min(TOTAL_DAYS - 1, barEndDay);
