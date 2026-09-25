@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getEmployeeByIdCached } from "@/lib/api/cached";
+import { requestCache } from "@/lib/request-cache";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -15,6 +17,7 @@ import {
   Database,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
 } from "lucide-react";
 
 type Role = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
@@ -37,6 +40,7 @@ const navByRole: Record<string, NavItem[]> = {
       subItems: [
         { label: "Skills", href: "/dashboard/master-data/skills" },
         { label: "Holidays", href: "/dashboard/master-data/holidays" },
+        { label: "Project Phases", href: "/dashboard/master-data/project-phases" },
       ]
     },
     { label: "Settings", href: "/settings", icon: Settings },
@@ -49,6 +53,7 @@ const navByRole: Record<string, NavItem[]> = {
   PM: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Project", href: "/project", icon: FolderKanban },
+    { label: "Team Activity", href: "/dashboard/pm/timesheet", icon: ClipboardList },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   Marketing: [
@@ -59,6 +64,7 @@ const navByRole: Record<string, NavItem[]> = {
   ],
   Staff: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Timesheet", href: "/dashboard/staff/timesheet", icon: ClipboardList },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
 };
@@ -69,7 +75,31 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ role }: AppSidebarProps) {
   const pathname = usePathname();
-  const navItems = navByRole[role ?? "Staff"] ?? navByRole["Staff"];
+  const [isPmInProject, setIsPmInProject] = useState(false);
+
+  React.useEffect(() => {
+    async function checkPmStatus() {
+      try {
+        const raw = localStorage.getItem("auth_user");
+        if (!raw) return;
+        const user = JSON.parse(raw);
+        if ((role ?? "Staff") !== "Staff") return;
+
+        // Backend login doesn't return projects, so we must fetch employee details
+        const emp = await getEmployeeByIdCached(user.userId);
+        const hasPm = (emp.projects ?? []).some((p) => p.roleInProject === "PM");
+        setIsPmInProject(hasPm);
+      } catch {
+        // ignore
+      }
+    }
+    checkPmStatus();
+  }, [role]);
+
+  // Jika user sebenarnya adalah Staff secara role sistem, namun dia memegang role "PM"
+  // di dalam project-nya, maka kita ganti paksa menunya menjadi menu PM seutuhnya.
+  const displayRole = (role === "Staff" && isPmInProject) ? "PM" : (role ?? "Staff");
+  const navItems = navByRole[displayRole] ?? navByRole["Staff"];
 
   // Collapsible sub-menu states
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>(() => {
@@ -187,6 +217,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
       <div className="px-4 py-3">
         <button
           onClick={() => {
+            requestCache.clear();
             localStorage.removeItem("auth_token");
             localStorage.removeItem("auth_user");
             window.location.href = "/login";

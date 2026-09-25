@@ -13,8 +13,8 @@ import {
   getHireRequests,
   HireRequest,
   getRequestHistory,
-  getStaffNotifications,
 } from "@/lib/api";
+import { getStaffNotificationsCached } from "@/lib/api/cached";
 import { ContractExtensionRequest, Project } from "@/lib/types";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -419,7 +419,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   const loadStaffNotifications = useCallback(async () => {
     if ((userRole !== "Staff" && userRole !== "GM") || !userId) return;
     try {
-      const data = await getStaffNotifications(userId);
+      const data = await getStaffNotificationsCached(userId);
       setStaffNotifications(data.hasUnread ? data.notifications : []);
     } catch {
       setStaffNotifications([]);
@@ -448,15 +448,25 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
       loadNotifications();
       if (userRole === "GM") loadStaffNotifications();
       timer = setInterval(() => {
-        loadNotifications();
-        if (userRole === "GM") loadStaffNotifications();
-      }, 10000);
+        if (document.visibilityState === 'visible') {
+          loadNotifications();
+          if (userRole === "GM") loadStaffNotifications();
+        }
+      }, 60000);
     } else if (userRole === "PM") {
       loadPMNotifications();
-      timer = setInterval(loadPMNotifications, 15000);
+      timer = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          loadPMNotifications();
+        }
+      }, 60000);
     } else if (userRole === "Staff") {
       if (userId) loadStaffNotifications();
-      timer = setInterval(loadStaffNotifications, 15000);
+      timer = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          loadStaffNotifications();
+        }
+      }, 60000);
     } else {
       setNotifications([]);
       setHireNotifications([]);
@@ -990,7 +1000,7 @@ export default function AppHeader({ title, role }: AppHeaderProps) {
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
-    <header className="sticky top-0 z-50 flex items-center justify-between h-[80px] px-8 bg-[var(--dash-bg-header)] backdrop-blur-xl border-b border-[var(--dash-border)] transition-colors duration-300">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-[80px] px-8 bg-[var(--dash-bg-header)] backdrop-blur-xl border-b border-[var(--dash-border)] transition-colors duration-300">
       {/* Page Title */}
       <h2 className="text-[20px] font-bold text-[var(--dash-text-heading)] tracking-tight">
         {title}

@@ -16,6 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname === "/dashboard") return "Dashboard";
     if (pathname.includes("/dashboard/gm/")) return null;
     if (pathname.startsWith("/dashboard/pm")) return null;
+    if (pathname.startsWith("/dashboard/staff/timesheet")) return null;
     if (pathname.includes("/projects/") ) return "Project Details";
     if (pathname.includes("/projects")) return "Projects";
     if (pathname.includes("/add-project")) return "Add New Project";
@@ -34,11 +35,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300">
+    <div className="flex min-h-screen bg-[var(--dash-bg-page)] transition-colors duration-300 overflow-x-hidden">
       <AppSidebar role={role} />
-      <main className="flex-1 ml-64 flex flex-col min-h-screen">
+      <main className="flex-1 ml-64 flex flex-col min-h-screen min-w-0 w-[calc(100%-16rem)] max-w-[calc(100vw-16rem)] overflow-x-hidden">
         {title ? <AppHeader title={title} role={role} /> : null}
-        {children}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {children}
+        </div>
       </main>
     </div>
   );

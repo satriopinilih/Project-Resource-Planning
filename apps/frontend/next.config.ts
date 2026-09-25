@@ -4,9 +4,7 @@ import path from "path";
 const repoRoot = path.resolve(__dirname, "..", "..");
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: repoRoot,
-  },
+  // Removed turbopack root override to avoid watching backend files which causes CPU spikes
 };
 
 export default nextConfig;

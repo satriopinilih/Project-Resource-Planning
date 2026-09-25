@@ -1,4 +1,4 @@
-import { ContractExtensionRequest, Employee, Project, RequestHistoryItem } from './types';
+import { ActivityLog, ContractExtensionRequest, CreateActivityLogPayload, Employee, Project, ProjectPhase, RequestHistoryItem, UpdateActivityLogPayload } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5103';
 
@@ -328,12 +328,88 @@ const mapContractExtension = (item: BackendContractExtension): ContractExtension
   };
 };
 
-async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  let res: Response;
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+const inFlightRequests = new Map<string, Promise<any>>();
 
-  try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
+async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const isGet = !init || !init.method || init.method.toUpperCase() === 'GET';
+
+  if (isGet && inFlightRequests.has(path)) {
+    return inFlightRequests.get(path) as Promise<T>;
+  }
+
+  const executeFetch = async (): Promise<T> => {
+    let res: Response;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+    try {
+      res = await fetch(`${API_BASE_URL}${path}`, {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(init?.headers ?? {})
+        },
+        cache: 'no-store'
+      });
+    } catch {
+      throw new Error(`Cannot reach backend at ${API_BASE_URL}. Ensure API is running.`);
+    }
+
+    if (res.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      throw new Error('Unauthorized');
+    }
+
+    const contentType = res.headers.get('content-type');
+    let data: any;
+
+    if (contentType && contentType.includes('application/json')) {
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.message || `API request failed: ${res.status}`);
+      }
+      data = json.data;
+    } else {
+      const text = await res.text();
+      if (!res.ok) {
+        const summary = text.split('\n')[0].substring(0, 200);
+        throw new Error(summary || `API request failed: ${res.status}`);
+      }
+      data = text;
+    }
+
+    return data;
+  };
+
+  const promise = executeFetch();
+
+  if (isGet) {
+    inFlightRequests.set(path, promise);
+    promise.finally(() => {
+      // Small delay to catch slightly delayed component mounts
+      setTimeout(() => inFlightRequests.delete(path), 50);
+    });
+  }
+
+  return promise;
+}
+
+// For endpoints that return plain JSON (not wrapped in ApiResponse<T>)
+async function fetchRaw<T>(path: string, init?: RequestInit): Promise<T> {
+  const isGet = !init || !init.method || init.method.toUpperCase() === 'GET';
+
+  if (isGet && inFlightRequests.has(path)) {
+    return inFlightRequests.get(path) as Promise<T>;
+  }
+
+  const executeFetch = async (): Promise<T> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+    const res = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       headers: {
         'Content-Type': 'application/json',
@@ -342,51 +418,33 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
       },
       cache: 'no-store'
     });
-  } catch {
-    throw new Error(`Cannot reach backend at ${API_BASE_URL}. Ensure API is running.`);
-  }
 
-  const contentType = res.headers.get('content-type');
-  let data: any;
-
-  if (contentType && contentType.includes('application/json')) {
-    const json = await res.json();
-    if (!res.ok) {
-      throw new Error(json?.message || `API request failed: ${res.status}`);
+    if (res.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      throw new Error('Unauthorized');
     }
-    data = json.data;
-  } else {
-    const text = await res.text();
+
     if (!res.ok) {
-      // If it's a long error page, just show the first line or a summary
-      const summary = text.split('\n')[0].substring(0, 200);
-      throw new Error(summary || `API request failed: ${res.status}`);
+      throw new Error(`API request failed: ${res.status}`);
     }
-    data = text;
+
+    return res.json() as Promise<T>;
+  };
+
+  const promise = executeFetch();
+
+  if (isGet) {
+    inFlightRequests.set(path, promise);
+    promise.finally(() => {
+      setTimeout(() => inFlightRequests.delete(path), 50);
+    });
   }
 
-  return data;
-}
-
-// For endpoints that return plain JSON (not wrapped in ApiResponse<T>)
-async function fetchRaw<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...(init?.headers ?? {})
-    },
-    cache: 'no-store'
-  });
-
-  if (!res.ok) {
-    throw new Error(`API request failed: ${res.status}`);
-  }
-
-  return res.json() as Promise<T>;
+  return promise;
 }
 
 export async function seedBackendData(): Promise<void> {
@@ -1059,4 +1117,146 @@ export async function updateWfoStatus(isNotAvailableWfo: boolean): Promise<Emplo
     body: JSON.stringify({ isNotAvailableWfo })
   });
   return mapEmployee(data);
+}
+
+// ── Project Phases ─────────────────────────────────────────────────────────
+
+export async function getProjectPhases(): Promise<ProjectPhase[]> {
+  return fetchJson<ProjectPhase[]>('/api/projectphases');
+}
+
+export async function createProjectPhase(name: string): Promise<ProjectPhase> {
+  return fetchJson<ProjectPhase>('/api/projectphases', {
+    method: 'POST',
+    body: JSON.stringify({ name })
+  });
+}
+
+export async function updateProjectPhase(id: number, name: string): Promise<ProjectPhase> {
+  return fetchJson<ProjectPhase>(`/api/projectphases/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name })
+  });
+}
+
+export async function deleteProjectPhase(id: number): Promise<void> {
+  await fetchJson<string>(`/api/projectphases/${id}`, { method: 'DELETE' });
+}
+
+// ── Activity Logs ──────────────────────────────────────────────────────────
+
+export async function getMyActivityLogs(
+  projectId?: number,
+  startDate?: string,
+  endDate?: string
+): Promise<ActivityLog[]> {
+  const params = new URLSearchParams();
+  if (projectId) params.set('projectId', String(projectId));
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return fetchJson<ActivityLog[]>(`/api/activitylogs/my${qs}`);
+}
+
+export async function getEmptyWorkDays(): Promise<string[]> {
+  return fetchJson<string[]>('/api/activitylogs/my/empty-days');
+}
+
+export async function getMyHolidays(year: number, month: number, projectId?: number | null): Promise<{ date: string; name: string }[]> {
+  const query = projectId ? `&projectId=${projectId}` : '';
+  return fetchJson<{ date: string; name: string }[]>(
+    `/api/activitylogs/my/holidays?year=${year}&month=${month}${query}`
+  );
+}
+
+export async function createActivityLog(
+  payload: CreateActivityLogPayload
+): Promise<{ log: ActivityLog; overHoursWarning: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/api/activitylogs`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('auth_token') ?? ''}`
+    },
+    body: JSON.stringify(payload)
+  });
+  const overHoursWarning = response.headers.get('X-Over-Hours-Warning') === 'true';
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.message ?? 'Failed to create activity log');
+  }
+  const json = await response.json();
+  return { log: json.data, overHoursWarning };
+}
+
+export async function updateActivityLog(
+  id: number,
+  payload: UpdateActivityLogPayload
+): Promise<{ log: ActivityLog; overHoursWarning: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/api/activitylogs/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('auth_token') ?? ''}`
+    },
+    body: JSON.stringify(payload)
+  });
+  const overHoursWarning = response.headers.get('X-Over-Hours-Warning') === 'true';
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.message ?? 'Failed to update activity log');
+  }
+  const json = await response.json();
+  return { log: json.data, overHoursWarning };
+}
+
+export async function deleteActivityLog(id: number): Promise<void> {
+  await fetchJson<string>(`/api/activitylogs/${id}`, { method: 'DELETE' });
+}
+
+export async function getTeamActivityLogs(
+  projectId: number,
+  opts?: {
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    staffUserId?: string;
+  }
+): Promise<ActivityLog[]> {
+  const params = new URLSearchParams();
+  if (opts?.date) params.set('date', opts.date);
+  if (opts?.startDate) params.set('startDate', opts.startDate);
+  if (opts?.endDate) params.set('endDate', opts.endDate);
+  if (opts?.staffUserId) params.set('staffUserId', opts.staffUserId);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return fetchJson<ActivityLog[]>(`/api/activitylogs/project/${projectId}/team${qs}`);
+}
+
+export async function exportActivityLogCsv(
+  projectId: number,
+  startDate?: string,
+  endDate?: string
+): Promise<void> {
+  const params = new URLSearchParams();
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/activitylogs/project/${projectId}/export${qs}`,
+    {
+      headers: { Authorization: `Bearer ${localStorage.getItem('auth_token') ?? ''}` }
+    }
+  );
+  if (!response.ok) throw new Error('Failed to export activity log.');
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const cd = response.headers.get('Content-Disposition') ?? '';
+  const match = cd.match(/filename="?([^"]+)"?/);
+  a.download = match?.[1] ?? `activity_log_${projectId}.csv`;
+  a.href = url;
+  a.click();
+  URL.revokeObjectURL(url);
 }

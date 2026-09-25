@@ -82,3 +82,52 @@ export interface RequestHistoryItem {
   status: string;
   reviewedDate?: string;
 }
+
+// ── Timesheet / Daily Activity Log ────────────────────────────────────────────
+
+export interface ProjectPhase {
+  id: number;
+  name: string;
+}
+
+export interface ActivityLog {
+  id: number;
+  userId: string;
+  userName: string;
+  projectId: number;
+  projectName: string;
+  projectPhaseId: number;
+  phaseName: string;
+  /** Format: yyyy-MM-dd */
+  activityDate: string;
+  /** Format: HH:mm — null when time range mode is OFF */
+  startTime: string | null;
+  /** Format: HH:mm — null when time range mode is OFF */
+  endTime: string | null;
+  description: string;
+  /** True when the requesting PM does not manage this log's project */
+  isRedacted: boolean;
+  createdAt: string;
+}
+
+export interface CreateActivityLogPayload {
+  projectId: number;
+  projectPhaseId: number;
+  /** Format: yyyy-MM-dd */
+  activityDate: string;
+  /** Format: HH:mm — omit when time range mode is OFF */
+  startTime?: string;
+  /** Format: HH:mm — omit when time range mode is OFF */
+  endTime?: string;
+  description: string;
+}
+
+export interface UpdateActivityLogPayload {
+  projectPhaseId: number;
+  /** Format: yyyy-MM-dd */
+  activityDate: string;
+  startTime?: string;
+  endTime?: string;
+  description: string;
+}
+

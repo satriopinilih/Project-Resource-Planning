@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getSessionUser, SessionUser } from "@/lib/auth";
-import { getEmployeeById, getEmployeeFormOptions, updateEmployeeSkills, updateWfoStatus, LookupItem } from "@/lib/api";
+import { getEmployeeFormOptions, updateEmployeeSkills, updateWfoStatus, LookupItem } from "@/lib/api";
+import { getEmployeeByIdCached } from "@/lib/api/cached";
+import { requestCache } from "@/lib/request-cache";
 import { Employee, Project, ContractHistoryItem } from "@/lib/types";
 import {
   Loader2, Search, Calendar as CalendarIcon, FolderKanban, CalendarClock, Users,
@@ -28,18 +30,20 @@ function WfoStatusWidget({ employee, onToggle }: { employee: Employee; onToggle:
   };
 
   return (
-    <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 shadow-sm">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-          <Users size={15} className="text-emerald-400" />
-        </div>
-        <div>
-          <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)]">Work Preferences</h3>
-          <p className="text-[10px] text-[var(--dash-text-faint)]">Manage your WFO availability</p>
+    <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 shadow-sm h-full flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+            <Users size={15} className="text-emerald-400" />
+          </div>
+          <div>
+            <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)]">Work Preferences</h3>
+            <p className="text-[10px] text-[var(--dash-text-faint)]">Manage your WFO availability</p>
+          </div>
         </div>
       </div>
       
-      <div className="flex items-center justify-between p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border-subtle)]">
+      <div className="flex items-center justify-between p-3 bg-[var(--dash-bg-input)] rounded-lg border border-[var(--dash-border-subtle)] mt-3">
         <div>
           <p className="text-[13px] font-semibold text-[var(--dash-text-heading)]">Not available WFO</p>
           <p className="text-[11px] text-[var(--dash-text-faint)]">Mark if you cannot work from office</p>
@@ -71,38 +75,40 @@ function ContractDetailWidget({ employee }: { employee: Employee }) {
   const isExpired = daysLeft !== null && daysLeft < 0;
 
   return (
-    <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-          <FileText size={15} className="text-blue-400" />
+    <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 shadow-sm h-full flex flex-col justify-between">
+      <div>
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+            <FileText size={15} className="text-blue-400" />
+          </div>
+          <div>
+            <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)]">Contract Detail</h3>
+            <p className="text-[10px] text-[var(--dash-text-faint)]">Your current contract information</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)]">Contract Detail</h3>
-          <p className="text-[10px] text-[var(--dash-text-faint)]">Your current contract information</p>
-        </div>
-      </div>
 
-      {/* Role */}
-      <div className="mb-3">
-        <p className="text-[10px] text-[var(--dash-text-faint)] uppercase tracking-wider font-semibold mb-0.5">Role</p>
-        <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">{employee.role}</p>
-      </div>
-
-      {/* Current Contract Period */}
-      {active && (
+        {/* Role */}
         <div className="mb-3">
-          <p className="text-[10px] text-[var(--dash-text-faint)] uppercase tracking-wider font-semibold mb-0.5">
-            Current Contract Period
-          </p>
-          <p className="text-[13px] font-semibold text-[var(--dash-text-primary)]">
-            {fmtDate(active.startDate)} – {active.endDate ? fmtDate(active.endDate) : "No End Date"}
-          </p>
-          {active.duration && (
-            <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5">({active.duration})</p>
-          )}
+          <p className="text-[10px] text-[var(--dash-text-faint)] uppercase tracking-wider font-semibold mb-0.5">Role</p>
+          <p className="text-[14px] font-bold text-[var(--dash-text-heading)]">{employee.role}</p>
         </div>
-      )}
+
+        {/* Current Contract Period */}
+        {active && (
+          <div className="mb-3">
+            <p className="text-[10px] text-[var(--dash-text-faint)] uppercase tracking-wider font-semibold mb-0.5">
+              Current Contract Period
+            </p>
+            <p className="text-[13px] font-semibold text-[var(--dash-text-primary)]">
+              {fmtDate(active.startDate)} – {active.endDate ? fmtDate(active.endDate) : "No End Date"}
+            </p>
+            {active.duration && (
+              <p className="text-[11px] text-[var(--dash-text-faint)] mt-0.5">({active.duration})</p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Days Until Expiry */}
       {(isExpiringSoon || isExpired) && (
@@ -133,53 +139,55 @@ function ContractHistoryPreview({ history }: { history: ContractHistoryItem[] })
   const preview = history.slice(0, 3);
 
   return (
-    <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-          <Clock size={15} className="text-purple-400" />
+    <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 shadow-sm h-full flex flex-col justify-between">
+      <div>
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+            <Clock size={15} className="text-purple-400" />
+          </div>
+          <div>
+            <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)]">Contract History</h3>
+            <p className="text-[10px] text-[var(--dash-text-faint)]">History of your contract extensions</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-[13px] font-bold text-[var(--dash-text-heading)]">Contract History</h3>
-          <p className="text-[10px] text-[var(--dash-text-faint)]">History of your contract extensions</p>
-        </div>
-      </div>
 
-      {/* Vertical Timeline */}
-      <div className="relative">
-        {/* Vertical line */}
-        <div className="absolute left-[7px] top-0 bottom-0 w-[2px] bg-[var(--dash-border)]" />
+        {/* Vertical Timeline */}
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-[7px] top-0 bottom-0 w-[2px] bg-[var(--dash-border)]" />
 
-        <div className="space-y-4">
-          {preview.map((item, idx) => (
-            <div key={idx} className="flex items-start gap-3 pl-6 relative">
-              {/* Node */}
-              <div className={`absolute left-0 top-1 w-4 h-4 rounded-full border-2 z-10 ${
-                item.isActive
-                  ? "bg-blue-500 border-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
-                  : "bg-[var(--dash-bg-card)] border-[var(--dash-border)]"
-              }`} />
-              
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <p className="text-[12px] font-semibold text-[var(--dash-text-primary)]">
-                    {fmtDate(item.startDate)} – {item.endDate ? fmtDate(item.endDate) : "Ongoing"}
-                  </p>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                    item.isActive
-                      ? "bg-green-500/15 text-green-400 border border-green-500/20"
-                      : "bg-[var(--dash-bg-input)] text-[var(--dash-text-faint)] border border-[var(--dash-border)]"
-                  }`}>
-                    {item.isActive ? "Current" : "Completed"}
-                  </span>
+          <div className="space-y-4">
+            {preview.map((item, idx) => (
+              <div key={idx} className="flex items-start gap-3 pl-6 relative">
+                {/* Node */}
+                <div className={`absolute left-0 top-1 w-4 h-4 rounded-full border-2 z-10 ${
+                  item.isActive
+                    ? "bg-blue-500 border-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+                    : "bg-[var(--dash-bg-card)] border-[var(--dash-border)]"
+                }`} />
+                
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <p className="text-[12px] font-semibold text-[var(--dash-text-primary)]">
+                      {fmtDate(item.startDate)} – {item.endDate ? fmtDate(item.endDate) : "Ongoing"}
+                    </p>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                      item.isActive
+                        ? "bg-green-500/15 text-green-400 border border-green-500/20"
+                        : "bg-[var(--dash-bg-input)] text-[var(--dash-text-faint)] border border-[var(--dash-border)]"
+                    }`}>
+                      {item.isActive ? "Current" : "Completed"}
+                    </span>
+                  </div>
+                  {item.extendedBy && (
+                    <p className="text-[10px] text-[var(--dash-text-faint)]">Extended by {item.extendedBy}</p>
+                  )}
                 </div>
-                {item.extendedBy && (
-                  <p className="text-[10px] text-[var(--dash-text-faint)]">Extended by {item.extendedBy}</p>
-                )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -232,7 +240,7 @@ export default function StaffDashboard() {
     setUser(sessionUser);
 
     if (sessionUser?.userId) {
-      getEmployeeById(sessionUser.userId)
+      getEmployeeByIdCached(sessionUser.userId)
         .then((data) => {
           setEmployee(data);
           if (data.skills && data.skills.length === 0) {
@@ -316,11 +324,11 @@ export default function StaffDashboard() {
   const contractHistory = employee?.contractHistory ?? [];
 
   return (
-    <div className="flex-1 p-6 overflow-y-auto space-y-6">
+    <div className="flex-1 p-4 sm:p-6 w-full min-w-0 overflow-y-auto overflow-x-hidden space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
-              <h1 className="text-3xl font-bold text-[var(--dash-text-heading)] tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold text-[var(--dash-text-heading)] tracking-tight">
                 {greeting}, {user?.userName}
               </h1>
               <p className="text-[var(--dash-text-muted)] text-sm mt-1 leading-relaxed">
@@ -328,7 +336,7 @@ export default function StaffDashboard() {
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 shrink-0">
               <div className="flex items-center bg-[var(--dash-bg-card)] backdrop-blur-md p-1.5 rounded-2xl border border-[var(--dash-border)] shadow-sm">
                 <div className="flex items-center gap-3 px-4 py-2">
                   <div className="p-2 bg-blue-500/10 rounded-xl dark:bg-blue-500/20">
@@ -348,8 +356,8 @@ export default function StaffDashboard() {
           </div>
 
           {/* Stat Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 select-none">
-            <div className="sm:col-span-2 bg-[#2563eb] text-white rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4 select-none">
+            <div className="2xl:col-span-2 bg-[#2563eb] text-white rounded-2xl p-5 shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-white/80">Total Projects</p>
                 <h3 className="text-3xl font-bold text-white mt-1.5">{totalCount}</h3>
@@ -391,18 +399,18 @@ export default function StaffDashboard() {
           </div>
 
       {/* Two-column layout for Projects and Contract sidebar */}
-      <div className="flex flex-col xl:flex-row gap-6 items-start">
+      <div className="flex flex-col 2xl:flex-row gap-6 items-start w-full min-w-0">
         {/* ── Left: Projects ── */}
         <div className="flex-1 min-w-0 w-full space-y-6">
           {/* My Assigned Projects Table */}
-          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300 shadow-sm">
+          <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 sm:p-6 transition-colors duration-300 shadow-sm w-full min-w-0">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)]">My Assigned Projects</h3>
                 <p className="text-[12px] text-[var(--dash-text-muted)] mt-1">Overview of your current and upcoming project assignments</p>
               </div>
 
-              <div className="relative w-72">
+              <div className="relative w-full sm:w-72">
                 <Search
                   size={16}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]"
@@ -418,8 +426,8 @@ export default function StaffDashboard() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto w-full min-w-0">
+              <table className="w-full min-w-[640px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-[var(--dash-border-subtle)] text-[11px] uppercase tracking-wider text-[var(--dash-text-muted)] font-semibold">
                     <th className="pb-2 px-4 pl-0">Project Name</th>
@@ -490,14 +498,14 @@ export default function StaffDashboard() {
 
           {/* Completed Projects */}
           {hasAnyCompletedProjects && (
-            <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-6 transition-colors duration-300 shadow-sm mt-6">
+            <div className="bg-[var(--dash-bg-card)] border border-[var(--dash-border)] rounded-xl p-5 sm:p-6 transition-colors duration-300 shadow-sm mt-6 w-full min-w-0">
               <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 className="text-[16px] font-bold text-[var(--dash-text-heading)]">Past / Completed Assignments</h3>
                   <p className="text-[12px] text-[var(--dash-text-muted)] mt-1">Projects where your involvement has concluded</p>
                 </div>
 
-                <div className="relative w-72">
+                <div className="relative w-full sm:w-72">
                   <Search
                     size={16}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-faint)]"
@@ -513,8 +521,8 @@ export default function StaffDashboard() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse opacity-70">
+              <div className="overflow-x-auto w-full min-w-0">
+                <table className="w-full min-w-[640px] text-left border-collapse opacity-70">
                   <thead>
                     <tr className="border-b border-[var(--dash-border-subtle)] text-[11px] uppercase tracking-wider text-[var(--dash-text-muted)] font-semibold">
                       <th className="pb-2 px-4 pl-0">Project Name</th>
@@ -571,14 +579,16 @@ export default function StaffDashboard() {
           )}
         </div>
 
-        {/* ── Right: Contract sidebar ── */}
+        {/* ── Right: Contract sidebar / Responsive Cards ── */}
         {employee && (
-          <div className="w-full xl:w-[320px] shrink-0 space-y-4">
-            <WfoStatusWidget employee={employee} onToggle={handleToggleWfo} />
-            <ContractDetailWidget employee={employee} />
-            {contractHistory.length > 0 && (
-              <ContractHistoryPreview history={contractHistory} />
-            )}
+          <div className="w-full 2xl:w-[320px] shrink-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-1 gap-4">
+              <WfoStatusWidget employee={employee} onToggle={handleToggleWfo} />
+              <ContractDetailWidget employee={employee} />
+              {contractHistory.length > 0 && (
+                <ContractHistoryPreview history={contractHistory} />
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -687,8 +697,9 @@ export default function StaffDashboard() {
                   setSkillError(null);
                   try {
                     await updateEmployeeSkills(user.userId, selectedSkillIds);
+                    requestCache.invalidate(`employee:${user.userId}`);
                     setIsSkillModalOpen(false);
-                    const updated = await getEmployeeById(user.userId);
+                    const updated = await getEmployeeByIdCached(user.userId);
                     setEmployee(updated);
                   } catch (err: any) {
                     setSkillError(err.message || "Failed to save skills");

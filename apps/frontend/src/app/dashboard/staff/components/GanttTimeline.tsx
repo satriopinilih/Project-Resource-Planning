@@ -95,11 +95,11 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
 
   /* ─── render ─────────────────────────────────────────────────────────── */
   return (
-    <div className="flex flex-col bg-[var(--dash-bg-card)] rounded-md border border-[var(--dash-border-subtle)] shadow-sm overflow-hidden text-[var(--dash-text-heading)]">
+    <div className="flex flex-col bg-[var(--dash-bg-card)] rounded-xl border border-[var(--dash-border)] shadow-sm overflow-hidden text-[var(--dash-text-heading)] w-full min-w-0">
 
       {/* ── Controls header ─────────────────────────────────────────────── */}
-      <div className="flex-none p-6 pb-2">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex-none p-5 sm:p-6 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-bold tracking-tight text-[var(--dash-text-heading)]">Project Timeline</h2>
             <p className="text-sm text-[var(--dash-text-muted)] font-medium">
@@ -108,7 +108,7 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
           </div>
 
           {/* Prev / Next navigation */}
-          <div className="flex items-center gap-3 bg-[var(--dash-bg-input)] px-3 py-1.5 rounded-lg border border-[var(--dash-border-subtle)] shadow-sm">
+          <div className="flex items-center gap-3 bg-[var(--dash-bg-input)] px-3 py-1.5 rounded-lg border border-[var(--dash-border-subtle)] shadow-sm self-start sm:self-auto">
             <button onClick={handlePrev} title="Previous 12 Weeks" className="hover:text-blue-500 cursor-pointer p-0.5 transition-colors">
               <ChevronLeft size={16} />
             </button>
@@ -122,9 +122,9 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
         </div>
 
         {/* Filter toggles — Scheduled + Running only (no Completed) */}
-        <div className="flex items-center gap-4 mt-6 pb-2">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-5 pb-2">
           <span className="text-[10px] font-bold text-[var(--dash-text-muted)] uppercase tracking-wider">Filter:</span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setFilterScheduled(v => !v)}
               className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all duration-200 cursor-pointer select-none ${filterScheduled
@@ -157,11 +157,11 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
       </div>
 
       {/* ── Grid ─────────────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto">
-        <div className="relative min-w-[900px] pr-8 pl-6">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden w-full min-w-0">
+        <div className="relative min-w-[800px] pr-8 pl-6">
 
           {/* Sticky header row with week labels */}
-          <div className="sticky top-0 z-30 grid grid-cols-[220px_1fr] bg-[var(--dash-bg-card)] border-b border-t border-[var(--dash-border-subtle)] shadow-xs">
+          <div className="sticky top-0 z-20 grid grid-cols-[220px_1fr] bg-[var(--dash-bg-card)] border-b border-t border-[var(--dash-border-subtle)] shadow-xs">
             <div className="p-4 pl-0 text-[10px] uppercase font-bold text-[var(--dash-text-faint)] border-r border-[var(--dash-border-subtle)]">
               Project / Client
             </div>
@@ -207,7 +207,7 @@ export default function GanttTimeline({ projects }: GanttTimelineProps) {
                     style={{ minHeight: 64 }}
                   >
                     {/* Left label */}
-                    <div className="sticky left-0 z-20 bg-white dark:bg-[var(--dash-bg-card)] p-4 pl-0 border-r border-[var(--dash-border-subtle)]">
+                    <div className="sticky left-0 z-20 bg-[var(--dash-bg-card)] p-4 pl-0 border-r border-[var(--dash-border-subtle)]">
                       <div className="text-[13px] font-semibold truncate">{project.name}</div>
                       <div className="text-[10px] text-[var(--dash-text-muted)] mt-0.5 truncate">
                         {project.client}  {" "}

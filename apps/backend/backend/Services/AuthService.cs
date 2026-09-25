@@ -44,7 +44,10 @@ public class AuthService
             {
                 ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
             };
-            using var client = new HttpClient(handler);
+            using var client = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromSeconds(8)
+            };
 
             var body = new List<KeyValuePair<string, string>>
             {

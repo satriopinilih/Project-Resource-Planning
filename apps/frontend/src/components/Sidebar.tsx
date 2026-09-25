@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { logout } from '@/lib/auth';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -72,11 +73,7 @@ export default function Sidebar() {
       {/* Logout */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <button
-          onClick={() => {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user');
-            window.location.href = '/login';
-          }}
+          onClick={() => logout()}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#29385B] w-full transition-colors"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

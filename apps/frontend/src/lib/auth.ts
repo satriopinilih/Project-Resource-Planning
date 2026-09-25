@@ -1,3 +1,5 @@
+import { requestCache } from "@/lib/request-cache";
+
 export type SessionUser = {
   userId: string;
   userName: string;
@@ -15,6 +17,15 @@ export function getSessionUser(): SessionUser | null {
     return JSON.parse(raw) as SessionUser;
   } catch {
     return null;
+  }
+}
+
+export function logout(): void {
+  if (typeof window !== 'undefined') {
+    requestCache.clear();
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = '/login';
   }
 }
 

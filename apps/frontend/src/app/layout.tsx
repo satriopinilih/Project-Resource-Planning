@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {

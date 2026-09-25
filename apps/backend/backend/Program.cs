@@ -78,6 +78,8 @@ builder.Services.AddScoped<PMProjectService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<RequestHistoryService>();
+builder.Services.AddScoped<ActivityLogService>();
+builder.Services.AddScoped<ProjectPhaseService>();
 
 // 5. JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -100,7 +102,9 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidateAudience = true,
         ValidAudience = jwtSettings["Audience"],
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+        RoleClaimType = "role",
+        NameClaimType = "name"
     };
 });
 

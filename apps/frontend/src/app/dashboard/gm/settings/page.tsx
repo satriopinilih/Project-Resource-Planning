@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { changePassword } from "@/lib/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface UserProfile {
     userId: string;
@@ -24,6 +25,7 @@ type HeaderRole = "GM" | "HR" | "PM" | "Marketing" | "Staff" | null;
 function GMSettingsContent() {
     const searchParams = useSearchParams();
     const { isDarkMode, toggleDarkMode } = useTheme();
+    const [role, setRole] = useState<HeaderRole | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -34,15 +36,20 @@ function GMSettingsContent() {
     const forceChange = searchParams.get("forcePasswordChange") === "1";
 
     useEffect(() => {
-        const auth = localStorage.getItem("auth_user");
-        if (auth) {
-            try {
-                setProfile(JSON.parse(auth));
-            } catch (e) {
-                console.error("Failed to parse auth user", e);
-            }
+        const user = getSessionUser();
+        if (user) {
+            setProfile(user);
+            setRole((user.roles?.[0] as HeaderRole) ?? null);
         }
     }, []);
+
+    if (!role) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+            </div>
+        );
+    }
 
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -84,7 +91,7 @@ function GMSettingsContent() {
 
     return (
         <div className="flex flex-col min-h-screen">
-            <AppHeader title="Settings" role={(profile?.roles?.[0] as HeaderRole) ?? "GM"} />
+            <AppHeader title="Settings" role={role} />
 
             <div className="p-8 w-full space-y-8 pb-16">
                 {/* Profile Information */}

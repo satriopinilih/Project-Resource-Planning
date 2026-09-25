@@ -29,6 +29,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Holiday> Holidays { get; set; }
     public DbSet<Client> Clients { get; set; }
     public DbSet<EmployeeRoleHistory> EmployeeRoleHistories { get; set; }
+    public DbSet<ProjectPhase> ProjectPhases { get; set; }
+    public DbSet<ActivityLog> ActivityLogs { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -95,6 +97,19 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<StaffRole>()
             .HasIndex(sr => sr.RoleName)
             .IsUnique();
+
+        // ProjectPhase: unique index on Name
+        modelBuilder.Entity<ProjectPhase>()
+            .HasIndex(pp => pp.Name)
+            .IsUnique();
+
+        // ActivityLog: index on UserId + ActivityDate for fast per-staff daily queries
+        modelBuilder.Entity<ActivityLog>()
+            .HasIndex(al => new { al.UserId, al.ActivityDate });
+
+        // ActivityLog: index on ProjectId for fast per-project team queries
+        modelBuilder.Entity<ActivityLog>()
+            .HasIndex(al => al.ProjectId);
 
         // EmployeeRoleHistory: index on UserId for fast per-employee lookups
         modelBuilder.Entity<EmployeeRoleHistory>()
@@ -170,6 +185,17 @@ public class ApplicationDbContext : DbContext
             new Holiday { Id = 4, Name = "Labour Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 5, 1), DateTimeKind.Utc), ClientId = null },
             new Holiday { Id = 5, Name = "Independence Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 8, 17), DateTimeKind.Utc), ClientId = null },
             new Holiday { Id = 6, Name = "Christmas Day", DateStart = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc), DateEnd = DateTime.SpecifyKind(new DateTime(2026, 12, 25), DateTimeKind.Utc), ClientId = null }
+        );
+
+        // Seed default project phases
+        modelBuilder.Entity<ProjectPhase>().HasData(
+            new ProjectPhase { Id = 1, Name = "Requirement Gathering", CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), UpdatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },
+            new ProjectPhase { Id = 2, Name = "UI/UX Design", CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), UpdatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },
+            new ProjectPhase { Id = 3, Name = "Development", CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), UpdatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },
+            new ProjectPhase { Id = 4, Name = "QA/Testing", CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), UpdatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },
+            new ProjectPhase { Id = 5, Name = "Bug Fixing", CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), UpdatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },
+            new ProjectPhase { Id = 6, Name = "Deployment", CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), UpdatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) },
+            new ProjectPhase { Id = 7, Name = "Warranty/Maintenance", CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc), UpdatedAt = DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc) }
         );
     }
 
